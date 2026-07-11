@@ -1,10 +1,11 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useAnimate } from 'framer-motion';
 import { CheckCircle2, Clock } from 'lucide-react';
 
 export function HeroExamSimulator() {
+  const [scope, animate] = useAnimate();
   const [activeStep, setActiveStep] = useState(0);
   const [phase, setPhase] = useState<'idle' | 'selecting' | 'verified'>('idle');
   const [timerSeconds, setTimerSeconds] = useState(6135); // 01:42:15
@@ -18,6 +19,53 @@ export function HeroExamSimulator() {
     }, 1000);
     return () => clearInterval(interval);
   }, []);
+
+  // Single-Element Imperative 3D Sequence Engine (Guarantees zero snap)
+  useEffect(() => {
+    let isCancelled = false;
+
+    const runSequence = async () => {
+      if (!scope.current) return;
+
+      // Phase 1: 360 Entrance Spin smoothly arriving at exact (-11, 8, -1.5, y:0)
+      await animate(
+        scope.current,
+        {
+          opacity: [0, 1],
+          scale: [0.85, 1],
+          rotateY: [-371, -11],
+          rotateX: [8, 8],
+          rotateZ: [-1.5, -1.5],
+          y: [0, 0],
+        },
+        { duration: 2.2, ease: [0.22, 1, 0.36, 1] }
+      );
+
+      if (isCancelled || !scope.current) return;
+
+      // Phase 2: Seamlessly begin continuous 3D floating animation from exact arrival coordinates
+      animate(
+        scope.current,
+        {
+          y: [0, -12, 0],
+          rotateY: [-11, -13.5, -11],
+          rotateX: [8, 6, 8],
+          rotateZ: [-1.5, -2, -1.5],
+        },
+        {
+          duration: 10,
+          repeat: Infinity,
+          ease: 'easeInOut',
+        }
+      );
+    };
+
+    runSequence();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [animate, scope]);
 
   // Ambient natural looping state machine
   useEffect(() => {
@@ -63,40 +111,16 @@ export function HeroExamSimulator() {
   return (
     <div className="relative w-full max-w-xl mx-auto lg:max-w-none flex items-center justify-end overflow-visible py-1 perspective-1200 select-none pointer-events-none">
       {/* 
-        3D Physical Sheet Emerging from Bottom-Right with 360-Degree Entrance Spin
-        Smoothly spins 360 degrees, lands in position, and continues floating
+        Single-Element Imperative 3D Sheet
+        Phase 1 (Entrance Spin) -> Phase 2 (Idle Float) seamlessly managed via useAnimate()
       */}
       <motion.div
-        initial={{ opacity: 0, scale: 0.88, rotateY: -371 }}
-        animate={{ opacity: 1, scale: 1, rotateY: -11 }}
-        transition={{
-          duration: 2.2,
-          ease: [0.22, 1, 0.36, 1],
-        }}
+        ref={scope}
         style={{
           transformStyle: 'preserve-3d',
         }}
-        className="w-full max-w-[520px] transform-gpu lg:translate-x-4 lg:-translate-y-8"
+        className="relative w-full max-w-[520px] bg-[#12141A] border border-[#262A35] rounded-2xl shadow-[0_36px_110px_-16px_rgba(0,0,0,0.88)] ring-1 ring-white/[0.04] overflow-hidden text-slate-300 transform-gpu lg:translate-x-4 lg:-translate-y-8"
       >
-        <motion.div
-          initial={{ rotateX: 8, rotateZ: -1.5, y: 0, rotateY: 0 }}
-          animate={{
-            y: [0, -12, 0],
-            rotateY: [0, -2.5, 0],
-            rotateX: [8, 6, 8],
-            rotateZ: [-1.5, -2, -1.5],
-          }}
-          transition={{
-            y: { duration: 9, repeat: Infinity, ease: 'easeInOut', delay: 2.0 },
-            rotateY: { duration: 11, repeat: Infinity, ease: 'easeInOut', delay: 2.0 },
-            rotateX: { duration: 10, repeat: Infinity, ease: 'easeInOut', delay: 2.0 },
-            rotateZ: { duration: 12, repeat: Infinity, ease: 'easeInOut', delay: 2.0 },
-          }}
-          style={{
-            transformStyle: 'preserve-3d',
-          }}
-          className="relative w-full bg-[#12141A] border border-[#262A35] rounded-2xl shadow-[0_36px_110px_-16px_rgba(0,0,0,0.88)] ring-1 ring-white/[0.04] overflow-hidden text-slate-300"
-        >
         {/* Soft Ambient Top Glow line on the card edge */}
         <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-slate-500/30 to-transparent" />
 
@@ -286,7 +310,6 @@ export function HeroExamSimulator() {
           </div>
           <span className="text-slate-600 tracking-widest">FINBENCH365 SYSTEM</span>
         </div>
-        </motion.div>
       </motion.div>
     </div>
   );
