@@ -67,11 +67,11 @@ export function HeroExamSimulator() {
         Smoothly spins 360 degrees, lands in position, and continues floating
       */}
       <motion.div
-        initial={{ opacity: 0, scale: 0.85, rotateY: -371 }}
+        initial={{ opacity: 0, scale: 0.88, rotateY: -371 }}
         animate={{ opacity: 1, scale: 1, rotateY: -11 }}
         transition={{
-          duration: 2.0,
-          ease: [0.16, 1, 0.3, 1],
+          duration: 2.2,
+          ease: [0.22, 1, 0.36, 1],
         }}
         style={{
           transformStyle: 'preserve-3d',
@@ -79,7 +79,7 @@ export function HeroExamSimulator() {
         className="w-full max-w-[520px] transform-gpu lg:translate-x-4 lg:-translate-y-8"
       >
         <motion.div
-          initial={{ rotateX: 8, rotateZ: -1.5 }}
+          initial={{ rotateX: 8, rotateZ: -1.5, y: 0, rotateY: 0 }}
           animate={{
             y: [0, -12, 0],
             rotateY: [0, -2.5, 0],
@@ -87,10 +87,10 @@ export function HeroExamSimulator() {
             rotateZ: [-1.5, -2, -1.5],
           }}
           transition={{
-            y: { duration: 9, repeat: Infinity, ease: 'easeInOut' },
-            rotateY: { duration: 11, repeat: Infinity, ease: 'easeInOut' },
-            rotateX: { duration: 10, repeat: Infinity, ease: 'easeInOut' },
-            rotateZ: { duration: 12, repeat: Infinity, ease: 'easeInOut' },
+            y: { duration: 9, repeat: Infinity, ease: 'easeInOut', delay: 2.0 },
+            rotateY: { duration: 11, repeat: Infinity, ease: 'easeInOut', delay: 2.0 },
+            rotateX: { duration: 10, repeat: Infinity, ease: 'easeInOut', delay: 2.0 },
+            rotateZ: { duration: 12, repeat: Infinity, ease: 'easeInOut', delay: 2.0 },
           }}
           style={{
             transformStyle: 'preserve-3d',
