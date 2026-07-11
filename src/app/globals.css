@@ -1,0 +1,88 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --background: #FBFBF9;
+    --foreground: #181A1F;
+    --card: #FFFFFF;
+    --card-foreground: #181A1F;
+    --border: #E3E3DE;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    font-family: var(--font-sans), -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    background-color: #FAFAF8;
+    color: #181A1F;
+  }
+
+  body {
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden;
+    background-color: var(--background);
+    color: var(--foreground);
+  }
+
+  ::selection {
+    background-color: #181A1F;
+    color: #FBFBF9;
+  }
+}
+
+/* Custom subtle ambient keyframe animations */
+@keyframes floatSlow {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes floatSlower {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-10px) rotate(0.5deg);
+  }
+}
+
+.animate-float-slow {
+  animation: floatSlow 7s ease-in-out infinite;
+}
+
+.animate-float-slower {
+  animation: floatSlower 9s ease-in-out infinite;
+}
+
+/* Custom refined scrollbar for Bloomberg / Prometric Terminal */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #14171E;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #2D323E;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #42495B;
+}
+
+/* 3D Perspective utility classes for hero simulator */
+.perspective-1000 {
+  perspective: 1000px;
+}
+
+.perspective-1200 {
+  perspective: 1200px;
+}
