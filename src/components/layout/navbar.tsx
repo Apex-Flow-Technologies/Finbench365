@@ -7,12 +7,14 @@ import { ArrowUpRight, Menu, X } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
 
 export function Navbar() {
+  const [mounted, setMounted] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
 
   useEffect(() => {
+    setMounted(true);
     const handleScroll = () => {
       if (window.scrollY > 28) {
         setScrolled(true);
@@ -20,9 +22,12 @@ export function Navbar() {
         setScrolled(false);
       }
     };
+    handleScroll();
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  const isScrolled = mounted && scrolled;
 
   const scrollToSection = (e: React.MouseEvent<HTMLAnchorElement>, id: string) => {
     e.preventDefault();
@@ -45,7 +50,7 @@ export function Navbar() {
 
   return (
     <header
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${scrolled
+      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${isScrolled
           ? 'bg-[#FBFBF9]/92 backdrop-blur-md border-b border-[#E3E3DE] py-3 shadow-[0_4px_24px_-8px_rgba(0,0,0,0.05)]'
           : 'bg-transparent py-6 border-b border-transparent'
         }`}
@@ -57,18 +62,18 @@ export function Navbar() {
           onClick={(e) => scrollToSection(e, 'hero')}
           className="flex items-center gap-2.5 group focus:outline-none"
         >
-          <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-mono font-bold text-sm tracking-tighter transition-colors ${scrolled
+          <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-mono font-bold text-sm tracking-tighter transition-colors ${isScrolled
               ? 'bg-[#181A1F] text-[#FBFBF9] shadow-sm'
               : 'bg-white/10 text-white border border-white/20 backdrop-blur-sm'
             }`}>
             FB
           </div>
           <div className="flex flex-col">
-            <span className={`font-semibold tracking-tight text-base transition-colors ${scrolled ? 'text-[#181A1F]' : 'text-white'
+            <span className={`font-semibold tracking-tight text-base transition-colors ${isScrolled ? 'text-[#181A1F]' : 'text-white'
               }`}>
-              FinBench<span className={scrolled ? 'text-amber-700 font-mono text-xs ml-0.5' : 'text-amber-400 font-mono text-xs ml-0.5'}>365</span>
+              FinBench<span className={isScrolled ? 'text-amber-700 font-mono text-xs ml-0.5' : 'text-amber-400 font-mono text-xs ml-0.5'}>365</span>
             </span>
-            <span className={`text-[10px] tracking-widest uppercase font-mono transition-colors ${scrolled ? 'text-slate-500' : 'text-slate-400'
+            <span className={`text-[10px] tracking-widest uppercase font-mono transition-colors ${isScrolled ? 'text-slate-500' : 'text-slate-400'
               }`}>
               By MentraEdge
             </span>
@@ -91,7 +96,7 @@ export function Navbar() {
                   scrollToSection(e, item.href.replace('#', ''));
                 }
               }}
-              className={`text-sm font-medium transition-colors hover:text-amber-500 relative py-1 ${scrolled ? 'text-slate-700 hover:text-[#181A1F]' : 'text-slate-300 hover:text-white'
+              className={`text-sm font-medium transition-colors hover:text-amber-500 relative py-1 ${isScrolled ? 'text-slate-700 hover:text-[#181A1F]' : 'text-slate-300 hover:text-white'
                 }`}
             >
               {item.label}
@@ -103,7 +108,7 @@ export function Navbar() {
         <div className="hidden sm:flex items-center gap-3">
           <button
             onClick={() => router.push('/login')}
-            className={`px-5 py-2.5 text-sm font-bold rounded-lg transition-all duration-300 shadow-sm ${scrolled
+            className={`px-5 py-2.5 text-sm font-bold rounded-lg transition-all duration-300 shadow-sm ${isScrolled
                 ? 'bg-[#181A1F] text-[#FBFBF9] hover:bg-[#272B33] hover:shadow-md'
                 : 'bg-white text-[#181A1F] hover:bg-[#F2F2EC] hover:shadow-[0_0_24px_rgba(255,255,255,0.2)]'
               }`}
@@ -115,7 +120,7 @@ export function Navbar() {
         {/* Mobile menu toggle */}
         <button
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          className={`md:hidden p-2 rounded-lg transition-colors ${scrolled ? 'text-slate-800 hover:bg-slate-200/60' : 'text-white hover:bg-white/10'
+          className={`md:hidden p-2 rounded-lg transition-colors ${isScrolled ? 'text-slate-800 hover:bg-slate-200/60' : 'text-white hover:bg-white/10'
             }`}
           aria-label="Toggle Navigation Menu"
         >
