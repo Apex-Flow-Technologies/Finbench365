@@ -285,6 +285,7 @@ export function HeroExamSimulator() {
             <span>IRT_CALIBRATION_ACTIVE</span>
           </div>
           <span className="text-slate-600 tracking-widest">FINBENCH365 SYSTEM</span>
+        </div>
         </motion.div>
       </motion.div>
     </div>
