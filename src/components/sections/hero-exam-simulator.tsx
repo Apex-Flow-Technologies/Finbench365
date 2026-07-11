@@ -63,32 +63,40 @@ export function HeroExamSimulator() {
   return (
     <div className="relative w-full max-w-xl mx-auto lg:max-w-none flex items-center justify-end overflow-visible py-1 perspective-1200 select-none pointer-events-none">
       {/* 
-        3D Physical Sheet Emerging from Bottom-Right
-        Approx 8-12 degrees rotation, slight tilt, emerging out of the page
+        3D Physical Sheet Emerging from Bottom-Right with 360-Degree Entrance Spin
+        Smoothly spins 360 degrees, lands in position, and continues floating
       */}
       <motion.div
-        initial={{ opacity: 0, scale: 0.94, rotateY: -10, rotateX: 8, rotateZ: -1.5 }}
-        animate={{
-          opacity: 1,
-          scale: 1,
-          y: [0, -12, 0],
-          rotateY: [-11, -13.5, -11],
-          rotateX: [8, 6, 8],
-          rotateZ: [-1.5, -2, -1.5],
-        }}
+        initial={{ opacity: 0, scale: 0.85, rotateY: -371 }}
+        animate={{ opacity: 1, scale: 1, rotateY: -11 }}
         transition={{
-          opacity: { duration: 0.9, ease: 'easeOut' },
-          scale: { duration: 0.9, ease: 'easeOut' },
-          y: { duration: 9, repeat: Infinity, ease: 'easeInOut' },
-          rotateY: { duration: 11, repeat: Infinity, ease: 'easeInOut' },
-          rotateX: { duration: 10, repeat: Infinity, ease: 'easeInOut' },
-          rotateZ: { duration: 12, repeat: Infinity, ease: 'easeInOut' },
+          duration: 2.0,
+          ease: [0.16, 1, 0.3, 1],
         }}
         style={{
           transformStyle: 'preserve-3d',
         }}
-        className="relative w-full max-w-[520px] bg-[#12141A] border border-[#262A35] rounded-2xl shadow-[0_36px_110px_-16px_rgba(0,0,0,0.88)] ring-1 ring-white/[0.04] overflow-hidden text-slate-300 transform-gpu lg:translate-x-4 lg:-translate-y-8"
+        className="w-full max-w-[520px] transform-gpu lg:translate-x-4 lg:-translate-y-8"
       >
+        <motion.div
+          initial={{ rotateX: 8, rotateZ: -1.5 }}
+          animate={{
+            y: [0, -12, 0],
+            rotateY: [0, -2.5, 0],
+            rotateX: [8, 6, 8],
+            rotateZ: [-1.5, -2, -1.5],
+          }}
+          transition={{
+            y: { duration: 9, repeat: Infinity, ease: 'easeInOut' },
+            rotateY: { duration: 11, repeat: Infinity, ease: 'easeInOut' },
+            rotateX: { duration: 10, repeat: Infinity, ease: 'easeInOut' },
+            rotateZ: { duration: 12, repeat: Infinity, ease: 'easeInOut' },
+          }}
+          style={{
+            transformStyle: 'preserve-3d',
+          }}
+          className="relative w-full bg-[#12141A] border border-[#262A35] rounded-2xl shadow-[0_36px_110px_-16px_rgba(0,0,0,0.88)] ring-1 ring-white/[0.04] overflow-hidden text-slate-300"
+        >
         {/* Soft Ambient Top Glow line on the card edge */}
         <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-slate-500/30 to-transparent" />
 
@@ -277,7 +285,7 @@ export function HeroExamSimulator() {
             <span>IRT_CALIBRATION_ACTIVE</span>
           </div>
           <span className="text-slate-600 tracking-widest">FINBENCH365 SYSTEM</span>
-        </div>
+        </motion.div>
       </motion.div>
     </div>
   );
