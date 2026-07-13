@@ -36,7 +36,7 @@ function PricingContent() {
         try {
           const parsed = JSON.parse(userJson);
           if (parsed.loggedIn) isLoggedIn = true;
-        } catch (e) {}
+        } catch {}
       }
 
       if (!isLoggedIn) {

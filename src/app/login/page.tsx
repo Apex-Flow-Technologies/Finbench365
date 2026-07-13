@@ -8,12 +8,11 @@ import {
   Mail, 
   User, 
   Key, 
-  ArrowRight, 
-  Sparkles, 
-  Building2, 
-  ShieldCheck, 
-  CheckCircle2, 
-  ArrowLeft 
+  ArrowRight,
+  Building2,
+  ShieldCheck,
+  CheckCircle2,
+  ArrowLeft
 } from 'lucide-react';
 
 function LoginContent() {
@@ -39,7 +38,7 @@ function LoginContent() {
         if (parsed.loggedIn) {
           setExistingUser(parsed);
         }
-      } catch (e) {}
+      } catch {}
     }
   }, []);
 

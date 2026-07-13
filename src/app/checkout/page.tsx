@@ -12,13 +12,11 @@ import {
   User, 
   Mail, 
   Phone, 
-  ArrowLeft, 
-  Sparkles, 
-  Tag, 
-  HelpCircle, 
-  Check, 
-  X, 
-  ExternalLink 
+  ArrowLeft,
+  Tag,
+  HelpCircle,
+  X,
+  ExternalLink
 } from 'lucide-react';
 
 function CheckoutContent() {
@@ -55,7 +53,7 @@ function CheckoutContent() {
         const parsed = JSON.parse(savedUser);
         if (parsed.name) setName(parsed.name);
         if (parsed.email) setEmail(parsed.email);
-      } catch (e) {}
+      } catch {}
     }
   }, []);
 
@@ -464,7 +462,9 @@ function CheckoutContent() {
                 <div className="flex items-center justify-between border-b border-[#282C36] pb-3 text-slate-300">
                   <span className="flex items-center gap-1.5">
                     <span>18% GST (Tax Invoice)</span>
-                    <HelpCircle className="w-3.5 h-3.5 text-slate-400" title="Standard 18% Goods & Services Tax on Digital Educational Software" />
+                    <span title="Standard 18% Goods & Services Tax on Digital Educational Software" className="cursor-help inline-flex">
+                      <HelpCircle className="w-3.5 h-3.5 text-slate-400" />
+                    </span>
                   </span>
                   <span className="text-amber-500 font-semibold">+₹{gstAmount.toFixed(2)}</span>
                 </div>

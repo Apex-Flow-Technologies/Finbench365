@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { ShieldCheck, TrendingUp, Award, Star, CheckCircle } from 'lucide-react';
+import { ShieldCheck, Award, Star } from 'lucide-react';
 
 interface TestimonialCard {
   id: string;

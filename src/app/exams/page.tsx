@@ -11,10 +11,7 @@ import {
   FileText,
   CheckCircle2,
   ArrowRight,
-  Award,
-  Sparkles,
-  Layers,
-  BarChart3
+  Layers
 } from 'lucide-react';
 
 interface CoursePackage {
@@ -279,7 +276,7 @@ export default function ExamsPage() {
             <Layers className="w-12 h-12 text-slate-500 mx-auto" />
             <h3 className="text-xl font-semibold text-white">No Examination Tracks Found</h3>
             <p className="text-slate-400 text-sm">
-              No curricula matched your search query "{searchQuery}". Try clearing your filter or searching for "Quantitative", "Level", or "Risk".
+              No curricula matched your search query &quot;{searchQuery}&quot;. Try clearing your filter or searching for &quot;Quantitative&quot;, &quot;Level&quot;, or &quot;Risk&quot;.
             </p>
             <button
               onClick={() => { setSearchQuery(''); setSelectedCategory('All'); }}
