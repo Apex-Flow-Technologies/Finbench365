@@ -91,6 +91,8 @@ export interface CourseDocument extends BaseDocument {
   totalQuestions: number;
   totalMockTests: number;
   isFeatured: boolean;
+  isPublished?: boolean;
+  availablePlans?: string[];
   instructor: CourseInstructor;
 }
 
