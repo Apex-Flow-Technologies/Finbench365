@@ -66,6 +66,9 @@ export interface CourseSyllabusModule {
   description: string;
   lectureCount: number;
   estimatedMinutes: number;
+  status?: DocumentStatus;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface CourseInstructor {

@@ -8,7 +8,7 @@
 
 import { firestoreService, type QueryFilter } from './firestore.service';
 import { FIRESTORE_COLLECTIONS } from '../constants/firestore';
-import type { CourseDocument, CourseCategoryDocument, DocumentStatus } from '../types/firestore';
+import type { CourseDocument, CourseCategoryDocument, CourseSyllabusModule, DocumentStatus } from '../types/firestore';
 
 export class CourseService {
   /**
@@ -172,6 +172,148 @@ export class CourseService {
    */
   async softDeleteCourse(courseId: string): Promise<void> {
     return this.updateCourse(courseId, { status: 'DELETED', isPublished: false });
+  }
+
+  // ============================================================================
+  // Sprint 4.2 — Curriculum Module Management (`course.syllabus`)
+  // ============================================================================
+
+  /**
+   * Add a new structured syllabus module to a specific course.
+   */
+  async addModule(
+    courseId: string,
+    moduleData: Omit<CourseSyllabusModule, 'moduleId' | 'createdAt' | 'updatedAt'> & { moduleId?: string }
+  ): Promise<CourseSyllabusModule> {
+    const course = await this.getCourseById(courseId);
+    if (!course) {
+      throw new Error(`Institutional course record not found: ${courseId}`);
+    }
+
+    const currentSyllabus = Array.isArray(course.syllabus) ? [...course.syllabus] : [];
+    const newId = moduleData.moduleId || `mod_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+    const now = new Date().toISOString();
+
+    const newModule: CourseSyllabusModule = {
+      ...moduleData,
+      moduleId: newId,
+      moduleIndex: moduleData.moduleIndex || currentSyllabus.length + 1,
+      status: moduleData.status || 'ACTIVE',
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    currentSyllabus.push(newModule);
+    currentSyllabus.sort((a, b) => a.moduleIndex - b.moduleIndex);
+    currentSyllabus.forEach((mod, idx) => {
+      mod.moduleIndex = idx + 1;
+    });
+
+    const totalLectures = currentSyllabus.reduce((acc, m) => acc + (m.status !== 'DELETED' ? m.lectureCount || 0 : 0), 0);
+
+    await this.updateCourse(courseId, {
+      syllabus: currentSyllabus,
+      totalLectures,
+    });
+
+    return newModule;
+  }
+
+  /**
+   * Update fields of an existing syllabus module.
+   */
+  async updateModule(
+    courseId: string,
+    moduleId: string,
+    data: Partial<Omit<CourseSyllabusModule, 'moduleId' | 'createdAt'>>
+  ): Promise<CourseSyllabusModule> {
+    const course = await this.getCourseById(courseId);
+    if (!course) {
+      throw new Error(`Institutional course record not found: ${courseId}`);
+    }
+
+    const currentSyllabus = Array.isArray(course.syllabus) ? [...course.syllabus] : [];
+    const index = currentSyllabus.findIndex((m) => m.moduleId === moduleId);
+    if (index === -1) {
+      throw new Error(`Syllabus module [${moduleId}] not found in course [${courseId}]`);
+    }
+
+    const updatedModule: CourseSyllabusModule = {
+      ...currentSyllabus[index],
+      ...data,
+      updatedAt: new Date().toISOString(),
+    };
+
+    currentSyllabus[index] = updatedModule;
+    currentSyllabus.sort((a, b) => a.moduleIndex - b.moduleIndex);
+    currentSyllabus.forEach((mod, idx) => {
+      mod.moduleIndex = idx + 1;
+    });
+
+    const totalLectures = currentSyllabus.reduce((acc, m) => acc + (m.status !== 'DELETED' ? m.lectureCount || 0 : 0), 0);
+
+    await this.updateCourse(courseId, {
+      syllabus: currentSyllabus,
+      totalLectures,
+    });
+
+    return updatedModule;
+  }
+
+  /**
+   * Archive an existing syllabus module (`status: 'ARCHIVED'`).
+   */
+  async archiveModule(courseId: string, moduleId: string): Promise<void> {
+    await this.updateModule(courseId, moduleId, { status: 'ARCHIVED' });
+  }
+
+  /**
+   * Soft delete an existing syllabus module (`status: 'DELETED'`).
+   */
+  async softDeleteModule(courseId: string, moduleId: string): Promise<void> {
+    await this.updateModule(courseId, moduleId, { status: 'DELETED' });
+  }
+
+  /**
+   * Reorder syllabus modules based on an array of `moduleId` strings.
+   */
+  async reorderModules(courseId: string, orderedModuleIds: string[]): Promise<CourseSyllabusModule[]> {
+    const course = await this.getCourseById(courseId);
+    if (!course) {
+      throw new Error(`Institutional course record not found: ${courseId}`);
+    }
+
+    const currentSyllabus = Array.isArray(course.syllabus) ? [...course.syllabus] : [];
+    const moduleMap = new Map(currentSyllabus.map((m) => [m.moduleId, m]));
+
+    const reordered: CourseSyllabusModule[] = [];
+    const now = new Date().toISOString();
+
+    orderedModuleIds.forEach((id) => {
+      const mod = moduleMap.get(id);
+      if (mod) {
+        reordered.push({ ...mod, updatedAt: now });
+        moduleMap.delete(id);
+      }
+    });
+
+    // Append any modules that were not inside orderedModuleIds at the end
+    moduleMap.forEach((mod) => {
+      reordered.push({ ...mod, updatedAt: now });
+    });
+
+    reordered.forEach((mod, idx) => {
+      mod.moduleIndex = idx + 1;
+    });
+
+    const totalLectures = reordered.reduce((acc, m) => acc + (m.status !== 'DELETED' ? m.lectureCount || 0 : 0), 0);
+
+    await this.updateCourse(courseId, {
+      syllabus: reordered,
+      totalLectures,
+    });
+
+    return reordered;
   }
 
   /**

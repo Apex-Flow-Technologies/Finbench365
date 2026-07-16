@@ -14,9 +14,11 @@
  */
 
 import React, { useState, useMemo } from 'react';
+import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   BookOpen,
+  Layers,
   Search,
   Plus,
   Edit3,
@@ -612,9 +614,13 @@ export default function CourseManagementAdminPage() {
                               </div>
                             )}
                             <div className="min-w-0">
-                              <div className="font-bold text-slate-900 truncate" title={course.title}>
+                              <Link
+                                href={`/admin/courses/${course.id}`}
+                                className="font-bold text-slate-900 truncate hover:text-amber-600 transition block"
+                                title="Open Course Workspace"
+                              >
                                 {course.title}
-                              </div>
+                              </Link>
                               <div className="text-xs font-mono text-slate-400 mt-0.5 truncate">
                                 ID: {course.id} • Slug: /{course.slug}
                               </div>
@@ -710,6 +716,17 @@ export default function CourseManagementAdminPage() {
                         {/* Action Buttons */}
                         <td className="py-4 px-4 text-right">
                           <div className="flex items-center justify-end gap-1.5">
+                            {/* Workspace Button */}
+                            {!isSoftDeleted && (
+                              <Link
+                                href={`/admin/courses/${course.id}`}
+                                className="p-2 bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-xl transition border border-amber-200/60"
+                                title="Open Course Workspace"
+                              >
+                                <Layers className="w-4 h-4" />
+                              </Link>
+                            )}
+
                             {/* Edit Button */}
                             {!isSoftDeleted && (
                               <button
