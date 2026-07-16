@@ -21,7 +21,10 @@ import {
 } from 'firebase/auth';
 import { FirebaseError } from 'firebase/app';
 import { auth } from '../lib/firebase/client';
+import { firestoreService } from './firestore.service';
+import { FIRESTORE_COLLECTIONS } from '../constants/firestore';
 import type { UserAuthProfile } from '../types/auth';
+import type { UserProfileDocument } from '../types/firestore';
 
 class AuthService {
   /**
@@ -57,6 +60,55 @@ class AuthService {
   }
 
   /**
+   * Hydrates institutional user profile from Firestore `users` collection or creates default record.
+   */
+  public async fetchOrHydrateProfile(fbUser: FirebaseUser): Promise<UserAuthProfile> {
+    const defaultProfile = this.mapToProfile(fbUser);
+    try {
+      const existingDoc = await firestoreService.getDocument<UserProfileDocument>(
+        FIRESTORE_COLLECTIONS.USERS,
+        fbUser.uid
+      );
+      if (existingDoc) {
+        return {
+          uid: existingDoc.id,
+          email: existingDoc.email || defaultProfile.email,
+          displayName: existingDoc.displayName || defaultProfile.displayName,
+          photoURL: existingDoc.photoURL || defaultProfile.photoURL,
+          role: existingDoc.role || 'STUDENT',
+          status: existingDoc.userStatus || 'ACTIVE',
+          activeTrackIds: existingDoc.activeTrackIds || [],
+          subscriptionStatus: existingDoc.subscriptionStatus || 'NONE',
+          emailVerified: existingDoc.emailVerified || fbUser.emailVerified,
+          createdAt: existingDoc.createdAt || defaultProfile.createdAt,
+          updatedAt: existingDoc.updatedAt || defaultProfile.updatedAt,
+        };
+      } else {
+        const newDocPayload = {
+          email: defaultProfile.email,
+          displayName: defaultProfile.displayName,
+          photoURL: defaultProfile.photoURL,
+          role: defaultProfile.role,
+          userStatus: defaultProfile.status,
+          activeTrackIds: defaultProfile.activeTrackIds,
+          subscriptionStatus: defaultProfile.subscriptionStatus,
+          emailVerified: defaultProfile.emailVerified,
+          status: 'ACTIVE' as const,
+        };
+        await firestoreService.createDocument<UserProfileDocument>(
+          FIRESTORE_COLLECTIONS.USERS,
+          fbUser.uid,
+          newDocPayload
+        );
+        return defaultProfile;
+      }
+    } catch (error) {
+      console.warn('[AuthService] Firestore profile hydration fallback to raw profile:', error);
+      return defaultProfile;
+    }
+  }
+
+  /**
    * Registers a new institutional candidate with Email and Password.
    */
   public async registerCandidate(name: string, email: string, password: string): Promise<UserAuthProfile> {
@@ -78,7 +130,7 @@ class AuthService {
       }
 
       // Refresh token profile
-      return this.mapToProfile({
+      return this.fetchOrHydrateProfile({
         ...fbUser,
         displayName: name.trim() || email.split('@')[0],
       } as FirebaseUser);
@@ -94,7 +146,7 @@ class AuthService {
     await this.ensurePersistence();
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      return this.mapToProfile(userCredential.user);
+      return this.fetchOrHydrateProfile(userCredential.user);
     } catch (error) {
       throw new Error(this.mapFirebaseAuthError(error));
     }

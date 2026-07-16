@@ -39,11 +39,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Synchronize Edge Middleware session cookie
         document.cookie = 'finbench_auth=true; path=/; max-age=2592000; SameSite=Lax';
 
-        // Map raw Firebase user to institutional profile
-        // Note: In Sprint 3 (Firestore Foundation), this will automatically hydrate
-        // role, activeTrackIds, and subscriptionStatus directly from `/users/{uid}`.
-        const mappedProfile = authService.mapToProfile(currentFbUser);
-        setUser(mappedProfile);
+        // Hydrate institutional profile directly from `/users/{uid}` in Firestore
+        const hydratedProfile = await authService.fetchOrHydrateProfile(currentFbUser);
+        if (isMounted) {
+          setUser(hydratedProfile);
+        }
       } else {
         document.cookie = 'finbench_auth=; path=/; max-age=0; SameSite=Lax';
         setUser(null);
