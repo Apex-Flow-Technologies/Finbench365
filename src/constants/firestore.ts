@@ -22,6 +22,7 @@ export const FIRESTORE_COLLECTIONS = {
   NOTIFICATIONS: 'notifications',
   ANALYTICS: 'analytics',
   ACTIVITY_LOGS: 'activityLogs',
+  ASSETS: 'assets',
 } as const;
 
 export type FirestoreCollectionName = (typeof FIRESTORE_COLLECTIONS)[keyof typeof FIRESTORE_COLLECTIONS];

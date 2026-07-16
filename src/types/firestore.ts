@@ -361,3 +361,28 @@ export interface ActivityLogDocument extends BaseDocument {
   metadata?: Record<string, unknown>;
   timestamp: string;
 }
+
+// ============================================================================
+// Sprint 4.3 — Digital Asset Management (`assets`)
+// ============================================================================
+
+export type AssetMimeType =
+  | 'application/pdf'
+  | 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+  | 'image/png'
+  | 'image/jpeg'
+  | 'image/svg+xml'
+  | 'application/octet-stream';
+
+export interface DigitalAssetDocument extends BaseDocument {
+  fileName: string;
+  originalFileName: string;
+  mimeType: AssetMimeType;
+  fileSize: number; // in bytes
+  storagePath: string; // full path in Firebase Storage
+  publicUrl: string; // accessible public download URL
+  courseId: string;
+  moduleId?: string;
+  uploadedBy: string; // identity (email or name) of administrator
+  uploadedAt: string; // ISO 8601 string timestamp
+}

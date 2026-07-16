@@ -43,6 +43,7 @@ import {
   ArrowUp,
   ArrowDown,
   AlertCircle,
+  HardDrive,
   RefreshCw,
   ShieldAlert,
   Info,
@@ -336,7 +337,15 @@ export default function CourseWorkspacePage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2.5 text-xs">
+          <div className="flex flex-wrap items-center gap-2.5 text-xs">
+            <Link
+              href="/admin/assets"
+              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full font-bold bg-amber-500/10 text-amber-800 border border-amber-500/30 hover:bg-amber-500/20 transition shadow-2xs"
+            >
+              <HardDrive className="w-3.5 h-3.5 text-amber-600" />
+              Digital Assets
+            </Link>
+
             <span
               className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full font-black tracking-wide border ${
                 course.status === 'ACTIVE'

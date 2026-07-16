@@ -33,6 +33,7 @@ import {
   Filter,
   ArrowLeft,
   ArrowRight,
+  HardDrive,
   ShieldAlert,
   Tag,
   Clock,
@@ -427,7 +428,15 @@ export default function CourseManagementAdminPage() {
           </div>
 
           {/* Action Bar */}
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <Link
+              href="/admin/assets"
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold bg-amber-500/10 text-amber-800 border border-amber-500/30 hover:bg-amber-500/20 transition shadow-2xs"
+            >
+              <HardDrive className="w-4 h-4 text-amber-600" />
+              Digital Asset Repository
+            </Link>
+
             <button
               onClick={() => {
                 setShowDeleteToggle(!showDeleteToggle);
