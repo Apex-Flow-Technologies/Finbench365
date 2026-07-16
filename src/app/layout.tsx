@@ -35,6 +35,8 @@ export const metadata: Metadata = {
   },
 };
 
+import { AuthProvider } from '@/context/AuthContext';
+
 export default function RootLayout({
   children,
 }: {
@@ -43,12 +45,14 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${inter.variable} ${jakarta.variable} ${jetbrainsMono.variable}`}>
       <body className="min-h-screen flex flex-col font-sans bg-[#FAFAF8] text-[#181A1F] antialiased selection:bg-[#181A1F] selection:text-white">
-        <AmbientBackground />
-        <Navbar />
-        <main className="flex-1 relative z-10">
-          {children}
-        </main>
-        <Footer />
+        <AuthProvider>
+          <AmbientBackground />
+          <Navbar />
+          <main className="flex-1 relative z-10">
+            {children}
+          </main>
+          <Footer />
+        </AuthProvider>
       </body>
     </html>
   );

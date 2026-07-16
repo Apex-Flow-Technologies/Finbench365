@@ -13,10 +13,12 @@ import {
   BookOpen, 
   ArrowLeft 
 } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
 
 function PricingContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const { authenticated } = useAuth();
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
 
   const trackTitle = searchParams?.get('track') || 'Institutional Quantitative Certification Track';
@@ -29,17 +31,7 @@ function PricingContent() {
       const numericPrice = plan.price.replace('₹', '');
       const targetCheckoutUrl = `/checkout?track=${encodeURIComponent(trackTitle)}&plan=${encodeURIComponent(plan.name)}&days=${encodeURIComponent(plan.days)}&price=${numericPrice}`;
       
-      // Check if candidate is logged in before proceeding to checkout
-      const userJson = localStorage.getItem('finbench_user');
-      let isLoggedIn = false;
-      if (userJson) {
-        try {
-          const parsed = JSON.parse(userJson);
-          if (parsed.loggedIn) isLoggedIn = true;
-        } catch {}
-      }
-
-      if (!isLoggedIn) {
+      if (!authenticated) {
         // Redirect to Login/Registration first, with exact return destination
         router.push(`/login?redirect=${encodeURIComponent(targetCheckoutUrl)}`);
       } else {
