@@ -18,12 +18,10 @@ import {
   X,
   ExternalLink
 } from 'lucide-react';
-import { useAuth } from '@/hooks/useAuth';
 
 function CheckoutContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { user } = useAuth();
 
   const trackTitle = searchParams?.get('track') || 'Quantitative Risk Mastery — Level I';
   const planName = searchParams?.get('plan') || 'Plan 2 — 30 Days';
@@ -49,11 +47,15 @@ function CheckoutContent() {
 
   // Auto-populate logged-in user details
   useEffect(() => {
-    if (user) {
-      if (user.displayName) setName(user.displayName);
-      if (user.email) setEmail(user.email);
+    const savedUser = localStorage.getItem('finbench_user');
+    if (savedUser) {
+      try {
+        const parsed = JSON.parse(savedUser);
+        if (parsed.name) setName(parsed.name);
+        if (parsed.email) setEmail(parsed.email);
+      } catch {}
     }
-  }, [user]);
+  }, []);
 
   const handleApplyCoupon = (e: React.FormEvent) => {
     e.preventDefault();

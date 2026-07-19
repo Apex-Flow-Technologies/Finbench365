@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, Suspense } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -15,12 +15,9 @@ import {
   ArrowLeft
 } from 'lucide-react';
 
-import { useAuth } from '@/hooks/useAuth';
-
 function LoginContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { user, login, register, logout, resetPassword } = useAuth();
 
   const redirectUrl = searchParams?.get('redirect') || '/exams';
   const [activeTab, setActiveTab] = useState<'signin' | 'signup'>('signin');
@@ -31,56 +28,44 @@ function LoginContent() {
   const [password, setPassword] = useState('');
   const [org, setOrg] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [authError, setAuthError] = useState<string | null>(null);
-  const [resetMessage, setResetMessage] = useState<string | null>(null);
+  const [existingUser, setExistingUser] = useState<{ name: string; email: string } | null>(null);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  useEffect(() => {
+    const saved = localStorage.getItem('finbench_user');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed.loggedIn) {
+          setExistingUser(parsed);
+        }
+      } catch {}
+    }
+  }, []);
+
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setAuthError(null);
-    setResetMessage(null);
-
     if (!email || !password || (activeTab === 'signup' && !name)) {
-      setAuthError('Please fill in all required institutional authentication credentials.');
+      alert('Please fill in all required institutional authentication credentials.');
       return;
     }
 
     setIsSubmitting(true);
-    try {
-      if (activeTab === 'signin') {
-        await login(email, password);
-      } else {
-        await register(name, email, password);
-      }
-      router.push(redirectUrl);
-    } catch (error) {
-      setAuthError(error instanceof Error ? error.message : 'Institutional authentication failed. Please try again.');
-    } finally {
+    setTimeout(() => {
+      const userName = activeTab === 'signup' ? name : (email.split('@')[0] || 'Candidate');
+      const userObj = {
+        name: userName.charAt(0).toUpperCase() + userName.slice(1),
+        email: email,
+        loggedIn: true
+      };
+      localStorage.setItem('finbench_user', JSON.stringify(userObj));
       setIsSubmitting(false);
-    }
+      router.push(redirectUrl);
+    }, 700);
   };
 
-  const handleLogout = async () => {
-    setAuthError(null);
-    try {
-      await logout();
-    } catch (error) {
-      setAuthError(error instanceof Error ? error.message : 'Failed to sign out of active session.');
-    }
-  };
-
-  const handleForgot = async () => {
-    setAuthError(null);
-    setResetMessage(null);
-    if (!email.trim()) {
-      setAuthError('Please enter your institutional email address in the field below to receive a password reset link.');
-      return;
-    }
-    try {
-      await resetPassword(email.trim());
-      setResetMessage(`Password reset link dispatched to ${email.trim()}. Check your institutional inbox.`);
-    } catch (error) {
-      setAuthError(error instanceof Error ? error.message : 'Failed to send password reset email.');
-    }
+  const handleLogout = () => {
+    localStorage.removeItem('finbench_user');
+    setExistingUser(null);
   };
 
   return (
@@ -115,26 +100,15 @@ function LoginContent() {
             </p>
           </div>
 
-          {authError && (
-            <div className="mb-4 p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-sans text-center">
-              {authError}
-            </div>
-          )}
-          {resetMessage && (
-            <div className="mb-4 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-sans text-center">
-              {resetMessage}
-            </div>
-          )}
-
-          {user ? (
+          {existingUser ? (
             <div className="space-y-6 text-center py-4">
               <div className="p-5 rounded-2xl bg-[#121419] border border-[#282C36] space-y-2">
                 <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto" />
                 <div className="font-bold text-sm text-white">
-                  Signed in as {user.displayName}
+                  Signed in as {existingUser.name}
                 </div>
                 <div className="text-xs font-mono text-slate-500">
-                  {user.email}
+                  {existingUser.email}
                 </div>
               </div>
 
@@ -232,7 +206,7 @@ function LoginContent() {
                   <label className="text-xs font-mono font-medium text-slate-300 flex justify-between">
                     <span>Password *</span>
                     {activeTab === 'signin' && (
-                      <span onClick={handleForgot} className="text-amber-500 hover:underline cursor-pointer text-[11px]">Forgot?</span>
+                      <span className="text-amber-500 hover:underline cursor-pointer text-[11px]">Forgot?</span>
                     )}
                   </label>
                   <div className="relative">
