@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, use } from 'react';
+import React, { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { useAuth } from '@/context/AuthContext';
@@ -9,10 +9,10 @@ import {
   getTestQuestions, 
   startTestAttempt, 
   saveTestProgress, 
-  submitTestAttempt 
+  submitTestAttempt,
+  getTestAttemptsCount
 } from '@/lib/firebase/db';
-import { Clock, AlertCircle, ChevronLeft, ChevronRight, CheckCircle2, LayoutGrid } from 'lucide-react';
-import { Timestamp } from 'firebase/firestore';
+import { Clock, AlertCircle, ChevronLeft, ChevronRight, CheckCircle2, LayoutGrid, AlertTriangle, ShieldCheck } from 'lucide-react';
 
 export default function ExamPage({ params }: { params: Promise<{ id: string }> }) {
   const unwrappedParams = use(params);
@@ -21,10 +21,16 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
   const { user } = useAuth();
   
   // Test Data State
-  const [test, setTest] = useState<any>(null);
+  const [test, setTest] = useState<{ id: string; title: string; durationMinutes: number; totalQuestions: number; description?: string; type?: 'practice' | 'exam' } | null>(null);
   const [questions, setQuestions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [attemptsCount, setAttemptsCount] = useState<number>(0);
+  const MAX_ATTEMPTS = 10;
+  
+  // Anti-Cheat State
+  const [isDisqualified, setIsDisqualified] = useState(false);
+  const [antiCheatWarning, setAntiCheatWarning] = useState<number | null>(null);
   
   // Attempt State
   const [attemptId, setAttemptId] = useState<string | null>(null);
@@ -41,8 +47,13 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
   useEffect(() => {
     async function loadTest() {
       try {
-        const testData = await getMockTest(testId);
+        const testData = await getMockTest(testId) as any;
         setTest(testData);
+        
+        if (user) {
+          const count = await getTestAttemptsCount(user.uid, testId);
+          setAttemptsCount(count);
+        }
         
         // In a real scenario, we might only load questions AFTER starting the test
         // but for UX, loading them now is fine.
@@ -51,7 +62,7 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
         
         // Initial time remaining based on test duration
         setTimeRemaining(testData.durationMinutes * 60);
-      } catch (err: any) {
+      } catch (err) {
         console.error(err);
         setError("Could not load exam data. It may not exist or is not published.");
       } finally {
@@ -59,7 +70,69 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
       }
     }
     loadTest();
-  }, [testId]);
+  }, [testId, user]);
+
+  // Anti-Cheat Logic
+  useEffect(() => {
+    if (status !== 'in_progress') return;
+
+    // Enter Fullscreen
+    const docElm = document.documentElement;
+    if (docElm.requestFullscreen && !document.fullscreenElement) {
+      docElm.requestFullscreen().catch(err => console.error("Fullscreen error:", err));
+    }
+
+    let warningTimer: NodeJS.Timeout | null = null;
+    let secondsLeft = 10;
+
+    const startWarning = () => {
+      if (warningTimer) return;
+      setAntiCheatWarning(10);
+      secondsLeft = 10;
+      warningTimer = setInterval(() => {
+        secondsLeft--;
+        setAntiCheatWarning(secondsLeft);
+        if (secondsLeft <= 0) {
+          clearInterval(warningTimer!);
+          setIsDisqualified(true);
+          handleAutoSubmit(); // Use internal submit bypassing state checks for auto-submit
+        }
+      }, 1000);
+    };
+
+    const clearWarning = () => {
+      if (warningTimer) {
+        clearInterval(warningTimer);
+        warningTimer = null;
+      }
+      setAntiCheatWarning(null);
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        startWarning();
+      } else {
+        clearWarning();
+      }
+    };
+
+    const handleFullscreenChange = () => {
+      if (!document.fullscreenElement) {
+        startWarning();
+      } else {
+        clearWarning();
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
+      if (warningTimer) clearInterval(warningTimer);
+    };
+  }, [status]);
 
   // Timer Logic (Strict One-Sitting)
   // In a production app, the remaining time should be calculated against the 
@@ -80,6 +153,7 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
       }, 1000);
     }
     return () => clearInterval(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status, timeRemaining]);
 
   const handleStartExam = async () => {
@@ -99,6 +173,12 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
 
   const handleSelectOption = async (optionIndex: number) => {
     const questionId = questions[currentQuestionIndex].id;
+    
+    // Lock answers in practice mode
+    if (test?.type === 'practice' && answers[questionId] !== undefined) {
+      return;
+    }
+
     const newAnswers = { ...answers, [questionId]: optionIndex };
     setAnswers(newAnswers);
     
@@ -109,6 +189,8 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
   };
 
   const calculateScore = () => {
+    // We keep calculateScore ONLY for practice tests which still evaluate locally
+    // For exams, the server API handles this.
     let correct = 0;
     questions.forEach(q => {
       if (answers[q.id] === q.correctOptionIndex) {
@@ -130,16 +212,37 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
   };
 
   const performSubmit = async () => {
-    if (!attemptId) return;
+    if (!attemptId || !user) return;
     setIsSubmitting(true);
     try {
-      const finalScore = calculateScore();
-      await submitTestAttempt(attemptId, answers, finalScore);
-      setScore(finalScore);
+      if (test?.type === 'practice') {
+        const finalScore = calculateScore();
+        await submitTestAttempt(attemptId, answers, finalScore);
+        setScore(finalScore);
+      } else {
+        const token = await user.getIdToken();
+        const res = await fetch('/api/exams/submit', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            attemptId,
+            testId: params.id as string,
+            answers
+          })
+        });
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Failed to grade exam');
+        setScore(data.score);
+      }
+      
       setStatus('completed');
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      alert("Failed to submit exam.");
+      alert(err.message || "Failed to submit exam.");
     } finally {
       setIsSubmitting(false);
     }
@@ -205,23 +308,47 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
             <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-4 mb-8 text-sm text-amber-500/90 flex gap-3">
               <AlertCircle className="w-5 h-5 shrink-0" />
               <p><strong>Strict One-Sitting Rule:</strong> Once you start the exam, the timer cannot be paused. If you leave this page, the timer will continue running on the server. Ensure you have a stable connection.</p>
-            </div>
+              {questions.length === 0 ? (
+                <div className="bg-red-500/10 border border-red-500/20 text-red-500 p-4 rounded-xl text-sm mb-6 flex items-start gap-3">
+                  <AlertCircle className="w-5 h-5 shrink-0" />
+                  <p>This test currently has no questions loaded. Please ask your instructor to publish the exam questions before attempting.</p>
+                </div>
+              ) : attemptsCount >= MAX_ATTEMPTS ? (
+                <div className="bg-red-500/10 border border-red-500/20 text-red-500 p-4 rounded-xl text-sm mb-6 flex items-start gap-3">
+                  <AlertCircle className="w-5 h-5 shrink-0" />
+                  <p>You have reached the maximum number of attempts ({MAX_ATTEMPTS}) for this test.</p>
+                </div>
+              ) : (
+                <div className="bg-amber-500/10 border border-amber-500/20 text-amber-500 p-4 rounded-xl text-sm mb-6 flex items-start gap-3">
+                  <AlertCircle className="w-5 h-5 shrink-0" />
+                  <p>
+                    <strong>Anti-Cheat Warning:</strong> Once you start, the browser will enter full-screen. 
+                    Switching tabs or exiting full-screen will result in immediate disqualification if not resolved within 10 seconds.
+                  </p>
+                </div>
+              )}
 
-            <div className="flex gap-4">
-              <button 
-                onClick={() => router.push('/dashboard')}
-                className="px-6 py-3 rounded-xl border border-[#282C36] text-white font-bold hover:bg-[#272B33] transition-colors"
-              >
-                Go Back
-              </button>
+              <div className="bg-[#121419] border border-slate-700/50 p-4 rounded-xl text-sm mb-6 flex items-start gap-3">
+                <ShieldCheck className="w-5 h-5 shrink-0 text-slate-400" />
+                <p className="text-slate-400 text-xs leading-relaxed">
+                  <strong>Disclaimer:</strong> This is a practice simulation created by FinExamsEdge. All questions are original. This test is not conducted by, affiliated with, or endorsed by NISM or SEBI. Your score here does not guarantee success in the actual examination.
+                </p>
+              </div>
+              
               <button 
                 onClick={handleStartExam}
-                disabled={isSubmitting || questions.length === 0}
-                className="flex-1 px-6 py-3 rounded-xl bg-amber-500 text-[#121419] font-bold shadow-md hover:bg-amber-400 transition-colors disabled:opacity-50"
+                disabled={isSubmitting || questions.length === 0 || attemptsCount >= MAX_ATTEMPTS}
+                className="w-full py-4 rounded-xl bg-amber-500 text-[#121419] font-bold text-lg shadow-lg hover:bg-amber-400 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
               >
-                {isSubmitting ? 'Starting...' : 'I am ready, Start Exam'}
+                {isSubmitting ? 'Initializing Engine...' : 'I am ready, Start Exam'}
               </button>
             </div>
+            {questions.length === 0 && (
+              <p className="text-red-500 text-sm mt-4 text-center font-bold">
+                Cannot start: This test has 0 questions saved in the database. 
+                Please go to the Course Builder, edit this test, and click "Save Test".
+              </p>
+            )}
           </div>
         </div>
       </ProtectedRoute>
@@ -237,8 +364,14 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
           <div className="w-20 h-20 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-500 mb-6">
             <CheckCircle2 className="w-10 h-10" />
           </div>
-          <h2 className="text-3xl font-bold text-white mb-2">Exam Submitted Successfully</h2>
-          <p className="text-slate-400 mb-8">Your institutional performance report has been generated.</p>
+          <h2 className="text-3xl font-bold text-white mb-2">
+            {isDisqualified ? 'Exam Disqualified' : 'Exam Submitted Successfully'}
+          </h2>
+          <p className="text-slate-400 mb-8">
+            {isDisqualified 
+              ? 'You were disqualified for violating the anti-cheat tab/fullscreen policies.'
+              : 'Your institutional performance report has been generated.'}
+          </p>
           
           <div className="bg-[#181A1F] border border-[#282C36] rounded-2xl p-8 max-w-md w-full shadow-xl text-center mb-8">
             <div className="text-sm font-mono text-slate-500 mb-2">FINAL SCORE</div>
@@ -264,7 +397,25 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
   
   return (
     <ProtectedRoute requiredRole="student">
-      <div className="min-h-[calc(100vh)] bg-[#0B0C10] text-[#FBFBF9] relative z-20 w-full flex flex-col">
+      {antiCheatWarning !== null && (
+        <div className="fixed inset-0 z-50 bg-[#121419]/95 flex flex-col items-center justify-center p-6 text-center backdrop-blur-sm">
+          <AlertTriangle className="w-24 h-24 text-red-500 mb-6 animate-pulse" />
+          <h2 className="text-4xl font-bold text-white mb-4">Warning: Tab Switch Detected</h2>
+          <p className="text-slate-300 text-lg mb-8 max-w-lg">
+            You must return to full-screen mode immediately. Failure to comply will result in automatic submission and disqualification.
+          </p>
+          <div className="text-7xl font-mono font-bold text-red-500 mb-12">
+            00:{antiCheatWarning.toString().padStart(2, '0')}
+          </div>
+          <button 
+            onClick={() => document.documentElement.requestFullscreen().catch(() => {})}
+            className="px-8 py-4 bg-amber-500 text-[#121419] rounded-xl font-bold text-xl hover:bg-amber-400"
+          >
+            Return to Full Screen
+          </button>
+        </div>
+      )}
+      <div className="min-h-[calc(100vh)] bg-[#0B0C10] text-[#FBFBF9] relative z-20 w-full flex flex-col select-none">
         {/* Top Navbar for CBT */}
         <div className="h-16 border-b border-[#282C36] bg-[#121419] flex items-center justify-between px-6 shrink-0">
           <div className="font-bold text-white tracking-tight">{test?.title}</div>
@@ -276,7 +427,7 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
             <button 
               onClick={handleManualSubmit}
               disabled={isSubmitting}
-              className="px-4 py-1.5 rounded bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 text-sm font-bold hover:bg-emerald-500 hover:text-[#121419] transition-all"
+              className="px-4 py-1.5 rounded bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 text-sm font-bold hover:bg-emerald-500 hover:text-[#121419] active:scale-95 transition-all duration-200"
             >
               Submit Exam
             </button>
@@ -302,22 +453,44 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
                 {currentQuestion?.options?.map((option: string, index: number) => {
                   const isSelected = answers[currentQuestion.id] === index;
                   const letter = String.fromCharCode(65 + index); // A, B, C, D
+                  
+                  const isPractice = test?.type === 'practice';
+                  const hasAnswered = answers[currentQuestion.id] !== undefined;
+                  const isCorrect = currentQuestion.correctOptionIndex === index;
+                  
+                  let optionStyle = 'border-[#282C36] bg-[#181A1F] hover:border-slate-500 hover:bg-[#272B33]';
+                  let letterStyle = 'bg-[#121419] text-slate-400 border border-[#282C36]';
+                  let textStyle = 'text-slate-300';
+                  
+                  if (isPractice && hasAnswered) {
+                    if (isCorrect) {
+                      optionStyle = 'border-emerald-500 bg-emerald-500/10 shadow-[0_0_15px_rgba(16,185,129,0.1)]';
+                      letterStyle = 'bg-emerald-500 text-[#121419]';
+                      textStyle = 'text-emerald-500 font-bold';
+                    } else if (isSelected) {
+                      optionStyle = 'border-red-500 bg-red-500/10 shadow-[0_0_15px_rgba(239,68,68,0.1)]';
+                      letterStyle = 'bg-red-500 text-white';
+                      textStyle = 'text-red-500';
+                    } else {
+                      optionStyle = 'border-[#282C36] bg-[#181A1F] opacity-50 cursor-not-allowed';
+                    }
+                  } else if (isSelected) {
+                    optionStyle = 'border-amber-500 bg-amber-500/10 shadow-[0_0_15px_rgba(245,158,11,0.1)]';
+                    letterStyle = 'bg-amber-500 text-[#121419]';
+                    textStyle = 'text-amber-500';
+                  }
+
                   return (
                     <button
                       key={index}
                       onClick={() => handleSelectOption(index)}
-                      className={`w-full text-left p-4 rounded-xl border flex items-center gap-4 transition-all ${
-                        isSelected 
-                          ? 'border-amber-500 bg-amber-500/10 shadow-[0_0_15px_rgba(245,158,11,0.1)]' 
-                          : 'border-[#282C36] bg-[#181A1F] hover:border-slate-500 hover:bg-[#272B33]'
-                      }`}
+                      disabled={isPractice && hasAnswered}
+                      className={`w-full text-left p-4 rounded-xl border flex items-center gap-4 transition-all ${optionStyle}`}
                     >
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold font-mono text-sm shrink-0 ${
-                        isSelected ? 'bg-amber-500 text-[#121419]' : 'bg-[#121419] text-slate-400 border border-[#282C36]'
-                      }`}>
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold font-mono text-sm shrink-0 ${letterStyle}`}>
                         {letter}
                       </div>
-                      <div className={`font-medium text-sm ${isSelected ? 'text-amber-500' : 'text-slate-300'}`}>
+                      <div className={`font-medium text-sm ${textStyle}`}>
                         {option}
                       </div>
                     </button>
@@ -334,13 +507,24 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
                 >
                   <ChevronLeft className="w-4 h-4" /> Previous
                 </button>
-                <button
-                  onClick={() => setCurrentQuestionIndex(prev => Math.min(questions.length - 1, prev + 1))}
-                  disabled={currentQuestionIndex === questions.length - 1}
-                  className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-white text-[#121419] font-bold hover:bg-slate-200 disabled:opacity-30 transition-colors"
-                >
-                  Next <ChevronRight className="w-4 h-4" />
-                </button>
+                
+                {currentQuestionIndex === questions.length - 1 ? (
+                  <button
+                    onClick={handleManualSubmit}
+                    disabled={isSubmitting}
+                    className="flex items-center gap-2 px-8 py-2.5 rounded-lg bg-emerald-500 text-[#121419] font-bold hover:bg-emerald-400 transition-colors"
+                  >
+                    Submit Exam <CheckCircle2 className="w-4 h-4" />
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => setCurrentQuestionIndex(prev => Math.min(questions.length - 1, prev + 1))}
+                    disabled={currentQuestionIndex === questions.length - 1}
+                    className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-white text-[#121419] font-bold hover:bg-slate-200 disabled:opacity-30 transition-colors"
+                  >
+                    Next <ChevronRight className="w-4 h-4" />
+                  </button>
+                )}
               </div>
             </div>
           </div>

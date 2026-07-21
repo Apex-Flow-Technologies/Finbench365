@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -11,8 +11,11 @@ import {
   FileText,
   CheckCircle2,
   ArrowRight,
-  Layers
+  Layers,
+  Loader2
 } from 'lucide-react';
+import { getCourses, getUserEntitlements } from '@/lib/firebase/db';
+import { useAuth } from '@/context/AuthContext';
 
 interface CoursePackage {
   id: string;
@@ -28,122 +31,80 @@ interface CoursePackage {
   badgeText: string;
 }
 
-const COURSES_DATA: CoursePackage[] = [
-  {
-    id: 'track-1',
-    title: 'Quantitative Risk Mastery — Level I',
-    trackBadge: 'Track A • Foundation Tier',
-    category: 'Foundation',
-    description: 'Comprehensive core foundation covering quantitative derivations, probability distributions, matrix calculus, and parametric VaR formulations for market risk analysts.',
-    mockCount: '15 Full Mocks (1,500 MCQs)',
-    notesCount: '42 PDF Topic Summaries',
-    features: [
-      'Exact CBT terminal simulation with flag & review',
-      'Step-by-step matrix derivation walkthroughs',
-      'Instant diagnostic score tracking & item analysis'
-    ],
-    levelColor: 'border border-amber-500/15 hover:border-amber-500/35',
-    badgeBg: 'bg-amber-500/10 border-amber-500/30',
-    badgeText: 'text-amber-400 font-bold'
-  },
-  {
-    id: 'track-2',
-    title: 'Parametric Monte Carlo & VaR Modeling — Track B I',
-    trackBadge: 'Track B • Foundation Tier',
-    category: 'Foundation',
-    description: 'Engineered specifically for institutional pricing models. Deep dive into Cholesky decompositions, variance reduction variance schemes, and historical boot-strapping.',
-    mockCount: '12 Full Mocks (1,200 MCQs)',
-    notesCount: '38 PDF Topic Summaries',
-    features: [
-      'Interactive Python & R snippet code-alongs',
-      'Stochastic differential equation breakdowns',
-      'Algorithmic scenario generation drills'
-    ],
-    levelColor: 'border border-amber-500/15 hover:border-amber-500/35',
-    badgeBg: 'bg-amber-500/10 border-amber-500/30',
-    badgeText: 'text-amber-400 font-bold'
-  },
-  {
-    id: 'track-3',
-    title: 'Institutional Credit Rating & Counterparty Risk — Level II',
-    trackBadge: 'Track A • Advanced Tier',
-    category: 'Advanced',
-    description: 'Advanced methodologies including Merton structural defaults, copula dependencies, CVA/DVA calculations, and regulatory Basel III/IV capital allocations.',
-    mockCount: '18 Full Mocks (1,800 MCQs)',
-    notesCount: '55 PDF Topic Summaries',
-    features: [
-      'Credit transition matrix modeling exercises',
-      'ISDA master agreement clause dissections',
-      'Full Basel IV capital buffer simulations'
-    ],
-    levelColor: 'border border-blue-500/15 hover:border-blue-500/35',
-    badgeBg: 'bg-blue-500/10 border-blue-500/30',
-    badgeText: 'text-blue-400 font-bold'
-  },
-  {
-    id: 'track-4',
-    title: 'Derivatives Valuation & Yield Curve Bootstrapping — Track B II',
-    trackBadge: 'Track B • Advanced Tier',
-    category: 'Advanced',
-    description: 'Advanced interest rate term structures, OIS discounting, Heath-Jarrow-Morton frameworks, and exotic option Greeks calibration techniques.',
-    mockCount: '14 Full Mocks (1,400 MCQs)',
-    notesCount: '48 PDF Topic Summaries',
-    features: [
-      'Multi-curve collateralized discounting models',
-      'Volatility smile & SABR surface fitting drills',
-      'Exact numerical finite difference solver guides'
-    ],
-    levelColor: 'border border-blue-500/15 hover:border-blue-500/35',
-    badgeBg: 'bg-blue-500/10 border-blue-500/30',
-    badgeText: 'text-blue-400 font-bold'
-  },
-  {
-    id: 'track-5',
-    title: 'Algorithmic Portfolio Optimization & Factor Attribution — Level III',
-    trackBadge: 'Track A • Quantitative Tier',
-    category: 'Quantitative',
-    description: 'High-stakes quantitative portfolio engineering. Black-Litterman models, regime-switching Markov chains, and machine learning factor extraction workflows.',
-    mockCount: '20 Full Mocks (2,000 MCQs)',
-    notesCount: '64 PDF Topic Summaries',
-    features: [
-      'Convex optimization & quadratic programming labs',
-      'Smart beta & risk-parity construction modules',
-      'Real-time backtesting performance metrics'
-    ],
-    levelColor: 'border border-purple-500/15 hover:border-purple-500/35',
-    badgeBg: 'bg-purple-500/10 border-purple-500/30',
-    badgeText: 'text-purple-400 font-bold'
-  },
-  {
-    id: 'track-6',
-    title: 'Comprehensive Quantitative Financial Engineering — Ultimate Track',
-    trackBadge: 'Track B • Comprehensive Tier',
-    category: 'Comprehensive',
-    description: 'The complete institutional quantitative bundle covering all tiers, modules, and exam tracks. Guaranteed mastery across risk, pricing, and algorithmic optimization.',
-    mockCount: '30 Full Mocks (3,000 MCQs)',
-    notesCount: '120 PDF Topic Summaries',
-    features: [
-      'Unlimited lifetime updates & new CBT releases',
-      'Direct 1-on-1 faculty doubt clearing portal access',
-      'Priority resume review for quantitative trading desks'
-    ],
-    levelColor: 'border border-emerald-500/15 hover:border-emerald-500/35',
-    badgeBg: 'bg-emerald-500/10 border-emerald-500/30',
-    badgeText: 'text-emerald-400 font-bold'
-  }
+const COLORS = [
+  { levelColor: 'border border-amber-500/15 hover:border-amber-500/35', badgeBg: 'bg-amber-500/10 border-amber-500/30', badgeText: 'text-amber-400 font-bold' },
+  { levelColor: 'border border-blue-500/15 hover:border-blue-500/35', badgeBg: 'bg-blue-500/10 border-blue-500/30', badgeText: 'text-blue-400 font-bold' },
+  { levelColor: 'border border-purple-500/15 hover:border-purple-500/35', badgeBg: 'bg-purple-500/10 border-purple-500/30', badgeText: 'text-purple-400 font-bold' },
+  { levelColor: 'border border-emerald-500/15 hover:border-emerald-500/35', badgeBg: 'bg-emerald-500/10 border-emerald-500/30', badgeText: 'text-emerald-400 font-bold' },
 ];
 
 export default function ExamsPage() {
   const router = useRouter();
+  const { user } = useAuth();
+  
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [purchasingId, setPurchasingId] = useState<string | null>(null);
+  
+  const [coursesData, setCoursesData] = useState<CoursePackage[]>([]);
+  const [entitlements, setEntitlements] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (user?.uid) {
+      getUserEntitlements(user.uid).then(data => {
+        setEntitlements(data);
+      }).catch(err => console.error(err));
+    } else {
+      setEntitlements([]);
+    }
+  }, [user?.uid]);
+
+  useEffect(() => {
+    async function load() {
+      try {
+        const data = await getCourses();
+        const published = data.filter((c: any) => c.isPublished);
+        
+        const mapped = published.map((course: any) => {
+          let colorIndex = 0;
+          if (course.track === 'Track B') colorIndex = 1;
+          else if (course.track === 'Track C') colorIndex = 2;
+          else if (course.track === 'Track D') colorIndex = 3;
+          
+          const color = COLORS[colorIndex];
+          return {
+            id: course.id,
+            title: course.title || 'Untitled Course',
+            description: course.description || '',
+            trackBadge: `${course.track || 'Track A'} • ${course.tier || 'Foundation Tier'}`,
+            category: course.tier || 'Foundation',
+            mockCount: `${course.mockCount || 0} Full Mocks`,
+            notesCount: `${course.notesCount || 0} PDF Notes`,
+            features: [
+              'Exact CBT terminal simulation with flag & review',
+              'Step-by-step matrix derivation walkthroughs',
+              'Instant diagnostic score tracking & item analysis'
+            ],
+            ...color
+          } as CoursePackage;
+        });
+        
+        setCoursesData(mapped);
+      } catch (err) {
+        console.error("Failed to load courses", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    load();
+  }, []);
 
   const categories = ['All', 'Foundation', 'Advanced', 'Quantitative', 'Comprehensive'];
 
   const filteredCourses = useMemo(() => {
-    return COURSES_DATA.filter((course) => {
+    return coursesData.filter((course) => {
       const matchesSearch =
         course.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         course.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -153,21 +114,35 @@ export default function ExamsPage() {
 
       return matchesSearch && matchesCategory;
     });
-  }, [searchQuery, selectedCategory]);
+  }, [coursesData, searchQuery, selectedCategory]);
+
+  const getCourseStatus = (courseId: string) => {
+    const entitlement = entitlements.find(e => e.courseId === courseId);
+    if (!entitlement) return null;
+
+    const diffDays = Math.ceil((entitlement.expiresAt.getTime() - new Date().getTime()) / (1000 * 3600 * 24));
+    if (diffDays <= 0) return { status: 'expired', daysLeft: 0 };
+    return { status: 'active', daysLeft: diffDays };
+  };
 
   const handleBuyNow = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     setPurchasingId(id);
-    const selectedCourse = COURSES_DATA.find(c => c.id === id);
     setTimeout(() => {
       setPurchasingId(null);
-      if (selectedCourse) {
-        router.push(`/pricing?track=${encodeURIComponent(selectedCourse.title)}&badge=${encodeURIComponent(selectedCourse.trackBadge)}`);
+      if (!user) {
+        router.push(`/login?redirect=/pricing?courseId=${id}&track=${encodeURIComponent(coursesData.find(c => c.id === id)?.title || '')}`);
       } else {
-        router.push('/pricing');
+        router.push(`/pricing?courseId=${id}&track=${encodeURIComponent(coursesData.find(c => c.id === id)?.title || '')}`);
       }
     }, 400);
   };
+
+  if (loading) return (
+    <div className="min-h-screen bg-[#121419] flex items-center justify-center">
+      <Loader2 className="w-8 h-8 text-amber-500 animate-spin" />
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-[#121419] text-[#FBFBF9] pt-20">
@@ -345,20 +320,41 @@ export default function ExamsPage() {
                     </div>
 
                     {/* Bottom Action Button (Buy Now with NO price listed) */}
-                    <button
-                      onClick={(e) => handleBuyNow(course.id, e)}
-                      disabled={purchasingId === course.id}
-                      className="w-full py-3.5 px-6 rounded-xl bg-amber-500 hover:bg-amber-400 text-[#121419] font-bold text-sm tracking-wide shadow-md transition-all duration-300 flex items-center justify-center gap-2 group/btn focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-offset-2 focus:ring-offset-[#181A1F]"
-                    >
-                      {purchasingId === course.id ? (
-                        <span className="animate-pulse">Processing Candidate Order...</span>
-                      ) : (
-                        <>
-                          <span>Buy Now</span>
-                          <ArrowRight className="w-4 h-4 transition-transform group-hover/btn:translate-x-1" />
-                        </>
-                      )}
-                    </button>
+                    {(() => {
+                      const courseStatus = getCourseStatus(course.id);
+                      if (courseStatus?.status === 'active') {
+                        return (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              router.push('/dashboard');
+                            }}
+                            className="w-full py-3.5 px-6 rounded-xl bg-[#272B33] hover:bg-[#2c303a] text-white font-bold text-sm tracking-wide shadow-md transition-all duration-300 flex items-center justify-center gap-2 group/btn focus:outline-none"
+                          >
+                            <span>Resume Course</span>
+                            <span className="text-amber-500 font-mono text-[10px] uppercase ml-1">({courseStatus.daysLeft} days left)</span>
+                          </button>
+                        );
+                      }
+                      
+                      const isExpired = courseStatus?.status === 'expired';
+                      return (
+                        <button
+                          onClick={(e) => handleBuyNow(course.id, e)}
+                          disabled={purchasingId === course.id}
+                          className="w-full py-3.5 px-6 rounded-xl bg-amber-500 hover:bg-amber-400 text-[#121419] font-bold text-sm tracking-wide shadow-md transition-all duration-300 flex items-center justify-center gap-2 group/btn focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-offset-2 focus:ring-offset-[#181A1F]"
+                        >
+                          {purchasingId === course.id ? (
+                            <span className="animate-pulse">Processing...</span>
+                          ) : (
+                            <>
+                              <span>{isExpired ? 'Renew Access' : 'Buy Now'}</span>
+                              <ArrowRight className="w-4 h-4 transition-transform group-hover/btn:translate-x-1" />
+                            </>
+                          )}
+                        </button>
+                      );
+                    })()}
                   </div>
                 ))}
               </motion.div>
@@ -403,20 +399,41 @@ export default function ExamsPage() {
 
                     {/* Right: Action Button */}
                     <div className="w-full lg:w-auto flex-shrink-0">
-                      <button
-                        onClick={(e) => handleBuyNow(course.id, e)}
-                        disabled={purchasingId === course.id}
-                        className="w-full lg:w-48 py-3.5 px-6 rounded-xl bg-amber-500 hover:bg-amber-400 text-[#121419] font-bold text-sm tracking-wide shadow-md transition-all duration-300 flex items-center justify-center gap-2 group/btn focus:outline-none"
-                      >
-                        {purchasingId === course.id ? (
-                          <span className="animate-pulse">Processing...</span>
-                        ) : (
-                          <>
-                            <span>Buy Now</span>
-                            <ArrowRight className="w-4 h-4 transition-transform group-hover/btn:translate-x-1" />
-                          </>
-                        )}
-                      </button>
+                      {(() => {
+                        const courseStatus = getCourseStatus(course.id);
+                        if (courseStatus?.status === 'active') {
+                          return (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                router.push('/dashboard');
+                              }}
+                              className="w-full lg:w-48 py-3.5 px-6 rounded-xl bg-[#272B33] hover:bg-[#2c303a] text-white font-bold text-sm tracking-wide shadow-md transition-all duration-300 flex items-center justify-center gap-2 group/btn focus:outline-none"
+                            >
+                              <span>Resume Course</span>
+                              <span className="text-amber-500 font-mono text-[10px] uppercase ml-1">({courseStatus.daysLeft}d)</span>
+                            </button>
+                          );
+                        }
+                        
+                        const isExpired = courseStatus?.status === 'expired';
+                        return (
+                          <button
+                            onClick={(e) => handleBuyNow(course.id, e)}
+                            disabled={purchasingId === course.id}
+                            className="w-full lg:w-48 py-3.5 px-6 rounded-xl bg-amber-500 hover:bg-amber-400 text-[#121419] font-bold text-sm tracking-wide shadow-md transition-all duration-300 flex items-center justify-center gap-2 group/btn focus:outline-none"
+                          >
+                            {purchasingId === course.id ? (
+                              <span className="animate-pulse">Processing...</span>
+                            ) : (
+                              <>
+                                <span>{isExpired ? 'Renew Access' : 'Buy Now'}</span>
+                                <ArrowRight className="w-4 h-4 transition-transform group-hover/btn:translate-x-1" />
+                              </>
+                            )}
+                          </button>
+                        );
+                      })()}
                     </div>
                   </div>
                 ))}

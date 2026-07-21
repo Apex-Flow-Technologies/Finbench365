@@ -86,14 +86,19 @@ service cloud.firestore {
       allow read: if isAuthenticated() && (isAdminOrEditor() || 
                   (resource.data.isPublished == true && hasActiveEntitlement(resource.data.courseId)));
       allow write: if isAdminOrEditor();
-    }
-    
-    // Questions Collection
-    match /questions/{questionId} {
-      // Must have active entitlement for the course this question belongs to
-      allow read: if isAuthenticated() && (isAdminOrEditor() || 
-                  hasActiveEntitlement(getCourseIdForTest(resource.data.testId)));
-      allow write: if isAdminOrEditor();
+      
+      // Questions Subcollection
+      match /questions/{questionId} {
+        // Must have active entitlement for the course this question belongs to
+        allow read: if isAuthenticated() && (isAdminOrEditor() || 
+                    hasActiveEntitlement(getCourseIdForTest(testId)));
+        allow write: if isAdminOrEditor();
+      }
+      // Solutions Subcollection (Answers) - STRICTLY PROTECTED
+      match /solutions/{questionId} {
+        // Students can NEVER read solutions. Only the Backend API (via Admin SDK) or Editor/Admins can.
+        allow read, write: if isAdminOrEditor();
+      }
     }
     
     // Test Attempts Collection
@@ -101,16 +106,8 @@ service cloud.firestore {
       // Students can read their own attempts
       allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
       
-      // Students can start a new attempt ONLY if they have an active entitlement to the course
-      allow create: if isAuthenticated() && 
-                    request.resource.data.userId == request.auth.uid &&
-                    hasActiveEntitlement(getCourseIdForTest(request.resource.data.testId));
-      
-      // Students can update an attempt ONLY IF it is not marked as completed yet
-      allow update: if isAuthenticated() && 
-                    resource.data.userId == request.auth.uid && 
-                    resource.data.status != 'completed' &&
-                    isNotModifyingProtectedFields(); // Ensure they can't maliciously change testId etc
+      // Students CANNOT create attempts directly anymore. The Server API creates them.
+      allow create, update: if false; 
       
       allow delete: if isAdmin();
     }

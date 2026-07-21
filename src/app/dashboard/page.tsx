@@ -5,12 +5,17 @@ import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { useAuth } from '@/context/AuthContext';
 import { auth } from '@/lib/firebase/config';
 import { signOut } from 'firebase/auth';
-import { LogOut, BookOpen, Clock, Award, Layers, Sun, Moon } from 'lucide-react';
+import { LogOut, BookOpen, Clock, Award, Layers, Sun, Moon, Loader2 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { getUserEntitlements } from '@/lib/firebase/db';
+import { useRouter } from 'next/navigation';
 
 export default function DashboardPage() {
   const { user } = useAuth();
+  const router = useRouter();
   const [isLightMode, setIsLightMode] = useState(false);
+  const [entitlements, setEntitlements] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const savedTheme = localStorage.getItem('dashboard_theme');
@@ -18,6 +23,18 @@ export default function DashboardPage() {
       setIsLightMode(true);
     }
   }, []);
+
+  useEffect(() => {
+    if (user?.uid) {
+      getUserEntitlements(user.uid).then(data => {
+        setEntitlements(data);
+        setLoading(false);
+      }).catch(err => {
+        console.error(err);
+        setLoading(false);
+      });
+    }
+  }, [user?.uid]);
 
   const toggleTheme = () => {
     setIsLightMode(!isLightMode);
@@ -81,50 +98,99 @@ export default function DashboardPage() {
             <section>
               <h2 className="text-xl font-bold mb-4">Your Enrolled Tracks</h2>
               
-              <div className={`rounded-2xl p-6 border transition-colors duration-300 ${
-                isLightMode 
-                  ? 'bg-white border-[#E3E3DE] shadow-sm' 
-                  : 'bg-[#181A1F] border-[#282C36] shadow-lg shadow-black/40'
-              }`}>
-                <div className="flex flex-col sm:flex-row gap-6">
-                  <div className={`w-16 h-16 rounded-xl flex items-center justify-center shrink-0 ${
-                    isLightMode ? 'bg-amber-500/10' : 'bg-amber-500/10 border border-amber-500/20'
-                  }`}>
-                    <Layers className={`w-8 h-8 ${isLightMode ? 'text-amber-600' : 'text-amber-500'}`} />
-                  </div>
-                  <div className="flex-1">
-                    <h3 className={`font-bold text-lg mb-1 ${isLightMode ? 'text-[#181A1F]' : 'text-white'}`}>Quantitative Risk Mastery — Level I</h3>
-                    <p className={`text-sm mb-4 ${isLightMode ? 'text-slate-500' : 'text-slate-400'}`}>Foundation Tier • 30 Days Access</p>
-                    
-                    <div className={`w-full rounded-full h-2 mb-2 ${
-                      isLightMode ? 'bg-slate-100' : 'bg-[#121419] border border-[#282C36]'
-                    }`}>
-                      <div className="bg-amber-500 h-2 rounded-full" style={{ width: '15%' }}></div>
-                    </div>
-                    <div className={`flex justify-between text-xs font-mono ${isLightMode ? 'text-slate-400' : 'text-slate-400'}`}>
-                      <span>15% Completed</span>
-                      <span>Expires in 28 days</span>
-                    </div>
-
-                    <div className="mt-6 flex flex-wrap gap-3">
-                      <button className={`px-5 py-2.5 rounded-lg text-sm font-bold shadow-md transition-colors ${
-                        isLightMode 
-                          ? 'bg-[#181A1F] text-white hover:bg-[#272B33]' 
-                          : 'bg-amber-500 text-[#121419] hover:bg-amber-400'
-                      }`}>
-                        Resume Course
-                      </button>
-                      <button className={`px-5 py-2.5 border rounded-lg text-sm font-bold shadow-sm transition-colors ${
-                        isLightMode 
-                          ? 'bg-white border-[#E3E3DE] text-[#181A1F] hover:bg-slate-50' 
-                          : 'bg-[#121419] border-[#282C36] text-white hover:bg-[#272B33]'
-                      }`}>
-                        View Study Notes
-                      </button>
-                    </div>
-                  </div>
+              {loading ? (
+                <div className="py-12 flex justify-center items-center">
+                  <Loader2 className="w-8 h-8 animate-spin text-amber-500" />
                 </div>
-              </div>
+              ) : entitlements.length === 0 ? (
+                <div className={`rounded-2xl p-12 border text-center transition-colors duration-300 ${isLightMode ? 'bg-white border-[#E3E3DE]' : 'bg-[#181A1F] border-[#282C36]'}`}>
+                  <Layers className={`w-12 h-12 mx-auto mb-4 ${isLightMode ? 'text-slate-300' : 'text-slate-600'}`} />
+                  <h3 className={`text-lg font-bold mb-2 ${isLightMode ? 'text-[#181A1F]' : 'text-white'}`}>No Active Enrollments</h3>
+                  <p className={`text-sm mb-6 ${isLightMode ? 'text-slate-500' : 'text-slate-400'}`}>You haven't enrolled in any tracks yet.</p>
+                  <button 
+                    onClick={() => router.push('/exams')}
+                    className="px-6 py-3 rounded-lg font-bold bg-amber-500 text-[#121419] hover:bg-amber-400 transition-all duration-200 active:scale-95"
+                  >
+                    Browse Curriculum
+                  </button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {entitlements.map((entitlement: any) => {
+                    const diffDays = Math.ceil((entitlement.expiresAt.getTime() - new Date().getTime()) / (1000 * 3600 * 24));
+                    const isExpired = diffDays <= 0;
+                    const daysTotal = entitlement.durationDays;
+                    const daysPassed = daysTotal - (isExpired ? 0 : diffDays);
+                    const progressPct = isExpired ? 100 : Math.min(100, Math.max(0, (daysPassed / daysTotal) * 100));
+
+                    return (
+                      <div key={entitlement.courseId} className={`rounded-2xl border transition-all duration-300 overflow-hidden flex flex-col ${
+                        isLightMode 
+                          ? 'bg-white border-[#E3E3DE] hover:shadow-lg' 
+                          : 'bg-[#181A1F] border-[#282C36] hover:shadow-xl hover:shadow-black/50 hover:border-slate-700'
+                      }`}>
+                        {/* Card Header / Banner */}
+                        <div className={`h-24 px-6 flex items-end pb-4 ${
+                          isLightMode ? 'bg-gradient-to-r from-amber-100 to-orange-100' : 'bg-gradient-to-r from-[#1E2128] to-[#272B33]'
+                        }`}>
+                          <div className={`w-12 h-12 rounded-xl flex items-center justify-center -mb-10 shadow-lg ${
+                            isLightMode ? 'bg-white' : 'bg-[#121419]'
+                          }`}>
+                            <Layers className={`w-6 h-6 ${isLightMode ? 'text-amber-500' : 'text-amber-500'}`} />
+                          </div>
+                        </div>
+
+                        {/* Card Body */}
+                        <div className="p-6 pt-10 flex-1 flex flex-col">
+                          <h3 className={`font-bold text-xl mb-1 ${isLightMode ? 'text-[#181A1F]' : 'text-white'}`}>{entitlement.course.title}</h3>
+                          <p className={`text-sm mb-6 ${isLightMode ? 'text-slate-500' : 'text-slate-400'}`}>
+                            {entitlement.course.tier || 'Foundation'} Tier • {entitlement.durationDays} Days Access
+                          </p>
+                            
+                            <div className={`w-full rounded-full h-2 mb-2 ${
+                              isLightMode ? 'bg-slate-100' : 'bg-[#121419] border border-[#282C36]'
+                            }`}>
+                              <div className={`${isExpired ? 'bg-red-500' : 'bg-amber-500'} h-2 rounded-full`} style={{ width: `${progressPct}%` }}></div>
+                            </div>
+                            <div className={`flex justify-between text-xs font-mono ${isLightMode ? 'text-slate-400' : 'text-slate-400'}`}>
+                              <span>{isExpired ? 'Access Expired' : 'Active'}</span>
+                              <span className={isExpired ? 'text-red-500' : ''}>
+                                {isExpired ? 'Expired' : `Expires in ${diffDays} days`}
+                              </span>
+                            </div>
+
+                            <div className="mt-6 flex flex-wrap gap-3">
+                              {isExpired ? (
+                                <button 
+                                  onClick={() => router.push(`/pricing?courseId=${entitlement.courseId}&track=${encodeURIComponent(entitlement.course.title)}`)}
+                                  className={`px-5 py-2.5 rounded-lg text-sm font-bold shadow-md transition-colors ${
+                                    isLightMode 
+                                      ? 'bg-[#181A1F] text-white hover:bg-[#272B33]' 
+                                      : 'bg-amber-500 text-[#121419] hover:bg-amber-400'
+                                  }`}
+                                >
+                                  Renew Access
+                                </button>
+                              ) : (
+                                <>
+                                  <button 
+                                    onClick={() => router.push(`/dashboard/courses/${entitlement.courseId}`)}
+                                    className={`w-full py-3 rounded-xl font-bold text-sm shadow-md flex items-center justify-center gap-2 transition-all duration-200 active:scale-[0.98] ${
+                                      isLightMode
+                                      ? 'bg-amber-500 text-[#121419] hover:bg-amber-400' 
+                                      : 'bg-amber-500 text-[#121419] hover:bg-amber-400'
+                                    }`}>
+                                    Open Course Hub
+                                  </button>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                    );
+                  })}
+                </div>
+              )}
             </section>
           </div>
 

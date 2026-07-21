@@ -11,42 +11,41 @@ import {
   ArrowRight, 
   Zap, 
   BookOpen, 
-  ArrowLeft 
+  ArrowLeft,
+  Loader2
 } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
+import { enrollUserInCourse } from '@/lib/firebase/db';
 
 function PricingContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const { user } = useAuth();
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
-
+  const courseId = searchParams?.get('courseId');
   const trackTitle = searchParams?.get('track') || 'Institutional Quantitative Certification Track';
   const trackBadge = searchParams?.get('badge') || 'Professional Syllabus Access';
 
-  const handleSelectPlan = (plan: { name: string; price: string; days: string }) => {
-    setSelectedPlan(plan.name);
-    setTimeout(() => {
-      setSelectedPlan(null);
-      const numericPrice = plan.price.replace('₹', '');
-      const targetCheckoutUrl = `/checkout?track=${encodeURIComponent(trackTitle)}&plan=${encodeURIComponent(plan.name)}&days=${encodeURIComponent(plan.days)}&price=${numericPrice}`;
-      
-      // Check if candidate is logged in before proceeding to checkout
-      const userJson = localStorage.getItem('finbench_user');
-      let isLoggedIn = false;
-      if (userJson) {
-        try {
-          const parsed = JSON.parse(userJson);
-          if (parsed.loggedIn) isLoggedIn = true;
-        } catch {}
-      }
+  const handleSelectPlan = async (plan: { name: string; price: string; days: string }) => {
+    if (!user || !courseId) {
+      router.push('/exams');
+      return;
+    }
 
-      if (!isLoggedIn) {
-        // Redirect to Login/Registration first, with exact return destination
-        router.push(`/login?redirect=${encodeURIComponent(targetCheckoutUrl)}`);
-      } else {
-        // Proceed straight to Checkout
-        router.push(targetCheckoutUrl);
-      }
-    }, 350);
+    setSelectedPlan(plan.name);
+    
+    // Parse duration from plan.days (e.g. '30 Days Access' -> 30)
+    const durationMatch = plan.days.match(/(\d+)/);
+    const durationDays = durationMatch ? parseInt(durationMatch[1]) : 30;
+
+    try {
+      await enrollUserInCourse(user.uid, courseId, durationDays);
+      router.push('/dashboard');
+    } catch (err) {
+      console.error(err);
+      alert("Validation failed.");
+      setSelectedPlan(null);
+    }
   };
 
   const plans = [
@@ -226,16 +225,20 @@ function PricingContent() {
                 </div>
 
                 {/* Action Button */}
-                <button
+                <button 
                   onClick={() => handleSelectPlan(plan)}
                   disabled={selectedPlan === plan.name}
-                  className={`w-full py-4 px-6 rounded-2xl font-bold transition-all duration-300 flex items-center justify-center gap-2.5 shadow-md focus:outline-none ${btnClass}`}
+                  className={`w-full py-4 rounded-xl font-bold flex items-center justify-center gap-2 transition-all duration-300 ${
+                    plan.popular
+                      ? 'bg-amber-500 text-[#121419] hover:bg-amber-400 shadow-[0_0_20px_rgba(245,158,11,0.2)] hover:shadow-[0_0_25px_rgba(245,158,11,0.4)]'
+                      : 'bg-[#272B33] text-white hover:bg-slate-700'
+                  }`}
                 >
                   {selectedPlan === plan.name ? (
-                    <span className="animate-pulse">Checking Account Status...</span>
+                     <Loader2 className="w-5 h-5 animate-spin" />
                   ) : (
                     <>
-                      <span>{plan.popular ? 'Unlock 30-Day Access' : 'Select Plan & Checkout'}</span>
+                      {plan.popular ? `Unlock ${plan.days.split(' ')[0]}-Day Access` : 'Select Plan & Checkout'}
                       <ArrowRight className="w-4 h-4" />
                     </>
                   )}
@@ -243,6 +246,9 @@ function PricingContent() {
               </motion.div>
             );
           })}
+        </div>
+        <div className="mt-8 text-center text-sm text-slate-400 font-mono">
+          * All prices are in Indian Rupees (INR) and are inclusive of 18% GST.
         </div>
       </section>
 

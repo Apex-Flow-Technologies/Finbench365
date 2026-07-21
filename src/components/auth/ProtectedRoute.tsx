@@ -13,7 +13,7 @@ export default function ProtectedRoute({ children, requiredRole }: { children: R
       if (!user) {
         // Not logged in, redirect to login
         router.push('/login');
-      } else if (requiredRole && user.role !== requiredRole && user.role !== 'admin') {
+      } else if (requiredRole && user.role?.toLowerCase() !== requiredRole.toLowerCase() && user.role?.toLowerCase() !== 'admin') {
         // Doesn't have required role (admins can access anything)
         router.push('/dashboard');
       }
@@ -28,7 +28,7 @@ export default function ProtectedRoute({ children, requiredRole }: { children: R
     );
   }
 
-  if (!user || (requiredRole && user.role !== requiredRole && user.role !== 'admin')) {
+  if (!user || (requiredRole && user.role?.toLowerCase() !== requiredRole.toLowerCase() && user.role?.toLowerCase() !== 'admin')) {
     return null;
   }
 

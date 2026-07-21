@@ -37,10 +37,13 @@ export default function CourseBuilderPage({ params }: { params: Promise<{ id: st
     try {
       // 1. Save Course Details
       await updateCourse(courseId, {
-        title: course.title,
-        description: course.description,
-        isPublished: course.isPublished,
-        tier: course.tier
+        title: course.title || 'Untitled Course',
+        description: course.description || '',
+        isPublished: course.isPublished || false,
+        track: course.track || 'Track A',
+        tier: course.tier || 'Foundation',
+        mockCount: course.mockCount || 0,
+        notesCount: course.notesCount || 0,
       });
 
       // 2. Save all chapter updates
@@ -112,24 +115,60 @@ export default function CourseBuilderPage({ params }: { params: Promise<{ id: st
               <input
                 type="text"
                 value={course.title}
-                onChange={(e) => setCourse({...course, title: e.target.value})}
-                className="w-full bg-[#181A1F] border border-[#282C36] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-amber-500"
+                onChange={(e) => setCourse({ ...course, title: e.target.value })}
+                className="w-full bg-[#121419] border border-[#282C36] rounded-lg px-4 py-3 text-white focus:outline-none focus:border-amber-500 font-bold"
               />
             </div>
             
             <div className="space-y-2">
-              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Pricing Tier</label>
-              <select 
-                value={course.tier || 'Foundation'}
-                onChange={(e) => setCourse({...course, tier: e.target.value})}
-                className="w-full bg-[#181A1F] border border-[#282C36] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-amber-500"
+              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Track Selection</label>
+              <select
+                value={course.track || 'Track A'}
+                onChange={(e) => setCourse({ ...course, track: e.target.value })}
+                className="w-full bg-[#121419] border border-[#282C36] rounded-lg px-4 py-3 text-white focus:outline-none focus:border-amber-500 font-bold appearance-none"
               >
-                <option value="Sprint">Sprint Revision (10 Days)</option>
-                <option value="Comprehensive">Comprehensive (30 Days)</option>
-                <option value="Foundation">Foundation (60 Days)</option>
+                <option value="Track A">Track A</option>
+                <option value="Track B">Track B</option>
+                <option value="Track C">Track C</option>
+                <option value="Track D">Track D</option>
               </select>
             </div>
 
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Tier Selection</label>
+              <select
+                value={course.tier || 'Foundation'}
+                onChange={(e) => setCourse({ ...course, tier: e.target.value })}
+                className="w-full bg-[#121419] border border-[#282C36] rounded-lg px-4 py-3 text-white focus:outline-none focus:border-amber-500 font-bold appearance-none"
+              >
+                <option value="Foundation">Foundation Tier</option>
+                <option value="Advanced">Advanced Tier</option>
+                <option value="Quantitative">Quantitative Tier</option>
+                <option value="Comprehensive">Comprehensive Tier</option>
+              </select>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Mock Count</label>
+                <input
+                  type="number"
+                  value={course.mockCount || 0}
+                  onChange={(e) => setCourse({ ...course, mockCount: parseInt(e.target.value) || 0 })}
+                  className="w-full bg-[#121419] border border-[#282C36] rounded-lg px-4 py-3 text-white focus:outline-none focus:border-amber-500 font-bold"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Notes Count</label>
+                <input
+                  type="number"
+                  value={course.notesCount || 0}
+                  onChange={(e) => setCourse({ ...course, notesCount: parseInt(e.target.value) || 0 })}
+                  className="w-full bg-[#121419] border border-[#282C36] rounded-lg px-4 py-3 text-white focus:outline-none focus:border-amber-500 font-bold"
+                />
+              </div>
+            </div>
+            
             <div className="space-y-2 md:col-span-2">
               <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Description</label>
               <textarea
@@ -137,6 +176,39 @@ export default function CourseBuilderPage({ params }: { params: Promise<{ id: st
                 onChange={(e) => setCourse({...course, description: e.target.value})}
                 className="w-full bg-[#181A1F] border border-[#282C36] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-amber-500 h-24 resize-y"
               />
+            </div>
+
+            <div className="space-y-2 md:col-span-2 mt-4 pt-4 border-t border-[#282C36]">
+              <label className="text-xs font-bold text-amber-500 uppercase tracking-wider flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4" /> Main Course Certification Exam
+              </label>
+              {course.mockTestId ? (
+                <div className="flex items-center gap-4 bg-[#181A1F] border border-[#282C36] rounded-xl p-4">
+                  <span className="text-sm font-bold text-emerald-400">Final Exam Attached</span>
+                  <button 
+                    onClick={() => router.push(`/editor/tests/${course.mockTestId}`)}
+                    className="ml-auto text-xs font-bold text-amber-500 hover:text-amber-400 underline underline-offset-4"
+                  >
+                    Edit Exam
+                  </button>
+                  <button 
+                    onClick={() => setCourse({ ...course, mockTestId: null })}
+                    className="text-xs font-bold text-red-500 hover:text-red-400 underline underline-offset-4 ml-4"
+                  >
+                    Remove
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-4 bg-[#181A1F] border border-[#282C36] rounded-xl p-4">
+                  <span className="text-sm text-slate-400">No final exam attached to this course yet.</span>
+                  <button 
+                    onClick={() => router.push(`/editor/tests/new?courseId=${courseId}&type=exam`)}
+                    className="ml-auto flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-400 text-[#121419] rounded-lg font-bold text-sm shadow-md transition-colors"
+                  >
+                    <Plus className="w-4 h-4" /> Create Final Exam
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </section>
@@ -205,21 +277,20 @@ export default function CourseBuilderPage({ params }: { params: Promise<{ id: st
                       {chapter.mockTestId ? (
                         <div className="flex flex-col items-center justify-center w-full h-full pb-2">
                           <CheckCircle2 className="w-6 h-6 text-emerald-500 mb-1" />
-                          <span className="text-sm font-bold text-emerald-500 mb-2">Test Attached successfully</span>
+                          <span className="text-sm font-bold text-emerald-500 mb-2">Practice Test Attached</span>
                           <button 
                             onClick={() => router.push(`/editor/tests/${chapter.mockTestId}`)}
                             className="text-xs font-bold text-amber-500 hover:text-amber-400 underline decoration-amber-500/30 underline-offset-4"
                           >
-                            Edit Questions
+                            Edit Test Questions
                           </button>
                         </div>
                       ) : (
                         <button 
-                          onClick={() => router.push(`/editor/tests/new?chapterId=${chapter.id}`)}
-                          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-500 hover:bg-amber-500 hover:text-[#121419] transition-colors text-sm font-bold mt-1"
+                          onClick={() => router.push(`/editor/tests/new?chapterId=${chapter.id}&courseId=${courseId}&type=practice`)}
+                          className="w-full py-2 bg-[#272B33] hover:bg-[#323842] text-white rounded-lg font-bold text-sm transition-colors mt-2"
                         >
-                          <BookOpen className="w-4 h-4" />
-                          Import Mock Test (.docx)
+                          + Create Practice Test
                         </button>
                       )}
                     </div>

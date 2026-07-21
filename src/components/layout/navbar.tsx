@@ -50,7 +50,7 @@ export function Navbar() {
     }
   };
 
-  if (mounted && pathname.startsWith('/editor')) {
+  if (mounted && (pathname.startsWith('/editor') || pathname.startsWith('/admin'))) {
     return null;
   }
 
@@ -119,7 +119,7 @@ export function Navbar() {
                 : 'bg-white text-[#181A1F] hover:bg-[#F2F2EC] hover:shadow-[0_0_24px_rgba(255,255,255,0.2)]'
               }`}
           >
-            {user ? 'Go to Dashboard' : 'Candidate Login'}
+            {user ? 'Go to Dashboard' : 'Login'}
           </button>
         </div>
 
@@ -175,7 +175,7 @@ export function Navbar() {
                   }}
                   className="w-full py-3 text-center rounded-lg bg-[#181A1F] text-white font-bold flex items-center justify-center gap-2 shadow-sm hover:bg-[#272B33] transition-colors"
                 >
-                  {user ? 'Go to Dashboard' : 'Candidate Login'}
+                  {user ? 'Go to Dashboard' : 'Login'}
                 </button>
               </div>
             </div>

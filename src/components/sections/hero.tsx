@@ -63,7 +63,7 @@ export function Hero() {
           >
             <a
               href="/exams"
-              className="group inline-flex items-center justify-center gap-3 px-8 py-4 rounded-xl bg-white text-[#16181D] font-semibold text-base shadow-[0_4px_24px_rgba(255,255,255,0.18)] hover:bg-[#EFEFEA] hover:scale-[1.01] transition-all duration-300"
+              className="group inline-flex items-center justify-center gap-3 px-8 py-4 rounded-xl bg-white text-[#16181D] font-semibold text-base shadow-[0_4px_24px_rgba(255,255,255,0.18)] hover:bg-[#EFEFEA] hover:scale-[1.01] active:scale-[0.98] transition-all duration-200"
             >
               <span>Explore Exams</span>
               <ArrowUpRight className="w-5 h-5 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5 text-[#16181D]" />

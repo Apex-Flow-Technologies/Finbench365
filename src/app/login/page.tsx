@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Lock, 
@@ -33,6 +34,7 @@ function LoginContent() {
   const [org, setOrg] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const [agreeLegal, setAgreeLegal] = useState(false);
   
   const { user, loading } = useAuth();
 
@@ -48,6 +50,11 @@ function LoginContent() {
     setErrorMsg('');
     if (!email || !password || (activeTab === 'signup' && !name)) {
       setErrorMsg('Please fill in all required credentials.');
+      return;
+    }
+    
+    if (activeTab === 'signup' && !agreeLegal) {
+      setErrorMsg('You must agree to the Terms of Service and Privacy Policy to create an account.');
       return;
     }
 
@@ -262,6 +269,21 @@ function LoginContent() {
                         className="w-full pl-10 pr-4 py-3 rounded-xl bg-[#121419] border border-[#282C36] text-white placeholder-slate-500 text-sm font-sans focus:outline-none focus:border-amber-500 transition-colors"
                       />
                     </div>
+                  </div>
+                )}
+                
+                {activeTab === 'signup' && (
+                  <div className="flex items-start gap-3 mt-4 mb-2">
+                    <input
+                      type="checkbox"
+                      id="legal-agreement"
+                      checked={agreeLegal}
+                      onChange={(e) => setAgreeLegal(e.target.checked)}
+                      className="mt-1 w-4 h-4 rounded border-[#282C36] bg-[#121419] checked:bg-amber-500 checked:border-amber-500 focus:ring-amber-500 focus:ring-offset-0 transition-colors"
+                    />
+                    <label htmlFor="legal-agreement" className="text-xs text-slate-400 leading-relaxed">
+                      I agree to the <Link href="/terms" className="text-amber-500 hover:underline">Terms of Service</Link> and <Link href="/privacy" className="text-amber-500 hover:underline">Privacy Policy</Link>.
+                    </label>
                   </div>
                 )}
 

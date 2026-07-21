@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { ArrowUpRight, ShieldCheck } from 'lucide-react';
 import { usePathname } from 'next/navigation';
+import Link from 'next/link';
 
 export function Footer() {
   const pathname = usePathname();
@@ -142,19 +143,20 @@ export function Footer() {
         </div>
 
         {/* Bottom Legal & Copyright Section */}
-        <div className="pt-8 flex flex-col md:flex-row items-center justify-between gap-6 text-xs text-slate-500 font-mono">
-          <div>
-            © {new Date().getFullYear()} FinBench365 Inc. All rights reserved. Built with academic rigor and mathematical precision.
+        <div className="pt-8 flex flex-col items-center gap-6 text-xs text-slate-500 font-mono text-center">
+          <div className="flex flex-wrap justify-center gap-x-6 gap-y-3 font-sans text-sm">
+            <Link href="/disclaimer" className="hover:text-amber-400 transition-colors">Disclaimer</Link>
+            <Link href="/terms" className="hover:text-amber-400 transition-colors">Terms of Service</Link>
+            <Link href="/privacy" className="hover:text-amber-400 transition-colors">Privacy Policy</Link>
+            <Link href="/refunds" className="hover:text-amber-400 transition-colors">Refund & Cancellation Policy</Link>
+            <Link href="/contact" className="hover:text-amber-400 transition-colors">Contact & Grievance</Link>
           </div>
-          <div className="flex items-center gap-6">
-            <a href="#contact" className="hover:text-slate-400 transition-colors">Privacy Policy</a>
-            <a href="#contact" className="hover:text-slate-400 transition-colors">Terms of Service</a>
-            <a href="#contact" className="hover:text-slate-400 transition-colors">Institutional Licensing</a>
+          <div className="mt-4 pt-6 border-t border-[#20232B] text-[11px] text-slate-500 leading-relaxed max-w-5xl font-sans text-justify">
+            FinExamsEdge is an independent exam-preparation platform. We are not affiliated with, endorsed by, sponsored by, or in any way officially connected with the National Institute of Securities Markets (NISM), the Securities and Exchange Board of India (SEBI), or any other regulator, exchange, or certification body. "NISM", "SEBI" and related names, marks and logos are the property of their respective owners and are used on this website solely for identification and descriptive purposes; such use does not imply any endorsement. All practice questions on FinExamsEdge are original content and are not actual exam questions. FinExamsEdge does not guarantee any exam result and issues no certification.
           </div>
-        </div>
-
-        <div className="mt-6 pt-6 border-t border-[#20232B] text-[11px] text-slate-600 leading-relaxed max-w-4xl font-sans">
-          Disclaimer: Trademarks and certification names mentioned are the property of their respective governing bodies. FinBench365 is an independent quantitative preparation platform not affiliated with, endorsed by, or sponsored by any certification board. All questions in our platform are algorithmic variations created by FinBench365 and are not verbatim questions from prior official examinations.
+          <div className="mt-2">
+            © {new Date().getFullYear()} FinExamsEdge EdTech Private Limited. All rights reserved.
+          </div>
         </div>
       </div>
     </footer>

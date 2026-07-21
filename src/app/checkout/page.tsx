@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   CheckCircle2, 
@@ -44,6 +45,7 @@ function CheckoutContent() {
   const [showRazorpayModal, setShowRazorpayModal] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [orderCompleted, setOrderCompleted] = useState(false);
+  const [agreeLegal, setAgreeLegal] = useState(false);
 
   // Auto-populate logged-in user details
   useEffect(() => {
@@ -71,6 +73,10 @@ function CheckoutContent() {
     e.preventDefault();
     if (!name || !email || !phone) {
       alert('Please fill in your Name, Email, and Phone so we can link your CBT license.');
+      return;
+    }
+    if (!agreeLegal) {
+      alert('You must agree to the Terms and the Refund & Cancellation Policy to proceed.');
       return;
     }
     setShowRazorpayModal(true);
@@ -131,7 +137,7 @@ function CheckoutContent() {
           <div className="flex flex-col sm:flex-row gap-3 pt-2">
             <button
               onClick={() => router.push('/exams')}
-              className="flex-1 py-3.5 px-6 rounded-xl bg-amber-500 hover:bg-amber-400 text-[#121419] font-bold text-sm tracking-wide shadow-md transition-colors"
+              className="flex-1 py-3.5 px-6 rounded-xl bg-amber-500 hover:bg-amber-400 text-[#121419] font-bold text-sm tracking-wide shadow-md transition-all duration-200 active:scale-[0.98]"
             >
               Enter CBT Examination Terminal
             </button>
@@ -475,11 +481,24 @@ function CheckoutContent() {
                 </div>
               </div>
 
+              <div className="flex items-start gap-3 mb-2">
+                <input
+                  type="checkbox"
+                  id="checkout-legal"
+                  checked={agreeLegal}
+                  onChange={(e) => setAgreeLegal(e.target.checked)}
+                  className="mt-1 w-4 h-4 rounded border-[#282C36] bg-[#121419] checked:bg-amber-500 checked:border-amber-500 focus:ring-amber-500 focus:ring-offset-0 transition-colors shrink-0"
+                />
+                <label htmlFor="checkout-legal" className="text-xs text-slate-400 leading-relaxed">
+                  I agree to the <Link href="/terms" className="text-amber-500 hover:underline">Terms of Service</Link> and the <Link href="/refunds" className="text-amber-500 hover:underline">Refund & Cancellation Policy</Link>. I understand that sales are final and access activates immediately upon payment.
+                </label>
+              </div>
+
               {/* Complete Payment via Razorpay Button */}
               <button
                 type="button"
                 onClick={handleOpenRazorpay}
-                className="w-full py-4 px-6 rounded-2xl bg-amber-500 hover:bg-amber-400 text-[#121419] font-extrabold text-base tracking-wide shadow-lg shadow-amber-500/25 transition-all duration-300 flex items-center justify-center gap-2 focus:outline-none"
+                className="w-full py-4 px-6 rounded-2xl bg-amber-500 hover:bg-amber-400 text-[#121419] font-extrabold text-base tracking-wide shadow-lg shadow-amber-500/25 active:scale-[0.98] transition-all duration-200 flex items-center justify-center gap-2 focus:outline-none"
               >
                 <Lock className="w-4 h-4 fill-[#121419]" />
                 <span>Pay via Razorpay • ₹{finalTotal.toFixed(2)}</span>

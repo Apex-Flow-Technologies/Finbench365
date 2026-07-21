@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, use, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { getMockTest, getTestQuestions, saveQuestionsBatch, createMockTest, updateChapter } from '@/lib/firebase/db';
+import { getMockTest, getTestQuestions, saveQuestionsBatch, createMockTest, updateChapter, updateCourse } from '@/lib/firebase/db';
 import { ParsedQuestion, parseDocxText } from '@/lib/parser';
 import * as mammoth from 'mammoth';
 import { UploadCloud, CheckCircle2, AlertCircle, Save, Plus, ChevronDown, ChevronUp, Trash2 } from 'lucide-react';
@@ -21,6 +21,8 @@ function TestBuilderContent({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const chapterId = searchParams.get('chapterId');
+  const courseId = searchParams.get('courseId');
+  const testType = searchParams.get('type') as 'practice' | 'exam' | null;
 
   const [test, setTest] = useState<any>(null);
   const [questions, setQuestions] = useState<any[]>([]);
@@ -119,23 +121,29 @@ function TestBuilderContent({ params }: { params: Promise<{ id: string }> }) {
       let currentTestId = testId;
 
       if (testId === 'new') {
-        if (!chapterId) {
-          alert("Error: No chapter ID provided to link this test to.");
+        if (!courseId) {
+          alert("Error: No course ID provided to link this test to.");
           setIsSaving(false);
           return;
         }
         
         currentTestId = await createMockTest({
-          title: `Mock Test`, 
-          durationMinutes: 120,
+          title: testType === 'exam' ? `Final Certification Exam` : `Practice Test`, 
+          durationMinutes: testType === 'exam' ? 180 : 120,
           totalQuestions: questions.length,
-          chapterId: chapterId 
+          chapterId: chapterId || undefined,
+          courseId: courseId,
+          type: testType || 'practice'
         });
 
-        await updateChapter(chapterId, { mockTestId: currentTestId });
+        if (chapterId) {
+          await updateChapter(chapterId, { mockTestId: currentTestId });
+        } else if (testType === 'exam') {
+          await updateCourse(courseId, { mockTestId: currentTestId });
+        }
       }
 
-      await saveQuestionsBatch(currentTestId, questions);
+      await saveQuestionsBatch(currentTestId, questions, test?.type || testType || 'practice');
       
       alert("Test created and questions saved securely to Firebase!");
       
