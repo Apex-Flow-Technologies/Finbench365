@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowUpRight, Menu, X } from 'lucide-react';
 
 import { usePathname, useRouter } from 'next/navigation';
+import { useAuth } from '@/context/AuthContext';
 
 export function Navbar() {
   const [mounted, setMounted] = useState(false);
@@ -12,6 +13,7 @@ export function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
+  const { user } = useAuth();
 
   useEffect(() => {
     setMounted(true);
@@ -27,7 +29,7 @@ export function Navbar() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const isScrolled = mounted && scrolled;
+  const isScrolled = mounted && (scrolled || pathname === '/dashboard');
 
   const scrollToSection = (e: React.MouseEvent<HTMLAnchorElement>, id: string) => {
     e.preventDefault();
@@ -47,6 +49,10 @@ export function Navbar() {
       });
     }
   };
+
+  if (mounted && pathname.startsWith('/editor')) {
+    return null;
+  }
 
   return (
     <header
@@ -107,13 +113,13 @@ export function Navbar() {
         {/* Action CTAs */}
         <div className="hidden sm:flex items-center gap-3">
           <button
-            onClick={() => router.push('/login')}
+            onClick={() => router.push(user ? '/dashboard' : '/login')}
             className={`px-5 py-2.5 text-sm font-bold rounded-lg transition-all duration-300 shadow-sm ${isScrolled
                 ? 'bg-[#181A1F] text-[#FBFBF9] hover:bg-[#272B33] hover:shadow-md'
                 : 'bg-white text-[#181A1F] hover:bg-[#F2F2EC] hover:shadow-[0_0_24px_rgba(255,255,255,0.2)]'
               }`}
           >
-            Candidate Login
+            {user ? 'Go to Dashboard' : 'Candidate Login'}
           </button>
         </div>
 
@@ -169,7 +175,7 @@ export function Navbar() {
                   }}
                   className="w-full py-3 text-center rounded-lg bg-[#181A1F] text-white font-bold flex items-center justify-center gap-2 shadow-sm hover:bg-[#272B33] transition-colors"
                 >
-                  Candidate Login
+                  {user ? 'Go to Dashboard' : 'Candidate Login'}
                 </button>
               </div>
             </div>

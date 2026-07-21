@@ -1,9 +1,15 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { ArrowUpRight, ShieldCheck } from 'lucide-react';
+import { usePathname } from 'next/navigation';
 
 export function Footer() {
+  const pathname = usePathname();
+  const [mounted, setMounted] = useState(false);
+  
+  useEffect(() => setMounted(true), []);
+
   const scrollToSection = (e: React.MouseEvent<HTMLAnchorElement>, id: string) => {
     e.preventDefault();
     const element = document.getElementById(id);
@@ -17,6 +23,10 @@ export function Footer() {
       });
     }
   };
+
+  if (mounted && pathname.startsWith('/editor')) {
+    return null;
+  }
 
   return (
     <footer className="bg-[#15171C] text-slate-400 pt-20 pb-12 border-t border-[#262A34] font-sans">

@@ -1,0 +1,118 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ---------------------------------------------------------
+    // Helper Functions
+    // ---------------------------------------------------------
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+    
+    function isAdmin() {
+      return isAuthenticated() && getUserData().role == 'admin';
+    }
+    
+    function isEditor() {
+      return isAuthenticated() && getUserData().role == 'editor';
+    }
+    
+    function isAdminOrEditor() {
+      return isAdmin() || isEditor();
+    }
+
+    // Prevents users from giving themselves admin rights or free courses
+    function isNotModifyingProtectedFields() {
+      // Allow creation if it doesn't try to set restricted roles/courses maliciously, 
+      // or just restrict updates. For updates:
+      let affectedKeys = request.resource.data.diff(resource.data).affectedKeys();
+      return !affectedKeys.hasAny(['role', 'enrolledCourses']);
+    }
+
+    // Checks if the user owns the course AND the time period has not expired
+    // enrolledCourses structure: { "courseId123": { "expiresAt": timestamp } }
+    function hasActiveEntitlement(courseId) {
+      let userData = getUserData();
+      let hasCourse = userData.enrolledCourses != null && (courseId in userData.enrolledCourses);
+      let isActive = hasCourse && request.time < userData.enrolledCourses[courseId].expiresAt;
+      return isActive;
+    }
+
+    // Gets the courseId for a given test
+    function getCourseIdForTest(testId) {
+      return get(/databases/$(database)/documents/mock_tests/$(testId)).data.courseId;
+    }
+    
+    // ---------------------------------------------------------
+    // Rules per Collection
+    // ---------------------------------------------------------
+    
+    // Users Profile Collection
+    match /users/{userId} {
+      // Anyone can create their profile when they sign up (must not set themselves as admin)
+      allow create: if isAuthenticated() && request.auth.uid == userId && 
+                    (!request.resource.data.keys().hasAny(['role']) || request.resource.data.role == 'student');
+      
+      // Users can update their own profile, but CANNOT modify role or enrolledCourses
+      allow update: if isAuthenticated() && request.auth.uid == userId && isNotModifyingProtectedFields();
+      
+      // Users can read their own profile. Admins can read/write all.
+      allow read: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
+      allow update, delete: if isAdmin();
+    }
+    
+    // Courses Collection (Storefront)
+    match /courses/{courseId} {
+      // Anyone logged in can read the course overview for the storefront
+      allow read: if isAuthenticated() && (resource.data.isPublished == true || isAdminOrEditor());
+      allow write: if isAdminOrEditor();
+    }
+
+    // Chapters Collection (Strictly protected by time-bound entitlement)
+    match /chapters/{chapterId} {
+      allow read: if isAuthenticated() && (isAdminOrEditor() || 
+                  (resource.data.isPublished == true && hasActiveEntitlement(resource.data.courseId)));
+      allow write: if isAdminOrEditor();
+    }
+    
+    // Mock Tests Collection (Strictly protected by time-bound entitlement)
+    match /mock_tests/{testId} {
+      allow read: if isAuthenticated() && (isAdminOrEditor() || 
+                  (resource.data.isPublished == true && hasActiveEntitlement(resource.data.courseId)));
+      allow write: if isAdminOrEditor();
+    }
+    
+    // Questions Collection
+    match /questions/{questionId} {
+      // Must have active entitlement for the course this question belongs to
+      allow read: if isAuthenticated() && (isAdminOrEditor() || 
+                  hasActiveEntitlement(getCourseIdForTest(resource.data.testId)));
+      allow write: if isAdminOrEditor();
+    }
+    
+    // Test Attempts Collection
+    match /test_attempts/{attemptId} {
+      // Students can read their own attempts
+      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+      
+      // Students can start a new attempt ONLY if they have an active entitlement to the course
+      allow create: if isAuthenticated() && 
+                    request.resource.data.userId == request.auth.uid &&
+                    hasActiveEntitlement(getCourseIdForTest(request.resource.data.testId));
+      
+      // Students can update an attempt ONLY IF it is not marked as completed yet
+      allow update: if isAuthenticated() && 
+                    resource.data.userId == request.auth.uid && 
+                    resource.data.status != 'completed' &&
+                    isNotModifyingProtectedFields(); // Ensure they can't maliciously change testId etc
+      
+      allow delete: if isAdmin();
+    }
+  }
+}

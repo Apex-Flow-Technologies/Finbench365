@@ -14,12 +14,16 @@ import {
   CheckCircle2,
   ArrowLeft
 } from 'lucide-react';
+import { auth, db } from '@/lib/firebase/config';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, updateProfile } from 'firebase/auth';
+import { doc, setDoc } from 'firebase/firestore';
+import { useAuth } from '@/context/AuthContext';
 
 function LoginContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
-  const redirectUrl = searchParams?.get('redirect') || '/exams';
+  const redirectUrl = searchParams?.get('redirect') || '/dashboard';
   const [activeTab, setActiveTab] = useState<'signin' | 'signup'>('signin');
 
   // Form State
@@ -28,45 +32,91 @@ function LoginContent() {
   const [password, setPassword] = useState('');
   const [org, setOrg] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [existingUser, setExistingUser] = useState<{ name: string; email: string } | null>(null);
+  const [errorMsg, setErrorMsg] = useState('');
+  
+  const { user, loading } = useAuth();
 
   useEffect(() => {
-    const saved = localStorage.getItem('finbench_user');
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        if (parsed.loggedIn) {
-          setExistingUser(parsed);
-        }
-      } catch {}
+    // If the user is already logged in, redirect them to the intended URL or dashboard
+    if (!loading && user) {
+      router.push(redirectUrl);
     }
-  }, []);
+  }, [user, loading, router, redirectUrl]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setErrorMsg('');
     if (!email || !password || (activeTab === 'signup' && !name)) {
-      alert('Please fill in all required institutional authentication credentials.');
+      setErrorMsg('Please fill in all required credentials.');
       return;
     }
 
     setIsSubmitting(true);
-    setTimeout(() => {
-      const userName = activeTab === 'signup' ? name : (email.split('@')[0] || 'Candidate');
-      const userObj = {
-        name: userName.charAt(0).toUpperCase() + userName.slice(1),
-        email: email,
-        loggedIn: true
-      };
-      localStorage.setItem('finbench_user', JSON.stringify(userObj));
+    
+    try {
+      if (activeTab === 'signin') {
+        // Sign In
+        await signInWithEmailAndPassword(auth, email, password);
+        // On success, the useEffect above will redirect them
+      } else {
+        // Sign Up
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        const newUser = userCredential.user;
+        
+        // Update display name
+        await updateProfile(newUser, {
+          displayName: name
+        });
+        
+        // Create user document in Firestore with default 'student' role
+        await setDoc(doc(db, 'users', newUser.uid), {
+          email: newUser.email,
+          name: name,
+          organization: org,
+          role: 'student',
+          createdAt: new Date().toISOString()
+        });
+        
+        // On success, the useEffect above will redirect them
+      }
+    } catch (error: any) {
+      console.error("Auth error:", error);
+      setErrorMsg(error.message || 'Authentication failed. Please try again.');
+    } finally {
       setIsSubmitting(false);
-      router.push(redirectUrl);
-    }, 700);
+    }
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('finbench_user');
-    setExistingUser(null);
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+    } catch (error) {
+      console.error("Error signing out:", error);
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#121419] flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-amber-500 border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
+  // If user is logged in, show a brief connecting screen before redirect happens
+  if (user) {
+    return (
+      <div className="min-h-screen bg-[#121419] flex flex-col items-center justify-center space-y-6">
+        <div className="w-16 h-16 rounded-2xl bg-[#181A1F] border border-[#282C36] flex items-center justify-center shadow-lg">
+          <CheckCircle2 className="w-8 h-8 text-emerald-500" />
+        </div>
+        <div className="text-center space-y-2">
+          <h2 className="text-xl font-bold text-white tracking-tight">Authentication Confirmed</h2>
+          <p className="text-sm text-slate-400 font-mono">Routing to secure portal...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen pt-24 pb-20 px-6 flex flex-col justify-between bg-[#121419] text-[#FBFBF9]">
@@ -100,36 +150,11 @@ function LoginContent() {
             </p>
           </div>
 
-          {existingUser ? (
-            <div className="space-y-6 text-center py-4">
-              <div className="p-5 rounded-2xl bg-[#121419] border border-[#282C36] space-y-2">
-                <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto" />
-                <div className="font-bold text-sm text-white">
-                  Signed in as {existingUser.name}
+              {errorMsg && (
+                <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-xs font-mono mb-4 text-center">
+                  {errorMsg}
                 </div>
-                <div className="text-xs font-mono text-slate-500">
-                  {existingUser.email}
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                <button
-                  onClick={() => router.push(redirectUrl)}
-                  className="w-full py-3.5 px-6 rounded-xl bg-amber-500 hover:bg-amber-400 text-[#121419] font-bold text-sm shadow-md transition-colors flex items-center justify-center gap-2"
-                >
-                  <span>Continue to Checkout</span>
-                  <ArrowRight className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={handleLogout}
-                  className="w-full py-3 px-6 rounded-xl border border-[#282C36] text-xs font-semibold text-slate-400 hover:text-white hover:bg-[#272B33] transition-colors"
-                >
-                  Sign Out & Switch Candidate Account
-                </button>
-              </div>
-            </div>
-          ) : (
-            <>
+              )}
               {/* Tabs */}
               <div className="grid grid-cols-2 gap-1 p-1 rounded-xl bg-[#121419] border border-[#282C36] mb-6">
                 <button
@@ -255,8 +280,6 @@ function LoginContent() {
                   )}
                 </button>
               </form>
-            </>
-          )}
 
           <div className="mt-6 pt-5 border-t border-[#282C36]/50 flex items-center justify-center gap-2 text-[11px] font-mono text-slate-400">
             <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
