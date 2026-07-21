@@ -6,13 +6,18 @@ let app;
 
 if (!getApps().length) {
   try {
-    app = initializeApp({
-      credential: cert({
-        projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 'dummy-project-id',
-        clientEmail: process.env.FIREBASE_CLIENT_EMAIL || 'dummy@dummy.com',
-        privateKey: (process.env.FIREBASE_PRIVATE_KEY || '-----BEGIN PRIVATE KEY-----\ndummy\n-----END PRIVATE KEY-----\n').replace(/\\n/g, '\n'),
-      }),
-    });
+      if (process.env.FIREBASE_PRIVATE_KEY) {
+        app = initializeApp({
+          credential: cert({
+            projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+            clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+            privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+          }),
+        });
+      } else {
+        // Initialize an empty app for Vercel build step to prevent crashes
+        app = initializeApp({ projectId: 'demo-project' });
+      }
   } catch (error: any) {
     console.error('Firebase admin initialization error', error.stack);
   }
