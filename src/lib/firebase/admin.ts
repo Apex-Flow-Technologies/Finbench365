@@ -24,5 +24,18 @@ if (!getApps().length) {
   }
 }
 
-export const adminDb = getFirestore();
-export const adminAuth = getAuth();
+let db: any;
+let auth: any;
+
+try {
+  db = getFirestore();
+  auth = getAuth();
+} catch (err) {
+  console.warn('Firebase Admin services not fully initialized (this is normal during Vercel builds if keys are missing)');
+  // Provide dummy objects so the build doesn't crash when files are evaluated
+  db = {} as any;
+  auth = {} as any;
+}
+
+export const adminDb = db;
+export const adminAuth = auth;
