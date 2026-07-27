@@ -21,21 +21,30 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import { PLAN_PRICING, GST_RATE } from '@/constants/pricing';
 
 function CheckoutContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
-  const trackTitle = searchParams?.get('track') || 'Quantitative Risk Mastery — Level I';
-  const planName = searchParams?.get('plan') || 'Plan 2 — 30 Days';
-  const planDays = searchParams?.get('days') || '30 Days Access';
-  const rawPrice = parseFloat(searchParams?.get('price') || '599');
-
-  // Calculations
-  const basePrice = isNaN(rawPrice) ? 599 : rawPrice;
-  const gstRate = 0.18;
-  const gstAmount = Math.round((basePrice * gstRate) * 100) / 100;
-  const finalTotal = Math.round((basePrice + gstAmount) * 100) / 100;
+  const planId = searchParams?.get('planId') || 'plan-30';
+  const courseId = searchParams?.get('courseId') || 'nism-va-mock-test-series';
+  const trackTitle = 'Institutional Quantitative Certification Track';
+  
+  const planData = PLAN_PRICING[planId] || PLAN_PRICING['plan-30'];
+  const planName = planData.name;
+  const planDays = `${planData.durationDays} Days Access`;
+  
+  // Base price is now strictly pulled from the local constant, ignoring any spoofed url params
+  const basePrice = planData.price;
+  const gstRate = GST_RATE;
+  
+  // We'll manage discount calculations dynamically based on validated coupons
+  const [discountPercent, setDiscountPercent] = useState(0);
+  
+  const discountedPrice = basePrice * (1 - discountPercent / 100);
+  const gstAmount = Math.round((discountedPrice * gstRate) * 100) / 100;
+  const finalTotal = Math.round((discountedPrice + gstAmount) * 100) / 100;
 
   const { user } = useAuth();
 
@@ -75,6 +84,7 @@ function CheckoutContent() {
       const data = await res.json();
       if (res.ok && data.valid) {
         setCouponApplied(true);
+        setDiscountPercent(data.discountPercent || 0);
       } else {
         setCouponError(data.message || 'Invalid coupon code.');
       }
@@ -107,8 +117,6 @@ function CheckoutContent() {
     setIsProcessing(true);
     try {
       const token = await user.getIdToken(true);
-      const courseId = searchParams?.get('courseId') || planName;
-      const durationDays = searchParams?.get('durationDays') || '30';
 
       const res = await fetch('/api/payments/create-order', {
         method: 'POST',
@@ -116,7 +124,7 @@ function CheckoutContent() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ planId: planName, price: finalTotal, courseId, durationDays })
+        body: JSON.stringify({ planId, couponCode: couponApplied ? coupon.trim().toUpperCase() : undefined })
       });
 
       const data = await res.json();
@@ -146,14 +154,14 @@ function CheckoutContent() {
                 razorpay_payment_id: response.razorpay_payment_id,
                 razorpay_order_id: response.razorpay_order_id,
                 razorpay_signature: response.razorpay_signature,
-                courseId,
-                durationDays,
-                planId: planName,
+                planId
               })
             });
+
             if (!verifyRes.ok) {
               const errData = await verifyRes.json();
               console.error('Verify failed:', errData);
+              throw new Error('Payment verification failed securely');
             }
           } catch (verifyErr) {
             console.error('Verify call failed:', verifyErr);

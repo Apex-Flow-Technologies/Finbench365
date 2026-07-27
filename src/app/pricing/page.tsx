@@ -26,7 +26,7 @@ function PricingContent() {
   const trackTitle = searchParams?.get('track') || 'Institutional Quantitative Certification Track';
   const trackBadge = searchParams?.get('badge') || 'Professional Syllabus Access';
 
-  const handleSelectPlan = async (plan: { name: string; price: string; days: string }) => {
+  const handleSelectPlan = async (plan: { id: string; name: string; price: string; days: string }) => {
     if (!user || !courseId) {
       router.push('/exams');
       return;
@@ -34,15 +34,8 @@ function PricingContent() {
 
     setSelectedPlan(plan.name);
     
-    // Parse duration from plan.days (e.g. '30 Days Access' -> 30)
-    const durationMatch = plan.days.match(/(\d+)/);
-    const durationDays = durationMatch ? parseInt(durationMatch[1]) : 30;
-
-    // Parse price to a number (e.g. '₹599' -> '599')
-    const priceAmount = plan.price.replace(/\D/g, '');
-
-    // Redirect to real checkout page
-    const checkoutUrl = `/checkout?planName=${encodeURIComponent(plan.name)}&price=${priceAmount}&courseId=${encodeURIComponent(courseId)}&durationDays=${durationDays}`;
+    // Redirect to real checkout page securely using planId
+    const checkoutUrl = `/checkout?planId=${encodeURIComponent(plan.id)}&courseId=${encodeURIComponent(courseId)}`;
     router.push(checkoutUrl);
   };
 

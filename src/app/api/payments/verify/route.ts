@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
+import { PLAN_PRICING } from '@/constants/pricing';
 import { Timestamp, FieldValue } from 'firebase-admin/firestore';
 import crypto from 'crypto';
 
@@ -18,10 +19,14 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { razorpay_payment_id, razorpay_order_id, razorpay_signature, courseId, durationDays, planId } = await req.json();
+    const { razorpay_payment_id, razorpay_order_id, razorpay_signature, planId } = await req.json();
 
-    if (!razorpay_payment_id || !razorpay_order_id || !razorpay_signature) {
+    if (!razorpay_payment_id || !razorpay_order_id || !razorpay_signature || !planId) {
       return NextResponse.json({ error: 'Missing payment verification fields' }, { status: 400 });
+    }
+
+    if (!PLAN_PRICING[planId]) {
+      return NextResponse.json({ error: 'Invalid planId provided during verification' }, { status: 400 });
     }
 
     // Verify the payment signature using Razorpay's standard method
@@ -41,13 +46,15 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Payment verification failed' }, { status: 400 });
     }
 
-    // Payment is verified — grant course access
+    // Payment is verified — grant course access securely using server constants
+    const planData = PLAN_PRICING[planId];
     const userId = decodedToken.uid;
-    const days = parseInt(String(durationDays || 30), 10);
+    const days = planData.durationDays;
+    const effectiveCourseId = planData.courseId;
+    
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + days);
 
-    const effectiveCourseId = courseId || planId || 'unknown';
     const userRef = adminDb.collection('users').doc(userId);
 
     // We use set with merge: true and a nested object so it creates the user document if it doesn't exist
@@ -57,7 +64,7 @@ export async function POST(req: Request) {
           expiresAt: Timestamp.fromDate(expiresAt),
           enrolledAt: FieldValue.serverTimestamp(),
           durationDays: days,
-          planId: planId || effectiveCourseId,
+          planId: planId,
           paymentId: razorpay_payment_id,
         }
       },
