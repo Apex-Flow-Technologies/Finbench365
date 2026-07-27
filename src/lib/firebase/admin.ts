@@ -1,13 +1,11 @@
-import { getApps, initializeApp, cert, getApp, App } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
-import { getAuth } from 'firebase-admin/auth';
-
-let app: App | undefined;
+import { getApps, initializeApp, cert } from 'firebase-admin/app';
+import type { Firestore } from 'firebase-admin/firestore';
+import type { Auth } from 'firebase-admin/auth';
 
 try {
   if (!getApps().length) {
     if (process.env.FIREBASE_PRIVATE_KEY) {
-      app = initializeApp({
+      initializeApp({
         credential: cert({
           projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
           clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
@@ -15,30 +13,28 @@ try {
         }),
       });
     } else {
-      app = initializeApp({ projectId: 'demo-project' });
+      initializeApp({ projectId: 'demo-project' });
     }
-  } else {
-    app = getApp();
   }
 } catch (error: any) {
   console.error('Firebase admin initialization error:', error.message);
   if (!getApps().length) {
-    app = initializeApp({ projectId: 'demo-project' });
-  } else {
-    app = getApp();
+    initializeApp({ projectId: 'demo-project' });
   }
 }
 
-let db: any;
-let authService: any;
-try {
-  if (app) {
-    db = getFirestore(app);
-    authService = getAuth(app);
+export const adminDb = new Proxy({}, {
+  get: (target, prop) => {
+    const { getFirestore } = require('firebase-admin/firestore');
+    const { getApp } = require('firebase-admin/app');
+    return (getFirestore(getApp()) as any)[prop];
   }
-} catch (e: any) {
-  console.error("Firebase admin service init failed:", e.message);
-}
+}) as Firestore;
 
-export const adminDb = db as ReturnType<typeof getFirestore>;
-export const adminAuth = authService as ReturnType<typeof getAuth>;
+export const adminAuth = new Proxy({}, {
+  get: (target, prop) => {
+    const { getAuth } = require('firebase-admin/auth');
+    const { getApp } = require('firebase-admin/app');
+    return (getAuth(getApp()) as any)[prop];
+  }
+}) as Auth;
