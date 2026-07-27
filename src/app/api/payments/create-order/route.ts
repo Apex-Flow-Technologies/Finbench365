@@ -20,50 +20,58 @@ export async function POST(req: Request) {
     const body = await req.json();
     const { planId, price, courseId, durationDays } = body;
 
-    if (!planId || !price) {
+    if (!planId || price === undefined || price === null) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    if (typeof price !== 'number' || price <= 0) {
+    const numericPrice = Number(price);
+    if (isNaN(numericPrice) || numericPrice <= 0) {
       return NextResponse.json({ error: 'Invalid price value' }, { status: 400 });
     }
 
-    // Validate Razorpay keys are configured
-    // Validating Razorpay keys
-    if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
+    const keyId = process.env.RAZORPAY_KEY_ID;
+    const keySecret = process.env.RAZORPAY_KEY_SECRET;
+
+    if (!keyId || !keySecret) {
       console.error('Razorpay keys not configured');
-      return NextResponse.json({ error: 'Payment gateway not configured. Please contact support.' }, { status: 503 });
+      return NextResponse.json({ error: 'Payment gateway not configured.' }, { status: 503 });
     }
 
-    const Razorpay = require('razorpay');
-    const razorpay = new Razorpay({
-      key_id: process.env.RAZORPAY_KEY_ID,
-      key_secret: process.env.RAZORPAY_KEY_SECRET,
+    // Call Razorpay REST API directly — no npm package needed
+    const credentials = Buffer.from(`${keyId}:${keySecret}`).toString('base64');
+
+    const razorpayRes = await fetch('https://api.razorpay.com/v1/orders', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Basic ${credentials}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        amount: Math.round(numericPrice * 100), // paise
+        currency: 'INR',
+        receipt: `rcpt_${decodedToken.uid}_${Date.now()}`.slice(0, 40),
+        notes: {
+          courseId: String(courseId || planId),
+          userId: decodedToken.uid,
+          durationDays: String(durationDays || 30),
+          planId: String(planId),
+        },
+      }),
     });
 
-    const options = {
-      amount: Math.round(price * 100), // Convert to paise (INR smallest unit)
-      currency: 'INR',
-      receipt: `rcpt_${decodedToken.uid}_${Date.now()}`,
-      notes: {
-        courseId: courseId || planId,
-        userId: decodedToken.uid,
-        durationDays: String(durationDays || 30),
-        planId,
-      },
-    };
+    const order = await razorpayRes.json();
 
-    const order = await razorpay.orders.create(options);
+    if (!razorpayRes.ok) {
+      console.error('Razorpay API error:', order);
+      return NextResponse.json({ error: order?.error?.description || 'Failed to create Razorpay order' }, { status: 500 });
+    }
 
     return NextResponse.json({ success: true, order });
 
   } catch (error: any) {
     console.error('Create Order API Error:', error);
-    return NextResponse.json({ 
+    return NextResponse.json({
       error: error.message || 'Internal Server Error',
-      stack: error.stack,
-      name: error.name
     }, { status: 500 });
   }
 }
-

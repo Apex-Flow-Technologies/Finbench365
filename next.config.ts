@@ -7,7 +7,7 @@ const nextConfig: NextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
-  serverExternalPackages: ['firebase-admin', 'razorpay']
+  serverExternalPackages: ['firebase-admin']
 };
 
 export default nextConfig;
