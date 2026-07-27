@@ -46,14 +46,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           
           if (userDoc.exists()) {
             const userData = userDoc.data();
-            setUser({ ...firebaseUser, role: userData.role });
+            setUser(Object.assign(firebaseUser, { role: userData.role }));
             
             // If activeSessionId is not set yet in DB, set it
             if (!userData.activeSessionId) {
               updateUserActiveSession(firebaseUser.uid, localSessionId).catch(() => {});
             }
           } else {
-            setUser({ ...firebaseUser, role: 'student' });
+            setUser(Object.assign(firebaseUser, { role: 'student' as const }));
           }
 
           // Real-time listener for Single Active Session revocation
@@ -73,7 +73,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
         } catch (error) {
           console.error("Error fetching user role:", error);
-          setUser({ ...firebaseUser, role: 'student' });
+          setUser(Object.assign(firebaseUser, { role: 'student' as const }));
         }
       } else {
         setUser(null);
