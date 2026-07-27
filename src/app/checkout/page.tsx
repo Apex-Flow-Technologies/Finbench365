@@ -131,7 +131,33 @@ function CheckoutContent() {
         order_id: order.id,
         name: 'FinBench365',
         description: planName,
-        handler: () => {
+        handler: async (response: any) => {
+          // Payment succeeded on Razorpay — now verify + grant course access
+          try {
+            const freshToken = await user.getIdToken(true);
+            const verifyRes = await fetch('/api/payments/verify', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${freshToken}`
+              },
+              body: JSON.stringify({
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_signature: response.razorpay_signature,
+                courseId,
+                durationDays,
+                planId: planName,
+              })
+            });
+            if (!verifyRes.ok) {
+              const errData = await verifyRes.json();
+              console.error('Verify failed:', errData);
+            }
+          } catch (verifyErr) {
+            console.error('Verify call failed:', verifyErr);
+          }
+          // Show success regardless — webhook is also set as backup
           setOrderCompleted(true);
         },
         prefill: { name, email, contact: phone.replace(/\s+/g, '') },
@@ -146,6 +172,7 @@ function CheckoutContent() {
       setIsProcessing(false);
     }
   };
+
 
   if (orderCompleted) {
     return (
