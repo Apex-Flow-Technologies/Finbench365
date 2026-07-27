@@ -21,7 +21,6 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
-import { enrollUserInCourse } from '@/lib/firebase/db';
 
 function CheckoutContent() {
   const searchParams = useSearchParams();
@@ -134,13 +133,6 @@ function CheckoutContent() {
         description: planName,
         handler: async (response: any) => {
           // Payment succeeded on Razorpay
-          // 1. Instantly enroll via Client SDK (bulletproof for UI update)
-          try {
-            await enrollUserInCourse(user.uid, courseId, parseInt(String(durationDays), 10));
-          } catch (err) {
-            console.error('Client SDK enroll failed:', err);
-          }
-
           // 2. Call backend verify for logging and server-side validation
           try {
             const freshToken = await user.getIdToken(true);
