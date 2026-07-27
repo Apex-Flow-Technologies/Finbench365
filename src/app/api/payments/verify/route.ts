@@ -48,8 +48,10 @@ export async function POST(req: Request) {
     expiresAt.setDate(expiresAt.getDate() + days);
 
     const effectiveCourseId = courseId || planId || 'unknown';
+    const userRef = adminDb.collection('users').doc(userId);
 
-    await adminDb.collection('users').doc(userId).set({
+    // Use update() so dot-notation keys write nested fields correctly
+    await userRef.update({
       [`enrolledCourses.${effectiveCourseId}`]: {
         expiresAt: Timestamp.fromDate(expiresAt),
         enrolledAt: FieldValue.serverTimestamp(),
@@ -57,9 +59,8 @@ export async function POST(req: Request) {
         planId: planId || effectiveCourseId,
         paymentId: razorpay_payment_id,
       },
-      totalSpent: FieldValue.increment(0),
       lastPaymentAt: FieldValue.serverTimestamp(),
-    }, { merge: true });
+    });
 
     console.log(`Course access granted: userId=${userId}, courseId=${effectiveCourseId}`);
 
