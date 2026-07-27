@@ -116,7 +116,7 @@ function CheckoutContent() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ planId: planName, price: basePrice, courseId, durationDays })
+        body: JSON.stringify({ planId: planName, price: finalTotal, courseId, durationDays })
       });
 
       const data = await res.json();
