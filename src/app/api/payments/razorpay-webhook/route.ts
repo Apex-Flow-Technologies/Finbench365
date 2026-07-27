@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebase/admin';
+import { PLAN_PRICING } from '@/constants/pricing';
 import { Timestamp, FieldValue } from 'firebase-admin/firestore';
 import crypto from 'crypto';
 
@@ -27,10 +28,8 @@ export async function POST(req: Request) {
       .digest('hex');
 
     if (signature !== expectedSignature) {
-      // TEMP: Log mismatch details for diagnosis, but still process the webhook
-      console.warn('Signature mismatch — expected:', expectedSignature, 'got:', signature, 'secret length:', secret?.length);
-      // TODO: Re-enable rejection after confirming secret is correct
-      // return NextResponse.json({ error: 'Invalid Signature' }, { status: 400 });
+      console.error('Webhook signature mismatch — expected:', expectedSignature, 'got:', signature);
+      return NextResponse.json({ error: 'Invalid Signature' }, { status: 400 });
     }
 
     const body = JSON.parse(rawBody);
@@ -42,29 +41,35 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: 'Invalid payload structure' }, { status: 400 });
       }
 
-      const { courseId, userId, durationDays, planId } = paymentData.notes || {};
+      const { userId, planId } = paymentData.notes || {};
       const amountPaid = paymentData.amount ? paymentData.amount / 100 : 0; // Convert from paise
 
-      if (userId && courseId) {
+      if (userId && planId && PLAN_PRICING[planId]) {
+        const planData = PLAN_PRICING[planId];
+        const days = planData.durationDays;
+        const effectiveCourseId = planData.courseId;
+
         const expiresAt = new Date();
-        expiresAt.setDate(expiresAt.getDate() + parseInt(durationDays || '30', 10));
+        expiresAt.setDate(expiresAt.getDate() + days);
 
         const userRef = adminDb.collection('users').doc(userId);
 
-        // Grant entitlement and track revenue atomically
-        await userRef.update({
-          [`enrolledCourses.${courseId}`]: {
-            expiresAt: Timestamp.fromDate(expiresAt),
-            enrolledAt: FieldValue.serverTimestamp(),
-            durationDays: parseInt(durationDays || '30', 10),
-            planId: planId || courseId,
-            paymentId: paymentData.id,
+        // Grant entitlement and track revenue atomically (use set with merge to avoid not-found errors)
+        await userRef.set({
+          enrolledCourses: {
+            [effectiveCourseId]: {
+              expiresAt: Timestamp.fromDate(expiresAt),
+              enrolledAt: FieldValue.serverTimestamp(),
+              durationDays: days,
+              planId: planId,
+              paymentId: paymentData.id,
+            }
           },
           totalSpent: FieldValue.increment(amountPaid),
           lastPaymentAt: FieldValue.serverTimestamp(),
-        });
+        }, { merge: true });
 
-        console.log(`Entitlement granted: userId=${userId}, courseId=${courseId}, durationDays=${durationDays}`);
+        console.log(`Webhook entitlement granted: userId=${userId}, courseId=${effectiveCourseId}, durationDays=${days}`);
       } else {
         console.warn('Webhook received but missing userId or courseId in notes:', paymentData.notes);
       }

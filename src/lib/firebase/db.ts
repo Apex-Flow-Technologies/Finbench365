@@ -235,16 +235,20 @@ export async function getUserEntitlements(userId: string) {
   
   for (const [courseId, data] of Object.entries<any>(enrolled)) {
     const courseSnap = await getDoc(doc(db, 'courses', courseId));
+    let courseData: any = { id: courseId, title: courseId.replace(/-/g, ' ').toUpperCase(), tier: 'Professional' };
+
     if (courseSnap.exists()) {
-      entitlements.push({
-        courseId,
-        course: { id: courseSnap.id, ...courseSnap.data() },
-        enrolledAt: data.enrolledAt?.toDate() || new Date(),
-        expiresAt: data.expiresAt?.toDate() || new Date(),
-        durationDays: data.durationDays,
-        isActive: new Date() < (data.expiresAt?.toDate() || new Date(0))
-      });
+      courseData = { id: courseSnap.id, ...courseSnap.data() };
     }
+
+    entitlements.push({
+      courseId,
+      course: courseData,
+      enrolledAt: data.enrolledAt?.toDate() || new Date(),
+      expiresAt: data.expiresAt?.toDate() || new Date(),
+      durationDays: data.durationDays,
+      isActive: new Date() < (data.expiresAt?.toDate() || new Date(0))
+    });
   }
   
   return entitlements;
