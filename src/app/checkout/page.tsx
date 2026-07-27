@@ -124,7 +124,7 @@ function CheckoutContent() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ planId, couponCode: couponApplied ? coupon.trim().toUpperCase() : undefined })
+        body: JSON.stringify({ planId, courseId, couponCode: couponApplied ? coupon.trim().toUpperCase() : undefined })
       });
 
       const data = await res.json();
@@ -154,7 +154,8 @@ function CheckoutContent() {
                 razorpay_payment_id: response.razorpay_payment_id,
                 razorpay_order_id: response.razorpay_order_id,
                 razorpay_signature: response.razorpay_signature,
-                planId
+                planId,
+                courseId
               })
             });
 

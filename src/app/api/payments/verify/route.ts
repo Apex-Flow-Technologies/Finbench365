@@ -19,9 +19,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { razorpay_payment_id, razorpay_order_id, razorpay_signature, planId } = await req.json();
+    const { razorpay_payment_id, razorpay_order_id, razorpay_signature, planId, courseId } = await req.json();
 
-    if (!razorpay_payment_id || !razorpay_order_id || !razorpay_signature || !planId) {
+    if (!razorpay_payment_id || !razorpay_order_id || !razorpay_signature || !planId || !courseId) {
       return NextResponse.json({ error: 'Missing payment verification fields' }, { status: 400 });
     }
 
@@ -50,7 +50,7 @@ export async function POST(req: Request) {
     const planData = PLAN_PRICING[planId];
     const userId = decodedToken.uid;
     const days = planData.durationDays;
-    const effectiveCourseId = planData.courseId;
+    const effectiveCourseId = courseId;
     
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + days);

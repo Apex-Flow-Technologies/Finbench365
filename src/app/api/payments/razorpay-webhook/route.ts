@@ -41,13 +41,13 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: 'Invalid payload structure' }, { status: 400 });
       }
 
-      const { userId, planId } = paymentData.notes || {};
+      const { userId, planId, courseId } = paymentData.notes || {};
       const amountPaid = paymentData.amount ? paymentData.amount / 100 : 0; // Convert from paise
 
-      if (userId && planId && PLAN_PRICING[planId]) {
+      if (userId && planId && courseId && PLAN_PRICING[planId]) {
         const planData = PLAN_PRICING[planId];
         const days = planData.durationDays;
-        const effectiveCourseId = planData.courseId;
+        const effectiveCourseId = courseId;
 
         const expiresAt = new Date();
         expiresAt.setDate(expiresAt.getDate() + days);

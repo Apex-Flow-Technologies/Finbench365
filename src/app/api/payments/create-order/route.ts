@@ -19,10 +19,14 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
-    const { planId, couponCode } = body;
+    const { planId, courseId, couponCode } = body;
 
     if (!planId || !PLAN_PRICING[planId]) {
       return NextResponse.json({ error: 'Invalid or missing planId' }, { status: 400 });
+    }
+    
+    if (!courseId) {
+      return NextResponse.json({ error: 'Missing courseId' }, { status: 400 });
     }
 
     const planData = PLAN_PRICING[planId];
@@ -74,6 +78,7 @@ export async function POST(req: Request) {
         receipt: `rcpt_${decodedToken.uid}_${Date.now()}`.slice(0, 40),
         notes: {
           planId: planId,
+          courseId: courseId,
           userId: decodedToken.uid,
           // Removed spoofable courseId and durationDays. 
           // The verify endpoint will look these up natively using planId.
