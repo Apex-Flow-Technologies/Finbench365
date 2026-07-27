@@ -252,6 +252,7 @@ export default function DashboardPage() {
           </div>
 
           {/* Sidebar / Performance Diagnostic Analytics Area (1/3 width) */}
+          {entitlements.length > 0 && (
           <motion.div 
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
@@ -323,6 +324,7 @@ export default function DashboardPage() {
               </div>
             </div>
           </motion.div>
+          )}
 
         </div>
       </div>

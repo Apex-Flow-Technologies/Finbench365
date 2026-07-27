@@ -15,7 +15,7 @@ import {
   Loader2
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
-import { enrollUserInCourse } from '@/lib/firebase/db';
+// Remove enrollUserInCourse from imports since we are routing to checkout now
 
 function PricingContent() {
   const searchParams = useSearchParams();
@@ -38,14 +38,12 @@ function PricingContent() {
     const durationMatch = plan.days.match(/(\d+)/);
     const durationDays = durationMatch ? parseInt(durationMatch[1]) : 30;
 
-    try {
-      await enrollUserInCourse(user.uid, courseId, durationDays);
-      router.push('/dashboard');
-    } catch (err) {
-      console.error(err);
-      alert("Validation failed.");
-      setSelectedPlan(null);
-    }
+    // Parse price to a number (e.g. '₹599' -> '599')
+    const priceAmount = plan.price.replace(/\D/g, '');
+
+    // Redirect to real checkout page
+    const checkoutUrl = `/checkout?planName=${encodeURIComponent(plan.name)}&price=${priceAmount}&courseId=${encodeURIComponent(courseId)}&durationDays=${durationDays}`;
+    router.push(checkoutUrl);
   };
 
   const plans = [
