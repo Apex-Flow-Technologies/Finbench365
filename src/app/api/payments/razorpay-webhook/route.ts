@@ -34,7 +34,7 @@ export async function POST(req: Request) {
     const body = JSON.parse(rawBody);
     const event = body.event;
 
-    if (event === 'payment.captured' || event === 'order.paid') {
+    if (event === 'payment.captured' || event === 'order.paid' || event === 'payment.authorized') {
       const paymentData = body.payload?.payment?.entity;
       if (!paymentData) {
         return NextResponse.json({ error: 'Invalid payload structure' }, { status: 400 });
