@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import { adminAuth } from '@/lib/firebase/admin';
-import Razorpay from 'razorpay';
 
 export async function POST(req: Request) {
   try {
@@ -29,11 +28,13 @@ export async function POST(req: Request) {
     }
 
     // Validate Razorpay keys are configured
+    // Validating Razorpay keys
     if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
       console.error('Razorpay keys not configured');
       return NextResponse.json({ error: 'Payment gateway not configured. Please contact support.' }, { status: 503 });
     }
 
+    const Razorpay = require('razorpay');
     const razorpay = new Razorpay({
       key_id: process.env.RAZORPAY_KEY_ID,
       key_secret: process.env.RAZORPAY_KEY_SECRET,

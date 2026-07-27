@@ -1,30 +1,32 @@
-import { getApps, initializeApp, cert, getApp, App } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
-import { getAuth } from 'firebase-admin/auth';
+import * as admin from 'firebase-admin';
 
-let app: App;
-
-if (!getApps().length) {
+if (!admin.apps.length) {
   try {
       if (process.env.FIREBASE_PRIVATE_KEY) {
-        app = initializeApp({
-          credential: cert({
+        admin.initializeApp({
+          credential: admin.credential.cert({
             projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
             clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
             privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
           }),
         });
       } else {
-        // Initialize an empty app for Vercel build step to prevent crashes
-        app = initializeApp({ projectId: 'demo-project' });
+        admin.initializeApp({ projectId: 'demo-project' });
       }
   } catch (error: any) {
     console.error('Firebase admin initialization error', error.stack);
-    app = getApps()[0] || initializeApp({ projectId: 'demo-project' });
+    if (!admin.apps.length) admin.initializeApp({ projectId: 'demo-project' });
   }
-} else {
-  app = getApp();
 }
 
-export const adminDb = getFirestore(app);
-export const adminAuth = getAuth(app);
+let db: any;
+let authService: any;
+try {
+  db = admin.firestore();
+  authService = admin.auth();
+} catch (e) {
+  console.error("Firebase admin service init failed", e);
+}
+
+export const adminDb = db as admin.firestore.Firestore;
+export const adminAuth = authService as admin.auth.Auth;
