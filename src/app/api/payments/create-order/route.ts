@@ -13,13 +13,8 @@ export async function POST(req: Request) {
     try {
       decodedToken = await adminAuth.verifyIdToken(idToken);
     } catch (err: any) {
-      console.error('Token verification failed:', err);
-      const debugInfo = {
-        keyPresent: !!process.env.FIREBASE_PRIVATE_KEY,
-        projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-        clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-      };
-      return NextResponse.json({ error: 'Invalid token: ' + err.message, debugInfo }, { status: 401 });
+      console.error('Token verification failed:', err.message);
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const body = await req.json();
