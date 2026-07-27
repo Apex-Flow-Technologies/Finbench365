@@ -59,7 +59,11 @@ export async function POST(req: Request) {
 
   } catch (error: any) {
     console.error('Create Order API Error:', error);
-    return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 });
+    return NextResponse.json({ 
+      error: error.message || 'Internal Server Error',
+      stack: error.stack,
+      name: error.name
+    }, { status: 500 });
   }
 }
 
