@@ -50,17 +50,19 @@ export async function POST(req: Request) {
     const effectiveCourseId = courseId || planId || 'unknown';
     const userRef = adminDb.collection('users').doc(userId);
 
-    // Use update() so dot-notation keys write nested fields correctly
-    await userRef.update({
-      [`enrolledCourses.${effectiveCourseId}`]: {
-        expiresAt: Timestamp.fromDate(expiresAt),
-        enrolledAt: FieldValue.serverTimestamp(),
-        durationDays: days,
-        planId: planId || effectiveCourseId,
-        paymentId: razorpay_payment_id,
+    // We use set with merge: true and a nested object so it creates the user document if it doesn't exist
+    await userRef.set({
+      enrolledCourses: {
+        [effectiveCourseId]: {
+          expiresAt: Timestamp.fromDate(expiresAt),
+          enrolledAt: FieldValue.serverTimestamp(),
+          durationDays: days,
+          planId: planId || effectiveCourseId,
+          paymentId: razorpay_payment_id,
+        }
       },
       lastPaymentAt: FieldValue.serverTimestamp(),
-    });
+    }, { merge: true });
 
     console.log(`Course access granted: userId=${userId}, courseId=${effectiveCourseId}`);
 
@@ -68,6 +70,13 @@ export async function POST(req: Request) {
 
   } catch (error: any) {
     console.error('Payment verify error:', error);
-    return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 });
+    return NextResponse.json({ 
+      error: error.message || 'Internal Server Error',
+      debug: {
+        code: error.code,
+        projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+        clientEmail: process.env.FIREBASE_CLIENT_EMAIL?.substring(0, 20) + '...',
+      }
+    }, { status: 500 });
   }
 }
