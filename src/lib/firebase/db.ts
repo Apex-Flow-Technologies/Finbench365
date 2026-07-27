@@ -212,13 +212,15 @@ export async function enrollUserInCourse(userId: string, courseId: string, durat
   const expiresAt = new Date();
   expiresAt.setDate(expiresAt.getDate() + durationDays);
   
-  await updateDoc(userRef, {
-    [`enrolledCourses.${courseId}`]: {
-      expiresAt: Timestamp.fromDate(expiresAt),
-      enrolledAt: serverTimestamp(),
-      durationDays
+  await setDoc(userRef, {
+    enrolledCourses: {
+      [courseId]: {
+        expiresAt: Timestamp.fromDate(expiresAt),
+        enrolledAt: serverTimestamp(),
+        durationDays
+      }
     }
-  });
+  }, { merge: true });
 }
 
 export async function getUserEntitlements(userId: string) {

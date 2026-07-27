@@ -21,6 +21,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import { enrollUserInCourse } from '@/lib/firebase/db';
 
 function CheckoutContent() {
   const searchParams = useSearchParams();
@@ -132,7 +133,15 @@ function CheckoutContent() {
         name: 'FinBench365',
         description: planName,
         handler: async (response: any) => {
-          // Payment succeeded on Razorpay — now verify + grant course access
+          // Payment succeeded on Razorpay
+          // 1. Instantly enroll via Client SDK (bulletproof for UI update)
+          try {
+            await enrollUserInCourse(user.uid, courseId, parseInt(String(durationDays), 10));
+          } catch (err) {
+            console.error('Client SDK enroll failed:', err);
+          }
+
+          // 2. Call backend verify for logging and server-side validation
           try {
             const freshToken = await user.getIdToken(true);
             const verifyRes = await fetch('/api/payments/verify', {
@@ -157,7 +166,7 @@ function CheckoutContent() {
           } catch (verifyErr) {
             console.error('Verify call failed:', verifyErr);
           }
-          // Show success regardless — webhook is also set as backup
+          // Show success regardless
           setOrderCompleted(true);
         },
         prefill: { name, email, contact: phone.replace(/\s+/g, '') },
