@@ -91,6 +91,22 @@ export async function submitTestAttempt(attemptId: string, answers: Record<strin
   });
 }
 
+export async function updateAttemptHeartbeat(attemptId: string) {
+  const attemptRef = doc(db, 'test_attempts', attemptId);
+  await updateDoc(attemptRef, {
+    lastHeartbeatAt: serverTimestamp()
+  });
+}
+
+export async function expireAttemptDueToDisconnect(attemptId: string) {
+  const attemptRef = doc(db, 'test_attempts', attemptId);
+  await updateDoc(attemptRef, {
+    status: 'completed',
+    expiredDueToDisconnect: true,
+    endedAt: serverTimestamp()
+  });
+}
+
 export async function getTestAttempt(attemptId: string) {
   const attemptRef = doc(db, 'test_attempts', attemptId);
   const attemptSnap = await getDoc(attemptRef);
@@ -102,7 +118,8 @@ export async function getTestAttemptsCount(userId: string, testId: string) {
   const q = query(
     collection(db, 'test_attempts'),
     where('userId', '==', userId),
-    where('testId', '==', testId)
+    where('testId', '==', testId),
+    where('status', '==', 'completed') // Match server-side validation — only count completed, not in_progress or expired
   );
   const snapshot = await getDocs(q);
   return snapshot.size;
@@ -235,4 +252,40 @@ export async function getUserEntitlements(userId: string) {
 export async function updateUserRole(userId: string, newRole: 'student' | 'editor' | 'admin') {
   const userRef = doc(db, 'users', userId);
   await updateDoc(userRef, { role: newRole });
+}
+
+// Get all mock tests for a given exam
+export async function getCourseTests(courseId: string) {
+  const q = query(
+    collection(db, 'mock_tests'),
+    where('courseId', '==', courseId)
+  );
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+}
+
+// Get all registered users for Admin Management
+export async function getUsers() {
+  const snapshot = await getDocs(collection(db, 'users'));
+  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+}
+
+// Single active session enforcement
+export async function updateUserActiveSession(userId: string, sessionId: string) {
+  const userRef = doc(db, 'users', userId);
+  await updateDoc(userRef, { activeSessionId: sessionId, lastLoginAt: serverTimestamp() });
+}
+
+// Find existing active attempt for fallback recovery
+export async function getActiveAttemptForUser(userId: string, testId: string) {
+  const q = query(
+    collection(db, 'test_attempts'),
+    where('userId', '==', userId),
+    where('testId', '==', testId),
+    where('status', '==', 'in_progress')
+  );
+  const snapshot = await getDocs(q);
+  if (snapshot.empty) return null;
+  const docSnap = snapshot.docs[0];
+  return { id: docSnap.id, ...docSnap.data() };
 }

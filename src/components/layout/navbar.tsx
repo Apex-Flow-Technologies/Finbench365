@@ -6,6 +6,8 @@ import { ArrowUpRight, Menu, X } from 'lucide-react';
 
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
+import { ThemeToggle } from '@/components/ThemeToggle';
+import { AdminPreviewBanner } from '@/components/AdminPreviewBanner';
 
 export function Navbar() {
   const [mounted, setMounted] = useState(false);
@@ -57,10 +59,11 @@ export function Navbar() {
   return (
     <header
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${isScrolled
-          ? 'bg-[#FBFBF9]/92 backdrop-blur-md border-b border-[#E3E3DE] py-3 shadow-[0_4px_24px_-8px_rgba(0,0,0,0.05)]'
+          ? 'bg-white/90 dark:bg-[#0B0C10]/90 backdrop-blur-md border-b border-slate-200 dark:border-white/10 py-3 shadow-[0_4px_24px_-8px_rgba(0,0,0,0.05)]'
           : 'bg-transparent py-6 border-b border-transparent'
         }`}
     >
+      <AdminPreviewBanner />
       <div className="max-w-[1240px] mx-auto px-6 md:px-8 flex items-center justify-between">
         {/* Logo */}
         <a
@@ -69,17 +72,17 @@ export function Navbar() {
           className="flex items-center gap-2.5 group focus:outline-none"
         >
           <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-mono font-bold text-sm tracking-tighter transition-colors ${isScrolled
-              ? 'bg-[#181A1F] text-[#FBFBF9] shadow-sm'
+              ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-sm'
               : 'bg-white/10 text-white border border-white/20 backdrop-blur-sm'
             }`}>
             FB
           </div>
           <div className="flex flex-col">
-            <span className={`font-semibold tracking-tight text-base transition-colors ${isScrolled ? 'text-[#181A1F]' : 'text-white'
+            <span className={`font-semibold tracking-tight text-base transition-colors ${isScrolled ? 'text-slate-900 dark:text-white' : 'text-white'
               }`}>
-              FinBench<span className={isScrolled ? 'text-amber-700 font-mono text-xs ml-0.5' : 'text-amber-400 font-mono text-xs ml-0.5'}>365</span>
+              FinBench<span className={isScrolled ? 'text-amber-600 dark:text-amber-500 font-mono text-xs ml-0.5' : 'text-amber-400 font-mono text-xs ml-0.5'}>365</span>
             </span>
-            <span className={`text-[10px] tracking-widest uppercase font-mono transition-colors ${isScrolled ? 'text-slate-500' : 'text-slate-400'
+            <span className={`text-[10px] tracking-widest uppercase font-mono transition-colors ${isScrolled ? 'text-slate-500 dark:text-slate-400' : 'text-slate-400'
               }`}>
               By MentraEdge
             </span>
@@ -102,7 +105,7 @@ export function Navbar() {
                   scrollToSection(e, item.href.replace('#', ''));
                 }
               }}
-              className={`text-sm font-medium transition-colors hover:text-amber-500 relative py-1 ${isScrolled ? 'text-slate-700 hover:text-[#181A1F]' : 'text-slate-300 hover:text-white'
+              className={`text-sm font-medium transition-colors hover:text-amber-500 dark:hover:text-amber-400 relative py-1 ${isScrolled ? 'text-slate-700 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white' : 'text-slate-300 hover:text-white'
                 }`}
             >
               {item.label}
@@ -112,14 +115,23 @@ export function Navbar() {
 
         {/* Action CTAs */}
         <div className="hidden sm:flex items-center gap-3">
+          {isScrolled && <ThemeToggle />}
           <button
-            onClick={() => router.push(user ? '/dashboard' : '/login')}
+            onClick={() => {
+              if (!user) {
+                router.push('/login');
+              } else if (user.role === 'admin' || user.role === 'editor') {
+                router.push('/admin');
+              } else {
+                router.push('/dashboard');
+              }
+            }}
             className={`px-5 py-2.5 text-sm font-bold rounded-lg transition-all duration-300 shadow-sm ${isScrolled
-                ? 'bg-[#181A1F] text-[#FBFBF9] hover:bg-[#272B33] hover:shadow-md'
-                : 'bg-white text-[#181A1F] hover:bg-[#F2F2EC] hover:shadow-[0_0_24px_rgba(255,255,255,0.2)]'
+                ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 hover:opacity-90 hover:shadow-md'
+                : 'bg-white text-slate-900 hover:bg-white/90 hover:shadow-[0_0_24px_rgba(255,255,255,0.2)]'
               }`}
           >
-            {user ? 'Go to Dashboard' : 'Login'}
+            {user ? (user.role === 'admin' || user.role === 'editor' ? 'Admin Portal' : 'My Dashboard') : 'Login'}
           </button>
         </div>
 
@@ -171,11 +183,17 @@ export function Navbar() {
                 <button
                   onClick={() => {
                     setMobileMenuOpen(false);
-                    router.push('/login');
+                    if (!user) {
+                      router.push('/login');
+                    } else if (user.role === 'admin' || user.role === 'editor') {
+                      router.push('/admin');
+                    } else {
+                      router.push('/dashboard');
+                    }
                   }}
                   className="w-full py-3 text-center rounded-lg bg-[#181A1F] text-white font-bold flex items-center justify-center gap-2 shadow-sm hover:bg-[#272B33] transition-colors"
                 >
-                  {user ? 'Go to Dashboard' : 'Login'}
+                  {user ? (user.role === 'admin' || user.role === 'editor' ? 'Admin Portal' : 'My Dashboard') : 'Login'}
                 </button>
               </div>
             </div>

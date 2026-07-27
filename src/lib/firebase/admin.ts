@@ -1,8 +1,8 @@
-import { getApps, initializeApp, cert, getApp } from 'firebase-admin/app';
+import { getApps, initializeApp, cert, getApp, App } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 import { getAuth } from 'firebase-admin/auth';
 
-let app;
+let app: App;
 
 if (!getApps().length) {
   try {
@@ -20,6 +20,7 @@ if (!getApps().length) {
       }
   } catch (error: any) {
     console.error('Firebase admin initialization error', error.stack);
+    app = getApps()[0] || initializeApp({ projectId: 'demo-project' });
   }
 } else {
   app = getApp();

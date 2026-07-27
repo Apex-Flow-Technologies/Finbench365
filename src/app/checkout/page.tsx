@@ -17,8 +17,10 @@ import {
   Tag,
   HelpCircle,
   X,
-  ExternalLink
+  ExternalLink,
+  AlertCircle
 } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
 
 function CheckoutContent() {
   const searchParams = useSearchParams();
@@ -35,6 +37,8 @@ function CheckoutContent() {
   const gstAmount = Math.round((basePrice * gstRate) * 100) / 100;
   const finalTotal = Math.round((basePrice + gstAmount) * 100) / 100;
 
+  const { user } = useAuth();
+
   // Form State
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -42,53 +46,105 @@ function CheckoutContent() {
   const [org, setOrg] = useState('');
   const [coupon, setCoupon] = useState('');
   const [couponApplied, setCouponApplied] = useState(false);
-  const [showRazorpayModal, setShowRazorpayModal] = useState(false);
+  const [couponError, setCouponError] = useState('');
+  const [formError, setFormError] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [orderCompleted, setOrderCompleted] = useState(false);
   const [agreeLegal, setAgreeLegal] = useState(false);
 
-  // Auto-populate logged-in user details
+  // Auto-populate from Firebase Auth (not stale localStorage)
   useEffect(() => {
-    const savedUser = localStorage.getItem('finbench_user');
-    if (savedUser) {
-      try {
-        const parsed = JSON.parse(savedUser);
-        if (parsed.name) setName(parsed.name);
-        if (parsed.email) setEmail(parsed.email);
-      } catch {}
+    if (user) {
+      setName(user.displayName || '');
+      setEmail(user.email || '');
     }
-  }, []);
+  }, [user]);
 
-  const handleApplyCoupon = (e: React.FormEvent) => {
+  const validatePhone = (p: string) => /^[6-9]\d{9}$/.test(p.replace(/\s+/g, '').replace('+91', ''));
+
+  const handleApplyCoupon = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (coupon.trim().toUpperCase() === 'FINBENCH10') {
-      setCouponApplied(true);
-      alert('Voucher FINBENCH10 applied successfully! Institutional tier verified.');
-    } else {
-      alert('Invalid coupon code. Try code: FINBENCH10');
+    setCouponError('');
+    if (!coupon.trim()) return;
+    try {
+      const res = await fetch('/api/payments/validate-coupon', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: coupon.trim().toUpperCase() })
+      });
+      const data = await res.json();
+      if (res.ok && data.valid) {
+        setCouponApplied(true);
+      } else {
+        setCouponError(data.message || 'Invalid coupon code.');
+      }
+    } catch {
+      setCouponError('Could not validate coupon. Please try again.');
     }
   };
 
-  const handleOpenRazorpay = (e: React.FormEvent) => {
+  const handleOpenRazorpay = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !email || !phone) {
-      alert('Please fill in your Name, Email, and Phone so we can link your CBT license.');
+    setFormError('');
+
+    if (!name.trim() || !email.trim() || !phone.trim()) {
+      setFormError('Please fill in your Name, Email, and Phone to proceed.');
+      return;
+    }
+    if (!validatePhone(phone)) {
+      setFormError('Please enter a valid 10-digit Indian mobile number.');
       return;
     }
     if (!agreeLegal) {
-      alert('You must agree to the Terms and the Refund & Cancellation Policy to proceed.');
+      setFormError('You must agree to the Terms and the Refund & Cancellation Policy to proceed.');
       return;
     }
-    setShowRazorpayModal(true);
-  };
+    if (!user) {
+      setFormError('Please sign in to complete your purchase.');
+      return;
+    }
 
-  const handleConfirmRazorpayPayment = () => {
     setIsProcessing(true);
-    setTimeout(() => {
+    try {
+      const token = await user.getIdToken(true);
+      const courseId = searchParams?.get('courseId') || planName;
+      const durationDays = searchParams?.get('durationDays') || '30';
+
+      const res = await fetch('/api/payments/create-order', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ planId: planName, price: basePrice, courseId, durationDays })
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to create order');
+
+      const { order } = data;
+
+      const rzp = new (window as any).Razorpay({
+        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+        amount: order.amount,
+        currency: order.currency,
+        order_id: order.id,
+        name: 'FinBench365',
+        description: planName,
+        handler: () => {
+          setOrderCompleted(true);
+        },
+        prefill: { name, email, contact: phone.replace(/\s+/g, '') },
+        theme: { color: '#F59E0B' },
+        modal: {
+          ondismiss: () => setIsProcessing(false)
+        }
+      });
+      rzp.open();
+    } catch (err: any) {
+      setFormError(err.message || 'Payment initialization failed. Please try again.');
       setIsProcessing(false);
-      setShowRazorpayModal(false);
-      setOrderCompleted(true);
-    }, 1500);
+    }
   };
 
   if (orderCompleted) {
@@ -153,94 +209,9 @@ function CheckoutContent() {
     );
   }
 
+
   return (
     <div className="min-h-screen pt-24 pb-24 px-6 md:px-8 bg-[#121419] text-[#FBFBF9]">
-      {/* Razorpay Simulated Modal Overlay */}
-      <AnimatePresence>
-        {showRazorpayModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="max-w-md w-full rounded-3xl overflow-hidden shadow-2xl bg-[#181A1F] border border-[#282C36] text-white"
-            >
-              {/* Modal Header */}
-              <div className="bg-gradient-to-r from-blue-600 to-indigo-700 p-5 text-white flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-xl bg-white/20">
-                    <ShieldCheck className="w-5 h-5 text-white" />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-sm leading-tight">Razorpay Secure Checkout</h3>
-                    <p className="text-[11px] text-blue-100 font-mono">Verified Institutional Gateway</p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setShowRazorpayModal(false)}
-                  className="p-1 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-
-              {/* Modal Body */}
-              <div className="p-6 space-y-5">
-                <div className="p-4 rounded-2xl bg-[#121419] border border-[#282C36] space-y-1">
-                  <div className="flex justify-between text-xs font-mono">
-                    <span className="text-slate-400">Merchant:</span>
-                    <span className="font-bold">FinBench365 CBT Portal</span>
-                  </div>
-                  <div className="flex justify-between text-xs font-mono">
-                    <span className="text-slate-400">Item:</span>
-                    <span className="font-semibold text-amber-500">{planName}</span>
-                  </div>
-                  <div className="flex justify-between text-sm font-mono pt-2 border-t border-[#282C36] mt-2">
-                    <span className="text-slate-300 font-sans">Amount (w/ GST):</span>
-                    <span className="font-extrabold text-emerald-500 text-base">₹{finalTotal.toFixed(2)}</span>
-                  </div>
-                </div>
-
-                <div className="space-y-3">
-                  <div className="text-xs font-semibold uppercase tracking-wider font-mono text-slate-400">
-                    Payment Options Handled by Razorpay
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2 text-xs font-medium">
-                    <div className="p-3 rounded-xl bg-[#121419] border border-[#282C36] text-slate-300 flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
-                      <span>UPI (GPay/PhonePe)</span>
-                    </div>
-                    <div className="p-3 rounded-xl bg-[#121419] border border-[#282C36] text-slate-300 flex items-center gap-2">
-                      <CreditCard className="w-3.5 h-3.5 text-blue-500" />
-                      <span>Credit / Debit Cards</span>
-                    </div>
-                  </div>
-
-                  <p className="text-[11px] leading-relaxed text-center text-slate-400">
-                    This is our live gateway provision. Razorpay will automatically handle all card authentications, UPI QR codes, and RBI OTP redirects.
-                  </p>
-                </div>
-
-                <button
-                  onClick={handleConfirmRazorpayPayment}
-                  disabled={isProcessing}
-                  className="w-full py-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm shadow-lg shadow-blue-500/25 transition-all flex items-center justify-center gap-2"
-                >
-                  {isProcessing ? (
-                    <span className="animate-pulse">Authorizing Razorpay Payment...</span>
-                  ) : (
-                    <>
-                      <span>Complete Payment • ₹{finalTotal.toFixed(2)}</span>
-                      <ExternalLink className="w-4 h-4" />
-                    </>
-                  )}
-                </button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
 
       <div className="max-w-[1200px] mx-auto space-y-8">
         {/* Top Back Navigation */}
@@ -494,14 +465,32 @@ function CheckoutContent() {
                 </label>
               </div>
 
+              {/* Inline Form Error */}
+              {formError && (
+                <div className="flex items-start gap-2 p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs">
+                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                  <span>{formError}</span>
+                </div>
+              )}
+
               {/* Complete Payment via Razorpay Button */}
               <button
                 type="button"
                 onClick={handleOpenRazorpay}
-                className="w-full py-4 px-6 rounded-2xl bg-amber-500 hover:bg-amber-400 text-[#121419] font-extrabold text-base tracking-wide shadow-lg shadow-amber-500/25 active:scale-[0.98] transition-all duration-200 flex items-center justify-center gap-2 focus:outline-none"
+                disabled={isProcessing}
+                className="w-full py-4 px-6 rounded-2xl bg-amber-500 hover:bg-amber-400 disabled:bg-amber-500/50 disabled:cursor-not-allowed text-[#121419] font-extrabold text-base tracking-wide shadow-lg shadow-amber-500/25 active:scale-[0.98] transition-all duration-200 flex items-center justify-center gap-2 focus:outline-none"
               >
-                <Lock className="w-4 h-4 fill-[#121419]" />
-                <span>Pay via Razorpay • ₹{finalTotal.toFixed(2)}</span>
+                {isProcessing ? (
+                  <>
+                    <span className="w-4 h-4 border-2 border-[#121419] border-t-transparent rounded-full animate-spin" />
+                    <span>Connecting to Razorpay...</span>
+                  </>
+                ) : (
+                  <>
+                    <Lock className="w-4 h-4 fill-[#121419]" />
+                    <span>Pay via Razorpay • ₹{finalTotal.toFixed(2)}</span>
+                  </>
+                )}
               </button>
 
               <div className="text-center text-[11px] text-slate-500 leading-normal font-sans">

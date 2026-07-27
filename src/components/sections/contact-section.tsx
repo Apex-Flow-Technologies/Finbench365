@@ -26,7 +26,7 @@ export function ContactSection() {
         <div className="bg-white border border-[#DDDDCF] rounded-2xl shadow-[0_16px_56px_-16px_rgba(0,0,0,0.06)] overflow-hidden grid grid-cols-1 lg:grid-cols-12">
 
           {/* Left Column: Institutional Pitch */}
-          <div className="lg:col-span-5 bg-[#181A1F] text-[#FBFBF9] p-8 md:p-12 flex flex-col justify-between relative overflow-hidden">
+          <div className="lg:col-span-5 bg-white dark:bg-[#181A1F] transition-colors duration-300 text-slate-900 dark:text-[#FBFBF9] p-8 md:p-12 flex flex-col justify-between relative overflow-hidden">
             <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-bl from-amber-500/10 to-transparent rounded-full blur-2xl pointer-events-none" />
 
             <div>
@@ -35,14 +35,14 @@ export function ContactSection() {
                 <span>Academic & Institutional Consultation</span>
               </div>
 
-              <h3 className="text-2xl sm:text-3xl font-semibold tracking-tight text-white leading-snug mb-4">
+              <h3 className="text-2xl sm:text-3xl font-semibold tracking-tight text-slate-900 dark:text-white leading-snug mb-4">
                 Schedule a Private Consultation or Institutional Demo.
               </h3>
-              <p className="text-slate-300 text-sm md:text-base leading-relaxed mb-8">
+              <p className="text-slate-600 dark:text-slate-300 text-sm md:text-base leading-relaxed mb-8">
                 Whether you are an individual candidate aiming for the 95th percentile or a university finance department looking to license our Institutional CBT simulator, our quantitative analysts are ready to assist.
               </p>
 
-              <div className="space-y-4 font-mono text-xs text-slate-400 pt-6 border-t border-slate-800">
+              <div className="space-y-4 font-mono text-xs text-slate-400 dark:text-slate-500 dark:text-slate-400 pt-6 border-t border-slate-800">
                 <div className="flex items-center gap-3">
                   <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
                   <span>Custom Institutional CBT lab deployments for universities</span>
@@ -58,7 +58,7 @@ export function ContactSection() {
               </div>
             </div>
 
-            <div className="pt-10 mt-10 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-400 font-mono">
+            <div className="pt-10 mt-10 border-t border-slate-200 dark:border-slate-800/80 flex items-center justify-between text-xs text-slate-400 dark:text-slate-500 dark:text-slate-400 font-mono">
               <span>Direct Inquiry: academic@finbench365.com</span>
               <span className="text-amber-400">Response &lt; 4 Hours</span>
             </div>
@@ -83,7 +83,7 @@ export function ContactSection() {
                 </p>
                 <button
                   onClick={() => setSubmitted(false)}
-                  className="mt-4 px-6 py-2.5 rounded-lg bg-[#181A1F] text-white text-sm font-medium hover:bg-[#282C36] transition-colors"
+                  className="mt-4 px-6 py-2.5 rounded-lg bg-white dark:bg-[#181A1F] transition-colors duration-300 text-slate-900 dark:text-white text-sm font-medium hover:bg-[#282C36] transition-colors"
                 >
                   Submit Another Inquiry
                 </button>
@@ -94,7 +94,7 @@ export function ContactSection() {
                   <h4 className="text-xl font-semibold text-slate-900 mb-1">
                     Request Candidate or Institutional Access
                   </h4>
-                  <p className="text-sm text-slate-500 mb-6">
+                  <p className="text-sm text-slate-400 dark:text-slate-500 mb-6">
                     Fill out the form below for immediate sandbox credentials or curriculum orientation.
                   </p>
                 </div>
@@ -177,12 +177,12 @@ export function ContactSection() {
                 <div className="pt-2">
                   <button
                     type="submit"
-                    className="w-full py-3.5 px-6 rounded-xl bg-[#181A1F] hover:bg-[#282C36] text-white font-semibold text-sm flex items-center justify-center gap-2 shadow-sm transition-all duration-200"
+                    className="w-full py-3.5 px-6 rounded-xl bg-white dark:bg-[#181A1F] transition-colors duration-300 hover:bg-[#282C36] text-slate-900 dark:text-white font-semibold text-sm flex items-center justify-center gap-2 shadow-sm transition-all duration-200"
                   >
                     <span>Submit Academic Inquiry</span>
                     <ArrowUpRight className="w-4 h-4" />
                   </button>
-                  <p className="text-[11px] text-center text-slate-500 mt-2 font-mono">
+                  <p className="text-[11px] text-center text-slate-400 dark:text-slate-500 mt-2 font-mono">
                     Protected by 256-bit SSL encryption. We never share candidate credentials with third parties.
                   </p>
                 </div>

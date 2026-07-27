@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { adminAuth } from '@/lib/firebase/admin';
+import Razorpay from 'razorpay';
 
 export async function POST(req: Request) {
   try {
@@ -17,33 +18,46 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
-    const { planId, price } = body;
+    const { planId, price, courseId, durationDays } = body;
 
     if (!planId || !price) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    // TODO: Initialize Razorpay instance
-    // const razorpay = new Razorpay({ key_id: process.env.RAZORPAY_KEY_ID, key_secret: process.env.RAZORPAY_KEY_SECRET });
-    
-    // const options = {
-    //   amount: price * 100, // amount in smallest currency unit
-    //   currency: "INR",
-    //   receipt: `receipt_${Date.now()}`
-    // };
-    // const order = await razorpay.orders.create(options);
+    if (typeof price !== 'number' || price <= 0) {
+      return NextResponse.json({ error: 'Invalid price value' }, { status: 400 });
+    }
 
-    // Mocking Razorpay Order Creation for now until keys are provided
-    const order = {
-      id: `order_${Math.random().toString(36).substring(2, 15)}`,
-      amount: price * 100,
-      currency: "INR"
+    // Validate Razorpay keys are configured
+    if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
+      console.error('Razorpay keys not configured');
+      return NextResponse.json({ error: 'Payment gateway not configured. Please contact support.' }, { status: 503 });
+    }
+
+    const razorpay = new Razorpay({
+      key_id: process.env.RAZORPAY_KEY_ID,
+      key_secret: process.env.RAZORPAY_KEY_SECRET,
+    });
+
+    const options = {
+      amount: Math.round(price * 100), // Convert to paise (INR smallest unit)
+      currency: 'INR',
+      receipt: `rcpt_${decodedToken.uid}_${Date.now()}`,
+      notes: {
+        courseId: courseId || planId,
+        userId: decodedToken.uid,
+        durationDays: String(durationDays || 30),
+        planId,
+      },
     };
+
+    const order = await razorpay.orders.create(options);
 
     return NextResponse.json({ success: true, order });
 
   } catch (error: any) {
     console.error('Create Order API Error:', error);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 });
   }
 }
+

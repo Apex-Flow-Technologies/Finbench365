@@ -89,7 +89,7 @@ export function ExamTracks() {
               <div>
                 {/* Track Badge */}
                 <div className="flex items-center justify-between gap-2 mb-4 font-mono text-xs">
-                  <span className="px-2.5 py-1 rounded bg-[#181A1F] text-white font-bold tracking-wider">
+                  <span className="px-2.5 py-1 rounded bg-white dark:bg-[#181A1F] transition-colors duration-300 text-slate-900 dark:text-white font-bold tracking-wider">
                     {track.badge}
                   </span>
                   <span className="text-emerald-700 font-semibold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
@@ -101,7 +101,7 @@ export function ExamTracks() {
                 <h3 className="text-2xl font-semibold text-slate-900 tracking-tight mb-1">
                   {track.title}
                 </h3>
-                <p className="text-xs font-mono text-slate-500 font-medium mb-4">
+                <p className="text-xs font-mono text-slate-400 dark:text-slate-500 font-medium mb-4">
                   {track.subtitle}
                 </p>
 
@@ -111,7 +111,7 @@ export function ExamTracks() {
 
                 {/* Key Topics List */}
                 <div className="space-y-2 mb-6 pt-6 border-t border-slate-150">
-                  <span className="font-mono text-xs font-bold uppercase tracking-wider text-slate-400 block mb-3">
+                  <span className="font-mono text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 dark:text-slate-400 block mb-3">
                     Core Curriculum Modules
                   </span>
                   {track.keyTopics.map((topic, tIdx) => (
@@ -136,7 +136,7 @@ export function ExamTracks() {
                     e.preventDefault();
                     document.getElementById('sandbox')?.scrollIntoView({ behavior: 'smooth' });
                   }}
-                  className="group inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-[#181A1F] hover:bg-[#282C36] text-white font-semibold text-xs sm:text-sm transition-all shadow-sm"
+                  className="group inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-white dark:bg-[#181A1F] transition-colors duration-300 hover:bg-[#282C36] text-slate-900 dark:text-white font-semibold text-xs sm:text-sm transition-all shadow-sm"
                 >
                   <span>Launch Practice</span>
                   <ArrowUpRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />

@@ -119,7 +119,7 @@ export function HeroExamSimulator() {
         style={{
           transformStyle: 'preserve-3d',
         }}
-        className="relative w-full max-w-[520px] bg-[#12141A] border border-[#262A35] rounded-2xl shadow-[0_36px_110px_-16px_rgba(0,0,0,0.88)] ring-1 ring-white/[0.04] overflow-hidden text-slate-300 transform-gpu lg:translate-x-4 lg:-translate-y-8"
+        className="relative w-full max-w-[520px] bg-[#12141A] border border-[#262A35] rounded-2xl shadow-[0_36px_110px_-16px_rgba(0,0,0,0.88)] ring-1 ring-white/[0.04] overflow-hidden text-slate-600 dark:text-slate-300 transform-gpu lg:translate-x-4 lg:-translate-y-8"
       >
         {/* Soft Ambient Top Glow line on the card edge */}
         <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-slate-500/30 to-transparent" />
@@ -128,15 +128,15 @@ export function HeroExamSimulator() {
         <div className="bg-[#161821]/90 border-b border-[#232732] px-5 py-3.5 flex items-center justify-between gap-3 font-mono text-[11px]">
           <div className="flex items-center gap-2.5">
             <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)] animate-pulse" />
-            <span className="text-slate-400 font-semibold tracking-wider uppercase">CBT_TERMINAL_v4.8</span>
+            <span className="text-slate-400 dark:text-slate-500 dark:text-slate-400 font-semibold tracking-wider uppercase">CBT_TERMINAL_v4.8</span>
           </div>
 
           <div className="flex items-center gap-3">
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#1A1D27] border border-[#2B303E] text-slate-300 font-medium tracking-wide">
-              <Clock className="w-3 h-3 text-slate-500" />
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#1A1D27] border border-[#2B303E] text-slate-600 dark:text-slate-300 font-medium tracking-wide">
+              <Clock className="w-3 h-3 text-slate-400 dark:text-slate-500" />
               <span>{formatTime(timerSeconds)}</span>
             </div>
-            <span className="px-2 py-0.5 rounded bg-slate-800/60 text-slate-400 text-[10px]">
+            <span className="px-2 py-0.5 rounded bg-slate-800/60 text-slate-400 dark:text-slate-500 dark:text-slate-400 text-[10px]">
               {progressPercent}%
             </span>
           </div>
@@ -179,10 +179,10 @@ export function HeroExamSimulator() {
         {/* Main Card Content (Visual Storytelling & Placeholders) */}
         <div className="p-6 sm:p-7 space-y-6">
           {/* Question Sequence Label Indicator */}
-          <div className="flex items-center justify-between font-mono text-xs text-slate-500">
+          <div className="flex items-center justify-between font-mono text-xs text-slate-400 dark:text-slate-500">
             <span className="flex items-center gap-2">
               <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-ping" />
-              <span className="font-semibold text-slate-400 tracking-wide">
+              <span className="font-semibold text-slate-400 dark:text-slate-500 dark:text-slate-400 tracking-wide">
                 QUESTION {(8 + (activeStep % 7)).toString().padStart(2, '0')} OF 100
               </span>
             </span>
@@ -242,7 +242,7 @@ export function HeroExamSimulator() {
                           ? 'bg-emerald-500 text-[#12141A]'
                           : isSelecting
                           ? 'bg-slate-300 text-[#12141A]'
-                          : 'bg-[#1C1F2A] border border-[#2B303E] text-slate-400'
+                          : 'bg-[#1C1F2A] border border-[#2B303E] text-slate-400 dark:text-slate-500 dark:text-slate-400'
                       }`}
                     >
                       {isVerified ? (
@@ -288,9 +288,9 @@ export function HeroExamSimulator() {
 
           {/* Minimal Bottom Progress Bar */}
           <div className="pt-3">
-            <div className="flex items-center justify-between font-mono text-[11px] text-slate-500 mb-2">
+            <div className="flex items-center justify-between font-mono text-[11px] text-slate-400 dark:text-slate-500 mb-2">
               <span>PROGRESSION TRACKER</span>
-              <span className="text-slate-400 font-semibold">{progressPercent}% COMPLETED</span>
+              <span className="text-slate-400 dark:text-slate-500 dark:text-slate-400 font-semibold">{progressPercent}% COMPLETED</span>
             </div>
             <div className="w-full h-1.5 bg-[#191C26] rounded-full overflow-hidden p-[1px]">
               <motion.div
@@ -303,7 +303,7 @@ export function HeroExamSimulator() {
         </div>
 
         {/* Bottom Minimal Decorative Status */}
-        <div className="bg-[#15171F] border-t border-[#222630] px-6 py-3 flex items-center justify-between text-[10px] font-mono text-slate-500">
+        <div className="bg-[#15171F] border-t border-[#222630] px-6 py-3 flex items-center justify-between text-[10px] font-mono text-slate-400 dark:text-slate-500">
           <div className="flex items-center gap-2">
             <span className="w-1.5 h-1.5 rounded-full bg-slate-500 animate-ping" />
             <span>IRT_CALIBRATION_ACTIVE</span>

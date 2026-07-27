@@ -98,7 +98,7 @@ export function Faq() {
 
                   <div
                     className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-colors duration-300 ${
-                      isOpen ? 'bg-[#181A1F] text-white' : 'bg-[#EFEFEA] text-slate-700'
+                      isOpen ? 'bg-white dark:bg-[#181A1F] transition-colors duration-300 text-slate-900 dark:text-white' : 'bg-[#EFEFEA] text-slate-700'
                     }`}
                   >
                     {isOpen ? (
@@ -130,7 +130,7 @@ export function Faq() {
 
         {/* Support Callout */}
         <div className="mt-16 text-center">
-          <p className="text-sm text-slate-500">
+          <p className="text-sm text-slate-400 dark:text-slate-500">
             Have a specific quantitative institutional query or university curriculum partnership request?{' '}
             <a href="#contact" className="font-semibold text-[#181A1F] underline underline-offset-4 hover:text-amber-700 transition-colors">
               Contact our Academic Team →

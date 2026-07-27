@@ -57,14 +57,14 @@ export default function UsersManagementPage() {
 
   return (
     <div>
-      <h1 className="text-3xl font-bold text-white mb-2">User Management</h1>
-      <p className="text-slate-400 mb-8">Manage registered users and assign administrative roles.</p>
+      <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">User Management</h1>
+      <p className="text-slate-500 dark:text-slate-400 mb-8">Manage registered users and assign administrative roles.</p>
 
-      <div className="bg-[#181A1F] border border-[#282C36] rounded-2xl overflow-hidden shadow-sm">
+      <div className="bg-white border-slate-200 dark:bg-[#181A1F] dark:border-[#282C36] border rounded-2xl overflow-hidden shadow-sm">
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20 text-slate-400">
             <Loader2 className="w-8 h-8 animate-spin mb-4 text-amber-500" />
-            <p>Loading users...</p>
+            <p className="text-sm font-mono">Fetching user records...</p>
           </div>
         ) : users.length === 0 ? (
           <div className="text-center py-20 text-slate-500">
@@ -74,33 +74,33 @@ export default function UsersManagementPage() {
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse min-w-[800px]">
               <thead>
-                <tr className="border-b border-[#282C36] bg-[#121419]/50">
-                  <th className="py-4 px-6 text-xs font-mono text-slate-400 uppercase tracking-wider font-medium">User Details</th>
-                  <th className="py-4 px-6 text-xs font-mono text-slate-400 uppercase tracking-wider font-medium">Registered Date</th>
-                  <th className="py-4 px-6 text-xs font-mono text-slate-400 uppercase tracking-wider font-medium">Current Role</th>
-                  <th className="py-4 px-6 text-xs font-mono text-slate-400 uppercase tracking-wider font-medium text-right">Actions</th>
+                <tr className="border-b border-slate-200 dark:border-[#282C36] bg-slate-50 dark:bg-[#121419]/50">
+                  <th className="py-4 px-6 text-xs font-mono text-slate-500 dark:text-slate-400 uppercase tracking-wider font-medium">User Details</th>
+                  <th className="py-4 px-6 text-xs font-mono text-slate-500 dark:text-slate-400 uppercase tracking-wider font-medium">Registered Date</th>
+                  <th className="py-4 px-6 text-xs font-mono text-slate-500 dark:text-slate-400 uppercase tracking-wider font-medium">Current Role</th>
+                  <th className="py-4 px-6 text-xs font-mono text-slate-500 dark:text-slate-400 uppercase tracking-wider font-medium text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="text-sm">
                 {users.map((user) => (
-                  <tr key={user.id} className="border-b border-[#282C36] last:border-0 hover:bg-[#20232B] transition-colors">
+                  <tr key={user.id} className="border-b border-slate-100 dark:border-[#282C36] last:border-0 hover:bg-slate-50 dark:hover:bg-[#20232B] transition-colors">
                     
                     {/* User Info */}
                     <td className="py-4 px-6">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-[#272B33] flex items-center justify-center text-slate-300 shrink-0">
+                        <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-[#272B33] flex items-center justify-center text-slate-500 dark:text-slate-300 shrink-0">
                           {user.role === 'admin' ? <Shield className="w-5 h-5 text-emerald-500" /> : <UserIcon className="w-5 h-5" />}
                         </div>
                         <div>
-                          <div className="font-bold text-white mb-0.5">{user.name || 'Unknown Name'}</div>
-                          <div className="text-xs text-slate-400 font-mono">{user.email}</div>
-                          <div className="text-[10px] text-slate-500 font-mono mt-1">ID: {user.id}</div>
+                          <div className="font-bold text-slate-900 dark:text-white mb-0.5">{user.name || 'Unknown Name'}</div>
+                          <div className="text-xs text-slate-500 dark:text-slate-400 font-mono">{user.email}</div>
+                          <div className="text-[10px] text-slate-400 dark:text-slate-500 font-mono mt-1">ID: {user.id}</div>
                         </div>
                       </div>
                     </td>
 
                     {/* Date */}
-                    <td className="py-4 px-6 text-slate-400 text-sm">
+                    <td className="py-4 px-6 text-slate-600 dark:text-slate-400 text-sm">
                       {user.createdAt.toLocaleDateString()}
                     </td>
 
@@ -121,41 +121,21 @@ export default function UsersManagementPage() {
                       )}
                     </td>
 
-                    {/* Actions */}
+                    {/* Actions — Revoke only */}
                     <td className="py-4 px-6 text-right">
                       {updatingId === user.id ? (
                         <div className="flex justify-end pr-4">
                           <Loader2 className="w-5 h-5 animate-spin text-amber-500" />
                         </div>
+                      ) : user.role !== 'student' ? (
+                        <button
+                          onClick={() => handleRoleChange(user.id, 'student')}
+                          className="px-4 py-1.5 bg-slate-100 hover:bg-red-50 text-slate-600 hover:text-red-600 border border-slate-200 hover:border-red-200 dark:bg-[#272B33] dark:hover:bg-red-500/10 dark:text-slate-300 dark:hover:text-red-400 dark:border-[#323842] dark:hover:border-red-500/30 rounded-lg text-xs font-semibold transition-all"
+                        >
+                          Revoke Access
+                        </button>
                       ) : (
-                        <div className="flex items-center justify-end gap-2">
-                          {user.role !== 'admin' && (
-                            <button
-                              onClick={() => handleRoleChange(user.id, 'admin')}
-                              className="px-3 py-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 rounded-md text-xs font-semibold transition-colors"
-                            >
-                              Make Admin
-                            </button>
-                          )}
-                          
-                          {user.role !== 'editor' && user.role !== 'admin' && (
-                            <button
-                              onClick={() => handleRoleChange(user.id, 'editor')}
-                              className="px-3 py-1.5 bg-blue-500/10 hover:bg-blue-500/20 text-blue-500 rounded-md text-xs font-semibold transition-colors"
-                            >
-                              Make Editor
-                            </button>
-                          )}
-
-                          {user.role !== 'student' && (
-                            <button
-                              onClick={() => handleRoleChange(user.id, 'student')}
-                              className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-white rounded-md text-xs font-semibold transition-colors"
-                            >
-                              Revoke
-                            </button>
-                          )}
-                        </div>
+                        <span className="text-xs text-slate-400 dark:text-slate-600 font-mono pr-4">—</span>
                       )}
                     </td>
 

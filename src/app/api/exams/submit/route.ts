@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { adminDb, adminAuth } from '@/lib/firebase/admin';
+import { FieldValue } from 'firebase-admin/firestore';
 
 export async function POST(req: Request) {
   try {
@@ -92,7 +93,7 @@ export async function POST(req: Request) {
       answers,
       score,
       status: 'completed',
-      submittedAt: adminDb.doc('users/1').firestore.FieldValue.serverTimestamp()
+      submittedAt: FieldValue.serverTimestamp()
     });
 
     return NextResponse.json({ success: true, score });
