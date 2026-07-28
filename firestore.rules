@@ -47,9 +47,9 @@ service cloud.firestore {
       }
       
       match /solutions/{questionId} {
-        // Only admins can read/write the hidden solutions, or users who have completed the test?
-        // Usually checked securely on the backend, so keep closed to client reads by default unless admin
-        allow read, write: if isAdmin();
+        // Only admins can read/write the hidden solutions, or users taking a practice test
+        allow read: if isAdmin() || (request.auth != null && get(/databases/$(database)/documents/mock_tests/$(testId)).data.type == 'practice');
+        allow write: if isAdmin();
       }
     }
 
