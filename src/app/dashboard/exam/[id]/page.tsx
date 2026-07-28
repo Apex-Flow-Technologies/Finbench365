@@ -68,7 +68,30 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
           setAttemptsCount(count);
         }
         
-        const questionsData = await getTestQuestions(testId, true);
+        // Always fetch questions without solutions via client (to avoid Firestore permissions)
+        const questionsData = await getTestQuestions(testId, false);
+        
+        // If it's a practice test, fetch solutions securely via our backend API route
+        if (testData.type === 'practice' && user) {
+          try {
+            const token = await user.getIdToken();
+            const res = await fetch(`/api/exams/${testId}/solutions`, {
+              headers: { Authorization: `Bearer ${token}` }
+            });
+            if (res.ok) {
+              const { solutions } = await res.json();
+              questionsData.forEach((q: any) => {
+                if (solutions[q.id]) {
+                  q.correctOptionIndex = solutions[q.id].correctOptionIndex;
+                  q.explanation = solutions[q.id].explanation;
+                }
+              });
+            }
+          } catch (e) {
+            console.error("Failed to fetch solutions for practice test", e);
+          }
+        }
+
         setQuestions(questionsData);
         setTimeRemaining(testData.durationMinutes * 60);
 
