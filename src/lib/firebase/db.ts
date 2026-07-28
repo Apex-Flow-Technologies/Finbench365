@@ -49,13 +49,31 @@ export async function getMockTest(testId: string) {
   return { id: testSnap.id, ...testSnap.data() } as any;
 }
 
-export async function getTestQuestions(testId: string) {
+export async function getTestQuestions(testId: string, withSolutions: boolean = false) {
   const q = query(
     collection(db, `mock_tests/${testId}/questions`), 
     orderBy('order', 'asc')
   );
   const snapshot = await getDocs(q);
-  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  const questions = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+  if (withSolutions) {
+    const solutionsSnap = await getDocs(collection(db, `mock_tests/${testId}/solutions`));
+    const solutionsMap = new Map();
+    solutionsSnap.docs.forEach(doc => {
+      solutionsMap.set(doc.id, doc.data());
+    });
+
+    return questions.map(q => {
+      const solution = solutionsMap.get(q.id);
+      if (solution) {
+        return { ...q, ...solution };
+      }
+      return q;
+    });
+  }
+
+  return questions;
 }
 
 // --- Test Attempts (The Engine) ---
@@ -178,17 +196,17 @@ export async function saveQuestionsBatch(testId: string, questions: any[], testT
     
     // We explicitly exclude the local 'id' field
     const { id, correctOptionIndex, ...publicData } = q;
+    const safeCorrectOptionIndex = correctOptionIndex ?? 0;
     
     // For practice tests, we keep correctOptionIndex public for instant grading UI
     // For certification exams, it is completely stripped from the client payload
     const finalPublicData = testType === 'practice' 
-      ? { ...publicData, correctOptionIndex } 
+      ? { ...publicData, correctOptionIndex: safeCorrectOptionIndex } 
       : publicData;
     
     // 1. Save public question data 
     batch.set(qRef, {
       ...finalPublicData,
-      testId,
       order: index,
       updatedAt: serverTimestamp()
     }, { merge: true });
@@ -196,7 +214,7 @@ export async function saveQuestionsBatch(testId: string, questions: any[], testT
     // 2. Save the solution securely in a separate subcollection using the SAME document ID
     const solutionRef = doc(db, `mock_tests/${testId}/solutions`, qRef.id);
     batch.set(solutionRef, {
-      correctOptionIndex,
+      correctOptionIndex: safeCorrectOptionIndex,
       updatedAt: serverTimestamp()
     }, { merge: true });
   });
@@ -333,4 +351,9 @@ export async function getUserAnalytics(userId: string) {
     attemptsCount,
     totalTimeMs
   };
+}
+
+export async function updateMockTest(testId: string, data: any) {
+  const testRef = doc(db, 'mock_tests', testId);
+  await updateDoc(testRef, data);
 }

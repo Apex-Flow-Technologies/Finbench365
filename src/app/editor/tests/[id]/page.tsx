@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, use, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { getMockTest, getTestQuestions, saveQuestionsBatch, createMockTest, updateChapter, updateCourse } from '@/lib/firebase/db';
+import { getMockTest, getTestQuestions, saveQuestionsBatch, createMockTest, updateChapter, updateCourse, updateMockTest } from '@/lib/firebase/db';
 import { ParsedQuestion, parseDocxText } from '@/lib/parser';
 import * as mammoth from 'mammoth';
 import { UploadCloud, CheckCircle2, AlertCircle, Save, Plus, ChevronDown, ChevronUp, Trash2, ArrowLeft, Loader2 } from 'lucide-react';
@@ -56,7 +56,7 @@ function TestBuilderContent({ params }: { params: Promise<{ id: string }> }) {
         if (testId !== 'new') {
           const testData = await getMockTest(testId);
           setTest(testData);
-          const qData = await getTestQuestions(testId);
+          const qData = await getTestQuestions(testId, true); // Load with solutions for the editor
           setQuestions(qData);
         } else {
           setTest({ title: 'New Mock Test', durationMinutes: 120, totalQuestions: 0 });
@@ -159,6 +159,13 @@ function TestBuilderContent({ params }: { params: Promise<{ id: string }> }) {
       } else if (testType === 'exam') {
         await updateCourse(effectiveCourseId, { mockTestId: currentTestId });
       }
+    } else {
+      await updateMockTest(currentTestId, {
+        title: test?.title || 'Mock Test',
+        durationMinutes: test?.durationMinutes || 120,
+        totalQuestions: questions.length,
+        isPublished: test?.isPublished || false
+      });
     }
 
     await saveQuestionsBatch(currentTestId, questions, test?.type || testType || 'practice');
@@ -236,17 +243,37 @@ function TestBuilderContent({ params }: { params: Promise<{ id: string }> }) {
           </button>
 
           <div>
-            <h1 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-              {test?.title || 'Mock Test'}
+            <div className="flex items-center gap-2">
+              <input 
+                type="text" 
+                value={test?.title || ''} 
+                onChange={(e) => setTest({...test, title: e.target.value})}
+                placeholder="Mock Test Title"
+                className="text-lg font-bold text-slate-900 dark:text-white bg-transparent border-none outline-none focus:ring-2 focus:ring-amber-500 rounded px-1 -ml-1"
+              />
               <span className="text-amber-500 font-mono text-xs tracking-widest">BUILDER</span>
-            </h1>
-            <p className="text-slate-500 dark:text-slate-400 text-xs">
+            </div>
+            <p className="text-slate-500 dark:text-slate-400 text-xs mt-1">
               {questions.length} Questions Loaded · Press Ctrl+S to save
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-3">
+          <label className="flex items-center gap-2 cursor-pointer bg-slate-100 dark:bg-[#272B33] px-3 py-1.5 rounded-xl border border-slate-200 dark:border-white/10 hover:bg-slate-200 dark:hover:bg-[#323842] transition-colors">
+            <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
+              {test?.isPublished ? 'Published' : 'Draft'}
+            </span>
+            <div className="relative inline-flex items-center">
+              <input
+                type="checkbox"
+                checked={test?.isPublished || false}
+                onChange={(e) => setTest({ ...test, isPublished: e.target.checked })}
+                className="sr-only peer"
+              />
+              <div className="w-9 h-5 bg-slate-300 dark:bg-[#121419] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-500 transition-colors" />
+            </div>
+          </label>
           <button
             onClick={() => fileInputRef.current?.click()}
             disabled={isSaving}
