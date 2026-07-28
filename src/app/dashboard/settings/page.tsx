@@ -101,7 +101,7 @@ export default function SettingsPage() {
   const invoices: any[] = []; // Will be populated from Firestore in a future iteration
 
   const handleDownloadInvoice = (invId: string) => {
-    toast('Invoice generation is being set up. Please contact support@finbench365.com for your GST invoice.', {
+    toast('Invoice generation is being set up. Please contact support@myexams365.com for your GST invoice.', {
       icon: '📄',
       duration: 5000,
     });
@@ -515,7 +515,7 @@ export default function SettingsPage() {
                   </div>
                 </div>
                 <p className="text-[11px] text-slate-500 leading-relaxed">
-                  FinBench365 is an independent financial examination simulator. NISM® is a registered trademark of the National Institute of Securities Markets. FinBench365 is not affiliated with or endorsed by NISM or SEBI.
+                  MyExams365 is an independent financial examination simulator. NISM® is a registered trademark of the National Institute of Securities Markets. MyExams365 is not affiliated with or endorsed by NISM or SEBI.
                 </p>
               </footer>
             </motion.div>

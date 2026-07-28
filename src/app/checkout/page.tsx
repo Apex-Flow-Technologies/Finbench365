@@ -137,7 +137,7 @@ function CheckoutContent() {
         amount: order.amount,
         currency: order.currency,
         order_id: order.id,
-        name: 'FinBench365',
+        name: 'MyExams365',
         description: planName,
         handler: async (response: any) => {
           // Payment succeeded on Razorpay

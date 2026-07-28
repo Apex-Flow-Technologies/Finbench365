@@ -28,12 +28,12 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'FinBench365 | Institutional Financial Examination & CBT Simulator',
+  title: 'MyExams365 | Institutional Financial Examination & CBT Simulator',
   description: 'Prepare for CFA®, FRM®, and Quantitative Finance certifications with Institutional CBT fidelity, Item-Response Theory (IRT) diagnostic analytics, and dynamic algorithmic problem sets.',
   keywords: ['CFA', 'FRM', 'Institutional CBT Simulator', 'CBT Mock Exam', 'Financial Certification', 'Quantitative Finance', 'Chartered Financial Analyst'],
-  authors: [{ name: 'FinBench365 Quantitative Curriculum Team' }],
+  authors: [{ name: 'MyExams365 Quantitative Curriculum Team' }],
   openGraph: {
-    title: 'FinBench365 | Institutional Financial Examination & CBT Simulator',
+    title: 'MyExams365 | Institutional Financial Examination & CBT Simulator',
     description: ' global financial certifications. Engineered by quantitative analysts and CFA charterholders.',
     type: 'website',
   },

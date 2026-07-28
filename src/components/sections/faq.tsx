@@ -13,13 +13,13 @@ interface FaqItem {
 const FAQ_ITEMS: FaqItem[] = [
   {
     category: 'Institutional CBT Fidelity',
-    question: 'How does FinBench365 replicate the exact CBT (Computer-Based Testing) interface for CFA® and FRM® exams?',
+    question: 'How does MyExams365 replicate the exact CBT (Computer-Based Testing) interface for CFA® and FRM® exams?',
     answer: 'Our frontend terminal exactly mirrors official examination center station constraints: pixel-accurate split-screen layouts, dual-pane formula sheets, item highlighting, right-click strikethrough for eliminating decoy distractors, and precise sub-second latency behavior. Sitting for our full-length mock exams builds muscle memory so exam day feels like just another practice session.'
   },
   {
     category: 'Algorithmic Question Bank',
     question: 'What makes your quantitative algorithmic question bank different from standard static question banks?',
-    answer: 'Conventional question banks use fixed numbers. If you attempt a question twice, you end up memorizing the answer rather than the underlying mathematical derivation. FinBench365’s algorithmic engine dynamically randomizes par values, yields, volatilities, asset weights, and tax rates every time a question is launched, generating thousands of unique quantitative variations from our core learning outcome statements.'
+    answer: 'Conventional question banks use fixed numbers. If you attempt a question twice, you end up memorizing the answer rather than the underlying mathematical derivation. MyExams365’s algorithmic engine dynamically randomizes par values, yields, volatilities, asset weights, and tax rates every time a question is launched, generating thousands of unique quantitative variations from our core learning outcome statements.'
   },
   {
     category: 'IRT Diagnostic Engine',
@@ -33,7 +33,7 @@ const FAQ_ITEMS: FaqItem[] = [
   },
   {
     category: 'Device & Platform Access',
-    question: 'Can I use FinBench365 across mobile, tablet, and desktop workstations simultaneously?',
+    question: 'Can I use MyExams365 across mobile, tablet, and desktop workstations simultaneously?',
     answer: 'Absolutely. While we recommend taking full-length timed CBT mock exams on a desktop or laptop to replicate official examination conditions, our responsive architecture allows you to practice individual algorithmic question sets, review formula derivations, and check performance analytics seamlessly on iPad and smartphone.'
   },
   {

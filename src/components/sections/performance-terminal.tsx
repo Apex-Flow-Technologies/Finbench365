@@ -33,7 +33,7 @@ export function PerformanceTerminal() {
             Static Coaching Material.
           </h2>
           <p className="text-slate-600 dark:text-slate-300 text-lg leading-relaxed">
-            Conventional coaching institutes rely on static PDFs and memorized question dumps from past cycles. FinBench365 operates like a quantitative diagnostic engine.
+            Conventional coaching institutes rely on static PDFs and memorized question dumps from past cycles. MyExams365 operates like a quantitative diagnostic engine.
           </p>
         </div>
 
@@ -88,7 +88,7 @@ export function PerformanceTerminal() {
                   <tr className="border-b border-[#2D323E] font-mono text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 dark:text-slate-400">
                     <th className="py-4 px-4 w-[28%]">Pedagogical Dimension</th>
                     <th className="py-4 px-4 w-[36%] text-slate-400 dark:text-slate-500">Typical Coaching Institutes (Static Prep)</th>
-                    <th className="py-4 px-4 w-[36%] text-amber-400">FinBench365 Institutional Architecture</th>
+                    <th className="py-4 px-4 w-[36%] text-amber-400">MyExams365 Institutional Architecture</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#232731] font-sans text-sm md:text-base">

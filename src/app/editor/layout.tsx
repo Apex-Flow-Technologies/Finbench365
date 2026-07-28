@@ -56,7 +56,7 @@ export default function EditorLayout({ children }: { children: React.ReactNode }
               FB
             </div>
             <span className="font-bold text-lg text-slate-900 dark:text-white tracking-tight leading-tight">
-              FinBench365<br/><span className="text-xs text-amber-500 font-mono">EXAM EDITOR</span>
+              MyExams365<br/><span className="text-xs text-amber-500 font-mono">EXAM EDITOR</span>
             </span>
           </div>
 

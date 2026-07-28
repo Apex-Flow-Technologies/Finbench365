@@ -320,7 +320,7 @@ function LoginContent() {
       </div>
 
       <div className="text-center text-xs font-mono text-slate-500 py-4">
-        © {new Date().getFullYear()} FinBench365 CBT Portal. All rights reserved.
+        © {new Date().getFullYear()} MyExams365 CBT Portal. All rights reserved.
       </div>
     </div>
   );

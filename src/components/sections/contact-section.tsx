@@ -59,7 +59,7 @@ export function ContactSection() {
             </div>
 
             <div className="pt-10 mt-10 border-t border-slate-200 dark:border-slate-800/80 flex items-center justify-between text-xs text-slate-400 dark:text-slate-500 dark:text-slate-400 font-mono">
-              <span>Direct Inquiry: academic@finbench365.com</span>
+              <span>Direct Inquiry: academic@myexams365.com</span>
               <span className="text-amber-400">Response &lt; 4 Hours</span>
             </div>
           </div>
