@@ -6,6 +6,7 @@ import Script from 'next/script';
 import { Navbar } from '@/components/layout/navbar';
 import { AmbientBackground } from '@/components/ui/ambient-background';
 import { Footer } from '@/components/layout/footer';
+import { LayoutWrapper } from '@/components/layout/LayoutWrapper';
 import { AuthProvider } from '@/context/AuthContext';
 import { ThemeProvider } from '@/components/ThemeProvider';
 import { Toaster } from 'react-hot-toast';
@@ -67,11 +68,9 @@ export default function RootLayout({
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
           <AuthProvider>
             <AmbientBackground />
-            <Navbar />
-            <main className="flex-1 relative z-10">
+            <LayoutWrapper>
               {children}
-            </main>
-            <Footer />
+            </LayoutWrapper>
             <Toaster
               position="top-right"
               toastOptions={{

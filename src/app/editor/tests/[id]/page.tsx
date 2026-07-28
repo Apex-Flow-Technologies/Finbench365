@@ -164,7 +164,8 @@ function TestBuilderContent({ params }: { params: Promise<{ id: string }> }) {
         title: test?.title || 'Mock Test',
         durationMinutes: test?.durationMinutes || 120,
         totalQuestions: questions.length,
-        isPublished: test?.isPublished || false
+        isPublished: test?.isPublished || false,
+        type: test?.type || 'practice'
       });
     }
 
@@ -242,16 +243,30 @@ function TestBuilderContent({ params }: { params: Promise<{ id: string }> }) {
             <span>Back to Exam</span>
           </button>
 
-          <div>
-            <div className="flex items-center gap-2">
-              <input 
-                type="text" 
-                value={test?.title || ''} 
-                onChange={(e) => setTest({...test, title: e.target.value})}
-                placeholder="Mock Test Title"
-                className="text-lg font-bold text-slate-900 dark:text-white bg-transparent border-none outline-none focus:ring-2 focus:ring-amber-500 rounded px-1 -ml-1"
-              />
-              <span className="text-amber-500 font-mono text-xs tracking-widest">BUILDER</span>
+          <div className="flex items-center gap-4">
+              <div className="flex flex-col gap-1">
+                <label className="text-[10px] uppercase font-bold text-slate-500">Test Title</label>
+                <input 
+                  type="text" 
+                  value={test?.title || ''} 
+                  onChange={(e) => setTest({...test, title: e.target.value})}
+                  className="font-bold text-lg bg-transparent border-none outline-none text-slate-900 dark:text-white placeholder:text-slate-400 focus:ring-0 p-0"
+                  placeholder="Enter Test Title..."
+                />
+              </div>
+              
+              <div className="flex flex-col gap-1 border-l border-slate-200 dark:border-slate-800 pl-4 ml-2">
+                <label className="text-[10px] uppercase font-bold text-slate-500">Test Mode</label>
+                <select
+                  value={test?.type || 'exam'}
+                  onChange={(e) => setTest({...test, type: e.target.value})}
+                  className="bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white text-xs font-bold rounded px-2 py-1 border-none outline-none cursor-pointer"
+                >
+                  <option value="practice">Practice Mode (Instant Feedback)</option>
+                  <option value="exam">Exam Mode (Strict, No Feedback)</option>
+                </select>
+              </div>
+            </div>  <span className="text-amber-500 font-mono text-xs tracking-widest">BUILDER</span>
             </div>
             <p className="text-slate-500 dark:text-slate-400 text-xs mt-1">
               {questions.length} Questions Loaded · Press Ctrl+S to save
