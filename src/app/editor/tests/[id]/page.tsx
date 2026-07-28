@@ -243,7 +243,8 @@ function TestBuilderContent({ params }: { params: Promise<{ id: string }> }) {
             <span>Back to Exam</span>
           </button>
 
-          <div className="flex items-center gap-4">
+          <div>
+            <div className="flex items-center gap-4">
               <div className="flex flex-col gap-1">
                 <label className="text-[10px] uppercase font-bold text-slate-500">Test Title</label>
                 <input 
@@ -266,7 +267,7 @@ function TestBuilderContent({ params }: { params: Promise<{ id: string }> }) {
                   <option value="exam">Exam Mode (Strict, No Feedback)</option>
                 </select>
               </div>
-            </div>  <span className="text-amber-500 font-mono text-xs tracking-widest">BUILDER</span>
+              <span className="text-amber-500 font-mono text-xs tracking-widest mt-4">BUILDER</span>
             </div>
             <p className="text-slate-500 dark:text-slate-400 text-xs mt-1">
               {questions.length} Questions Loaded · Press Ctrl+S to save
