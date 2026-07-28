@@ -9,7 +9,7 @@ export function useThemeMode() {
 
   useEffect(() => {
     setMounted(true);
-    const saved = localStorage.getItem('finbench_theme') as 'dark' | 'light';
+    const saved = localStorage.getItem('myexams_theme') as 'dark' | 'light';
     if (saved === 'light' || saved === 'dark') {
       setThemeState(saved);
     }
@@ -19,7 +19,7 @@ export function useThemeMode() {
     const next = theme === 'dark' ? 'light' : 'dark';
     setThemeState(next);
     if (typeof window !== 'undefined') {
-      localStorage.setItem('finbench_theme', next);
+      localStorage.setItem('myexams_theme', next);
     }
   };
 

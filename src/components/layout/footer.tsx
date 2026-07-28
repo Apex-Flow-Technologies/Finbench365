@@ -46,7 +46,7 @@ export function Footer() {
                 FB
               </div>
               <span className="font-semibold tracking-tight text-lg text-white">
-                FinBench<span className="text-amber-400 font-mono text-xs ml-0.5">365</span>
+                MyExams<span className="text-amber-400 font-mono text-xs ml-0.5">365</span>
               </span>
             </a>
 

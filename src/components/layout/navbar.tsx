@@ -80,7 +80,7 @@ export function Navbar() {
           <div className="flex flex-col">
             <span className={`font-semibold tracking-tight text-base transition-colors ${isScrolled ? 'text-slate-900 dark:text-white' : 'text-white'
               }`}>
-              FinBench<span className={isScrolled ? 'text-amber-600 dark:text-amber-500 font-mono text-xs ml-0.5' : 'text-amber-400 font-mono text-xs ml-0.5'}>365</span>
+              MyExams<span className={isScrolled ? 'text-amber-600 dark:text-amber-500 font-mono text-xs ml-0.5' : 'text-amber-400 font-mono text-xs ml-0.5'}>365</span>
             </span>
             <span className={`text-[10px] tracking-widest uppercase font-mono transition-colors ${isScrolled ? 'text-slate-500 dark:text-slate-400' : 'text-slate-400'
               }`}>

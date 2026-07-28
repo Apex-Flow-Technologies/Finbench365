@@ -32,10 +32,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         // Ensure local session ID exists
-        let localSessionId = localStorage.getItem('finbench_session_id');
+        let localSessionId = localStorage.getItem('myexams_session_id');
         if (!localSessionId) {
           localSessionId = 'sess_' + Math.random().toString(36).substring(2) + Date.now().toString(36);
-          localStorage.setItem('finbench_session_id', localSessionId);
+          localStorage.setItem('myexams_session_id', localSessionId);
           // Set in Firestore
           updateUserActiveSession(firebaseUser.uid, localSessionId).catch(() => {});
         }
@@ -61,11 +61,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           snapshotUnsubscribe = onSnapshot(userDocRef, (snap) => {
             if (snap.exists()) {
               const data = snap.data();
-              const currentLocalSess = localStorage.getItem('finbench_session_id');
+              const currentLocalSess = localStorage.getItem('myexams_session_id');
               if (data.activeSessionId && currentLocalSess && data.activeSessionId !== currentLocalSess) {
                 alert("Security Alert: Your account was logged in on another device. You have been signed out of this session.");
                 auth.signOut();
-                localStorage.removeItem('finbench_session_id');
+                localStorage.removeItem('myexams_session_id');
                 setUser(null);
               }
             }

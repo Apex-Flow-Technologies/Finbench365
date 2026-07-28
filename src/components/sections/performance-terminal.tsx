@@ -96,27 +96,27 @@ export function PerformanceTerminal() {
                     {
                       dimension: 'Examination Environment Fidelity',
                       conventional: 'Static PDF worksheets or generic web quizzes with no timer calibration or Prometric CBT constraints.',
-                      finbench: 'Exact Prometric CBT terminal replica (screen split, highlighting, strikethrough, item flagging, precise sub-second latency).'
+                      myexams: 'Exact Prometric CBT terminal replica (screen split, highlighting, strikethrough, item flagging, precise sub-second latency).'
                     },
                     {
                       dimension: 'Question Bank Algorithmic Variance',
                       conventional: 'Fixed numeric parameters. Students memorize answers after 2 practice attempts instead of learning the formula.',
-                      finbench: 'Dynamic Algorithmic Parameter Randomization. Par values, yields, volatilities, and tax rates regenerate on every single attempt.'
+                      myexams: 'Dynamic Algorithmic Parameter Randomization. Par values, yields, volatilities, and tax rates regenerate on every single attempt.'
                     },
                     {
                       dimension: 'Distractor Diagnostic Explanations',
                       conventional: 'Provides only the explanation for option A being correct. Decoy distractors are left completely unexplained.',
-                      finbench: 'Complete Distractor Deconstruction. Explains exactly why option B is a time-value trap and why option C represents a tax shield error.'
+                      myexams: 'Complete Distractor Deconstruction. Explains exactly why option B is a time-value trap and why option C represents a tax shield error.'
                     },
                     {
                       dimension: 'Grading & Mastery Calibration',
                       conventional: 'Raw percentage score (e.g. "72/100"). Fails to distinguish between easy foundation questions and complex 3-step derivatives.',
-                      finbench: 'Item-Response Theory (IRT) Two-Parameter Logistic Model. Calibrates true mastery and predicts exact Prometric exam pass probability.'
+                      myexams: 'Item-Response Theory (IRT) Two-Parameter Logistic Model. Calibrates true mastery and predicts exact Prometric exam pass probability.'
                     },
                     {
                       dimension: 'Curriculum Synchronization',
                       conventional: 'Updated once annually (or biannually). Often contains deprecated LOS standards from 3 years prior.',
-                      finbench: 'Real-time 2026–2027 Syllabus Sync. Automated deprecation alerts when CFA Institute or GARP alters weightings.'
+                      myexams: 'Real-time 2026–2027 Syllabus Sync. Automated deprecation alerts when CFA Institute or GARP alters weightings.'
                     }
                   ].map((row, rIdx) => (
                     <tr key={rIdx} className="hover:bg-[#1E222C]/60 transition-colors">
@@ -135,7 +135,7 @@ export function PerformanceTerminal() {
                       <td className="py-5 px-4 text-slate-100 align-top bg-amber-500/[0.03]">
                         <div className="flex items-start gap-2">
                           <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-1" />
-                          <span className="font-medium leading-relaxed">{row.finbench}</span>
+                          <span className="font-medium leading-relaxed">{row.myexams}</span>
                         </div>
                       </td>
                     </tr>
