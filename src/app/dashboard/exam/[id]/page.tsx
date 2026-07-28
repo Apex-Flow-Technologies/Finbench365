@@ -35,6 +35,7 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
   // Anti-Cheat & Disconnect State
   const [isDisqualified, setIsDisqualified] = useState(false);
   const [antiCheatWarning, setAntiCheatWarning] = useState<number | null>(null);
+  const [strikes, setStrikes] = useState(0);
   const [disconnectExpired, setDisconnectExpired] = useState(false);
   
   // Attempt State
@@ -67,7 +68,7 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
           setAttemptsCount(count);
         }
         
-        const questionsData = await getTestQuestions(testId);
+        const questionsData = await getTestQuestions(testId, true);
         setQuestions(questionsData);
         setTimeRemaining(testData.durationMinutes * 60);
 
@@ -145,7 +146,7 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
     }
   }, [answers, markedForReview, status, testId, attemptId]);
 
-  // Anti-Cheat Logic
+  // Anti-Cheat Logic (3 Strikes + 15s Timer)
   useEffect(() => {
     if (status !== 'in_progress') return;
 
@@ -155,44 +156,61 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
     }
 
     let warningTimer: NodeJS.Timeout | null = null;
-    let secondsLeft = 10;
+    let secondsLeft = 15;
+    let isCurrentlyWarning = false; // Prevent double-triggering strikes
 
-    const startWarning = () => {
-      if (warningTimer) return;
-      setAntiCheatWarning(10);
-      secondsLeft = 10;
+    const triggerWarning = () => {
+      if (isCurrentlyWarning) return;
+      isCurrentlyWarning = true;
+      
+      setStrikes(prev => {
+        const newStrikes = prev + 1;
+        if (newStrikes >= 3) {
+          setIsDisqualified(true);
+          handleAutoSubmit();
+        }
+        return newStrikes;
+      });
+
+      // Start 15s countdown
+      setAntiCheatWarning(15);
+      secondsLeft = 15;
+      
       warningTimer = setInterval(() => {
         secondsLeft--;
         setAntiCheatWarning(secondsLeft);
         if (secondsLeft <= 0) {
-          clearInterval(warningTimer!);
+          if (warningTimer) clearInterval(warningTimer);
           setIsDisqualified(true);
           handleAutoSubmit();
         }
       }, 1000);
     };
 
-    const clearWarning = () => {
-      if (warningTimer) {
-        clearInterval(warningTimer);
-        warningTimer = null;
-      }
-      setAntiCheatWarning(null);
-    };
+    // Note: We no longer clear the warning automatically. The user MUST click a button to clear it.
+    // The button click handler is implemented in the render block.
 
     const handleVisibilityChange = () => {
       if (document.hidden) {
-        startWarning();
-      } else {
-        clearWarning();
+        triggerWarning();
       }
     };
 
     const handleFullscreenChange = () => {
       if (!document.fullscreenElement) {
-        startWarning();
-      } else {
-        clearWarning();
+        triggerWarning();
+      }
+    };
+
+    // Expose a global function for the UI button to call to clear the warning and re-enter fullscreen
+    (window as any).clearAntiCheatWarning = () => {
+      if (warningTimer) clearInterval(warningTimer);
+      warningTimer = null;
+      isCurrentlyWarning = false;
+      setAntiCheatWarning(null);
+      
+      if (typeof document !== 'undefined' && 'requestFullscreen' in document.documentElement && !document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(err => console.error("Fullscreen error:", err));
       }
     };
 
@@ -203,12 +221,13 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       document.removeEventListener("fullscreenchange", handleFullscreenChange);
       if (warningTimer) clearInterval(warningTimer);
+      delete (window as any).clearAntiCheatWarning;
     };
   }, [status]);
 
-  // Timer Logic — only depends on status to avoid stale-closure drift
+  // Timer Logic — Only for 'exam' type tests (Real Exam Feel)
   useEffect(() => {
-    if (status !== 'in_progress') return;
+    if (status !== 'in_progress' || test?.type !== 'exam') return;
     const timer = setInterval(() => {
       setTimeRemaining((prev) => {
         if (prev <= 1) {
@@ -220,7 +239,7 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
       });
     }, 1000);
     return () => clearInterval(timer);
-  }, [status]); // intentionally omits timeRemaining — functional updater handles it correctly
+  }, [status, test?.type]);
 
   const handleStartExam = async () => {
     if (!user) return;
@@ -325,6 +344,11 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
       
       localStorage.removeItem(`cbt_backup_${testId}`);
       setStatus('completed');
+      
+      // Exit fullscreen if active
+      if (typeof document !== 'undefined' && document.fullscreenElement) {
+        document.exitFullscreen().catch(err => console.error("Exit fullscreen error:", err));
+      }
     } catch (err: any) {
       console.error(err);
       alert(err.message || "Failed to submit exam.");
@@ -486,15 +510,49 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
     <ProtectedRoute requiredRole="student">
       <div className="min-h-screen bg-slate-950 text-white flex flex-col select-none relative z-20">
         
+        {/* Anti-Cheat Overlay */}
+        {antiCheatWarning !== null && (
+          <div className="fixed inset-0 z-50 bg-slate-950/95 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center">
+            <AlertTriangle className="w-24 h-24 text-red-500 mb-6 animate-pulse" />
+            <h2 className="text-4xl font-extrabold text-red-500 mb-4">ANTI-CHEAT WARNING</h2>
+            <p className="text-xl text-slate-300 max-w-2xl mb-8 leading-relaxed">
+              You have left the exam window or exited full-screen mode. This is a violation of the exam rules.
+            </p>
+            
+            <div className="bg-red-500/10 border border-red-500/30 rounded-2xl p-6 mb-8 max-w-md w-full shadow-lg">
+              <div className="text-sm text-red-400 font-bold mb-2 uppercase tracking-widest">Strikes Recorded</div>
+              <div className="text-3xl font-extrabold text-red-500">{strikes} / 3</div>
+              <div className="text-xs text-red-400/80 mt-2">3 strikes will result in immediate disqualification.</div>
+            </div>
+            
+            <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-6 mb-10 max-w-md w-full shadow-lg">
+              <div className="text-sm text-amber-400 font-bold mb-2 uppercase tracking-widest">Time to Return</div>
+              <div className="text-5xl font-mono font-extrabold text-amber-500">{antiCheatWarning}s</div>
+            </div>
+            
+            <button 
+              onClick={() => (window as any).clearAntiCheatWarning?.()}
+              className="px-8 py-4 bg-red-600 hover:bg-red-500 text-white font-bold rounded-xl text-lg shadow-[0_0_30px_rgba(220,38,38,0.3)] transition-all hover:scale-105 active:scale-95"
+            >
+              I Understand, Return to Fullscreen
+            </button>
+          </div>
+        )}
+
         {/* Top Roof Header */}
         <div className="h-16 border-b border-white/10 bg-zinc-900 px-6 flex items-center justify-between shrink-0">
           <div className="font-bold text-white text-sm flex items-center gap-2">
             <span className="text-amber-500">NISM V-A</span> · {test?.title}
+            {test?.type === 'exam' && (
+              <span className={`ml-4 px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wider ${strikes > 0 ? 'bg-red-500/20 text-red-400 border border-red-500/30 animate-pulse' : 'bg-white/5 text-slate-400 border border-white/10'}`}>
+                WARNINGS: {strikes}/3
+              </span>
+            )}
           </div>
           <div className="flex items-center gap-6">
-            <div className={`font-mono text-base font-bold flex items-center gap-2 ${timeRemaining < 300 ? 'text-red-400 animate-pulse' : 'text-amber-400'}`}>
+            <div className={`font-mono text-base font-bold flex items-center gap-2 ${test?.type === 'exam' ? (timeRemaining < 300 ? 'text-red-400 animate-pulse' : 'text-amber-400') : 'text-emerald-400'}`}>
               <Clock className="w-4 h-4" />
-              {formatTime(timeRemaining)}
+              {test?.type === 'exam' ? formatTime(timeRemaining) : 'Practice Mode'}
             </div>
             <button 
               onClick={handleManualSubmit}
@@ -528,22 +586,44 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
 
               <div className="space-y-3 pt-2">
                 {currentQuestion.options?.map((option: string, index: number) => {
+                  const isAnswered = answers[currentQuestion.id] !== undefined;
                   const isSelected = answers[currentQuestion.id] === index;
+                  const isCorrectOption = currentQuestion.correctOptionIndex === index;
+                  
+                  // Styles for instant feedback (Only for Practice tests)
+                  let buttonStyle = 'border-white/10 bg-zinc-900/80 text-slate-300 hover:border-white/20 hover:bg-white/5';
+                  let iconStyle = 'bg-slate-800 text-slate-400';
+                  
+                  if (test?.type === 'practice') {
+                    if (isAnswered) {
+                      if (isCorrectOption) {
+                        buttonStyle = 'border-emerald-500 bg-emerald-500/10 shadow-[0_0_15px_rgba(16,185,129,0.15)] text-emerald-400 font-bold';
+                        iconStyle = 'bg-emerald-500 text-slate-950';
+                      } else if (isSelected) {
+                        buttonStyle = 'border-red-500 bg-red-500/10 shadow-[0_0_15px_rgba(239,68,68,0.15)] text-red-400 font-bold';
+                        iconStyle = 'bg-red-500 text-slate-950';
+                      } else {
+                        buttonStyle = 'border-white/5 bg-zinc-900/40 text-slate-500 opacity-50 cursor-not-allowed';
+                      }
+                    }
+                  } else {
+                    // Exam Mode Styling (No feedback, just select)
+                    if (isSelected) {
+                      buttonStyle = 'border-amber-500 bg-amber-500/10 shadow-[0_0_15px_rgba(245,158,11,0.15)] text-amber-400 font-bold';
+                      iconStyle = 'bg-amber-500 text-slate-950';
+                    }
+                  }
+
                   const letter = String.fromCharCode(65 + index);
                   
                   return (
                     <button
                       key={index}
-                      onClick={() => handleSelectOption(index)}
-                      className={`w-full text-left p-4 rounded-xl border flex items-center gap-4 transition-all ${
-                        isSelected
-                          ? 'border-amber-500 bg-amber-500/10 shadow-[0_0_15px_rgba(245,158,11,0.15)] text-amber-400 font-bold'
-                          : 'border-white/10 bg-zinc-900/80 text-slate-300 hover:border-white/20'
-                      }`}
+                      onClick={() => (test?.type === 'practice' && isAnswered) ? null : handleSelectOption(index)}
+                      disabled={test?.type === 'practice' && isAnswered}
+                      className={`w-full text-left p-4 rounded-xl border flex items-center gap-4 transition-all ${buttonStyle}`}
                     >
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold font-mono text-sm shrink-0 ${
-                        isSelected ? 'bg-amber-500 text-slate-950' : 'bg-slate-800 text-slate-400'
-                      }`}>
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold font-mono text-sm shrink-0 transition-colors ${iconStyle}`}>
                         {letter}
                       </div>
                       <div className="text-sm">{option}</div>
@@ -551,6 +631,25 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
                   );
                 })}
               </div>
+
+              {/* Instant Feedback Explanation (Only for Practice Tests) */}
+              {test?.type === 'practice' && answers[currentQuestion.id] !== undefined && currentQuestion.explanation && (
+                <div className="mt-6 p-5 rounded-xl bg-slate-800/50 border border-slate-700 animate-in fade-in slide-in-from-bottom-2">
+                  <div className="flex items-center gap-2 mb-2">
+                    {answers[currentQuestion.id] === currentQuestion.correctOptionIndex ? (
+                      <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+                    ) : (
+                      <AlertTriangle className="w-5 h-5 text-red-400" />
+                    )}
+                    <h3 className="font-bold text-slate-200">
+                      {answers[currentQuestion.id] === currentQuestion.correctOptionIndex ? 'Correct!' : 'Incorrect'}
+                    </h3>
+                  </div>
+                  <p className="text-sm text-slate-400 leading-relaxed">
+                    {currentQuestion.explanation}
+                  </p>
+                </div>
+              )}
 
               {/* Navigation Actions */}
               <div className="flex items-center justify-between border-t border-white/10 pt-6 gap-3 flex-wrap">
