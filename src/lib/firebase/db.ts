@@ -295,3 +295,42 @@ export async function getActiveAttemptForUser(userId: string, testId: string) {
   const docSnap = snapshot.docs[0];
   return { id: docSnap.id, ...docSnap.data() };
 }
+
+export async function getUserAnalytics(userId: string) {
+  const q = query(
+    collection(db, 'test_attempts'),
+    where('userId', '==', userId),
+    where('status', '==', 'completed')
+  );
+  
+  const snapshot = await getDocs(q);
+  
+  let totalScore = 0;
+  let totalQuestions = 0;
+  let totalTimeMs = 0;
+  
+  snapshot.docs.forEach(doc => {
+    const data = doc.data();
+    
+    // Fallback to max 50 if missing for old data
+    const attemptTotalQuestions = data.totalQuestions || Object.keys(data.answers || {}).length || 50; 
+    
+    totalScore += (data.score || 0);
+    totalQuestions += attemptTotalQuestions;
+    
+    if (data.startedAt && data.submittedAt) {
+      const start = data.startedAt.toDate();
+      const end = data.submittedAt.toDate();
+      totalTimeMs += Math.max(0, end.getTime() - start.getTime());
+    }
+  });
+
+  const accuracy = totalQuestions > 0 ? Math.round((totalScore / totalQuestions) * 100) : 0;
+  const attemptsCount = snapshot.size;
+
+  return {
+    accuracy,
+    attemptsCount,
+    totalTimeMs
+  };
+}

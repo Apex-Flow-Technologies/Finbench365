@@ -92,6 +92,7 @@ export async function POST(req: Request) {
     await attemptRef.update({
       answers,
       score,
+      totalQuestions: solutionsSnapshot.size,
       status: 'completed',
       submittedAt: FieldValue.serverTimestamp()
     });

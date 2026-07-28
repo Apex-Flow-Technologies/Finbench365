@@ -7,7 +7,7 @@ import { auth } from '@/lib/firebase/config';
 import { signOut } from 'firebase/auth';
 import { LogOut, BookOpen, Clock, Award, Layers, Loader2 } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { getUserEntitlements, getCourses } from '@/lib/firebase/db';
+import { getUserEntitlements, getCourses, getUserAnalytics } from '@/lib/firebase/db';
 import { useRouter } from 'next/navigation';
 import { AdminPreviewBanner } from '@/components/AdminPreviewBanner';
 
@@ -16,6 +16,7 @@ export default function DashboardPage() {
   const router = useRouter();
   const [entitlements, setEntitlements] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [analytics, setAnalytics] = useState({ accuracy: 0, totalTimeMs: 0, attemptsCount: 0 });
 
   useEffect(() => {
     if (!user) return;
@@ -38,6 +39,9 @@ export default function DashboardPage() {
         console.error(err);
         setLoading(false);
       });
+      
+      getUserAnalytics(user.uid).then(setAnalytics).catch(console.error);
+
     } else if (user.uid) {
       getUserEntitlements(user.uid).then(data => {
         setEntitlements(data);
@@ -46,6 +50,8 @@ export default function DashboardPage() {
         console.error(err);
         setLoading(false);
       });
+      
+      getUserAnalytics(user.uid).then(setAnalytics).catch(console.error);
     }
   }, [user?.uid, user?.role]);
 
@@ -263,9 +269,6 @@ export default function DashboardPage() {
             <div className="rounded-2xl p-6 border transition-all duration-300 bg-white border-slate-200 shadow-sm dark:bg-[#181A1F] dark:border-white/10 dark:shadow-lg space-y-6">
               <div className="flex items-center justify-between border-b border-slate-100 dark:border-[#282C36] pb-3">
                 <h3 className="font-bold text-slate-900 dark:text-white text-base">Performance Overview</h3>
-                <span className="text-[10px] font-mono font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 px-2 py-0.5 rounded border border-amber-500/20">
-                  NISM V-A
-                </span>
               </div>
 
               <div className="space-y-4">
@@ -276,12 +279,19 @@ export default function DashboardPage() {
                     </div>
                     <div>
                       <div className="text-xs text-slate-500 dark:text-slate-400">Average Accuracy</div>
-                      <div className="font-extrabold text-xl text-slate-900 dark:text-white">74%</div>
+                      <div className="font-extrabold text-xl text-slate-900 dark:text-white">{analytics.accuracy}%</div>
                     </div>
                   </div>
-                  <span className="text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded">
-                    QUALIFIED
-                  </span>
+                  {analytics.accuracy >= 70 && (
+                    <span className="text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded">
+                      QUALIFIED
+                    </span>
+                  )}
+                  {analytics.accuracy < 70 && analytics.accuracy > 0 && (
+                    <span className="text-xs font-mono font-bold text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded">
+                      IMPROVING
+                    </span>
+                  )}
                 </div>
 
                 <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-[#121419] rounded-xl border border-slate-100 dark:border-[#282C36]">
@@ -291,36 +301,15 @@ export default function DashboardPage() {
                     </div>
                     <div>
                       <div className="text-xs text-slate-500 dark:text-slate-400">Total CBT Time</div>
-                      <div className="font-extrabold text-xl text-slate-900 dark:text-white">14h 20m</div>
+                      <div className="font-extrabold text-xl text-slate-900 dark:text-white">
+                        {Math.floor(analytics.totalTimeMs / (1000 * 60 * 60))}h {Math.floor((analytics.totalTimeMs / (1000 * 60)) % 60)}m
+                      </div>
                     </div>
                   </div>
                   <span className="text-xs font-mono font-bold text-slate-500 dark:text-slate-400">
-                    6 Mocks
+                    {analytics.attemptsCount} Mocks
                   </span>
                 </div>
-              </div>
-
-              {/* 2. Chapter Strength Breakdown Diagnostic */}
-              <div className="pt-2 space-y-3 border-t border-slate-100 dark:border-[#282C36]">
-                <div className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                  Chapter Strength Diagnostic
-                </div>
-
-                {[
-                  { chapter: 'Mutual Fund Structure & Services', pct: 85, color: 'bg-emerald-500' },
-                  { chapter: 'Risk, Return & Performance Evaluation', pct: 72, color: 'bg-indigo-500' },
-                  { chapter: 'Legal & Regulatory Framework (SEBI)', pct: 58, color: 'bg-amber-500' },
-                ].map((item, idx) => (
-                  <div key={idx} className="space-y-1">
-                    <div className="flex justify-between text-xs font-mono">
-                      <span className="text-slate-700 dark:text-slate-300 truncate max-w-[180px]">{item.chapter}</span>
-                      <span className="font-bold text-slate-900 dark:text-white">{item.pct}%</span>
-                    </div>
-                    <div className="w-full h-1.5 bg-slate-100 dark:bg-[#272B33] rounded-full overflow-hidden">
-                      <div className={`h-full ${item.color} rounded-full`} style={{ width: `${item.pct}%` }} />
-                    </div>
-                  </div>
-                ))}
               </div>
             </div>
           </motion.div>
