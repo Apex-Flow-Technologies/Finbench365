@@ -6,7 +6,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useRouter, usePathname } from 'next/navigation';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { motion } from 'framer-motion';
-import { LayoutDashboard, BookOpen, Users, Settings, LogOut, ChevronLeft, Menu, Home, ExternalLink } from 'lucide-react';
+import { LayoutDashboard, BookOpen, Users, Settings, LogOut, ChevronLeft, Menu, Home, ExternalLink, ShieldCheck } from 'lucide-react';
 import { signOut } from 'firebase/auth';
 import { auth } from '@/lib/firebase/config';
 
@@ -25,7 +25,7 @@ export default function EditorLayout({ children }: { children: React.ReactNode }
 
   const navItems = [
     { label: 'Dashboard', icon: LayoutDashboard, href: '/editor' },
-    ...(!isEditorPath ? [{ label: 'Users', icon: Users, href: '/admin/users' }] : []),
+    ...(user?.role === 'admin' ? [{ label: 'Admin Panel', icon: ShieldCheck, href: '/admin' }] : []),
     { label: 'Settings', icon: Settings, href: '/editor/settings' },
   ];
 
