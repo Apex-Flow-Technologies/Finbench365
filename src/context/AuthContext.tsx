@@ -33,14 +33,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       if (firebaseUser) {
         // Ensure local session ID exists
         let localSessionId = localStorage.getItem('myexams_session_id');
+        let isNewSession = false;
         if (!localSessionId) {
           localSessionId = 'sess_' + Math.random().toString(36).substring(2) + Date.now().toString(36);
           localStorage.setItem('myexams_session_id', localSessionId);
-          // Set in Firestore
-          updateUserActiveSession(firebaseUser.uid, localSessionId).catch(() => {});
+          isNewSession = true;
         }
 
         try {
+          if (isNewSession) {
+            await updateUserActiveSession(firebaseUser.uid, localSessionId);
+          }
+
           const userDocRef = doc(db, 'users', firebaseUser.uid);
           const userDoc = await getDoc(userDocRef);
           
@@ -50,7 +54,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             
             // If activeSessionId is not set yet in DB, set it
             if (!userData.activeSessionId) {
-              updateUserActiveSession(firebaseUser.uid, localSessionId).catch(() => {});
+              await updateUserActiveSession(firebaseUser.uid, localSessionId);
             }
           } else {
             setUser(Object.assign(firebaseUser, { role: 'student' as const }));

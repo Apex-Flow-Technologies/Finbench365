@@ -20,6 +20,8 @@ import { auth, db } from '@/lib/firebase/config';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, updateProfile } from 'firebase/auth';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { useAuth } from '@/context/AuthContext';
+import NProgress from 'nprogress';
+import 'nprogress/nprogress.css';
 
 function LoginContent() {
   const searchParams = useSearchParams();
@@ -66,8 +68,10 @@ function LoginContent() {
     }
 
     setIsSubmitting(true);
+    NProgress.start();
     
     try {
+      localStorage.removeItem('myexams_session_id'); // FORCE new session on explicit login
       if (activeTab === 'signin') {
         // Sign In — useEffect handles role-based redirect
         await signInWithEmailAndPassword(auth, email, password);
@@ -98,11 +102,13 @@ function LoginContent() {
       setErrorMsg(error.message || 'Authentication failed. Please try again.');
     } finally {
       setIsSubmitting(false);
+      NProgress.done();
     }
   };
 
   const handleLogout = async () => {
     try {
+      localStorage.removeItem('myexams_session_id');
       await signOut(auth);
     } catch (error) {
       console.error("Error signing out:", error);

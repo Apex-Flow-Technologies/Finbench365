@@ -31,6 +31,18 @@
     background-color: #181A1F;
     color: #FBFBF9;
   }
+
+  button, 
+  [role="button"],
+  a {
+    cursor: pointer;
+  }
+  
+  button:disabled, 
+  [role="button"]:disabled,
+  a[aria-disabled="true"] {
+    cursor: not-allowed;
+  }
 }
 
 /* Custom subtle ambient keyframe animations */

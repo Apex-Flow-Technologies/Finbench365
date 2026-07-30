@@ -200,8 +200,8 @@ export async function saveQuestionsBatch(testId: string, questions: any[], testT
     const questionsRef = collection(db, `mock_tests/${testId}/questions`);
     const qRef = q.id ? doc(db, `mock_tests/${testId}/questions`, q.id) : doc(questionsRef);
     
-    // We explicitly exclude the local 'id' field
-    const { id, correctOptionIndex, ...publicData } = q;
+    // We explicitly exclude the local 'id' and 'explanation' fields from public data
+    const { id, correctOptionIndex, explanation, ...publicData } = q;
     const safeCorrectOptionIndex = correctOptionIndex ?? 0;
     
     // For practice tests, we keep correctOptionIndex public for instant grading UI
@@ -221,6 +221,7 @@ export async function saveQuestionsBatch(testId: string, questions: any[], testT
     const solutionRef = doc(db, `mock_tests/${testId}/solutions`, qRef.id);
     batch.set(solutionRef, {
       correctOptionIndex: safeCorrectOptionIndex,
+      explanation: explanation || "",
       updatedAt: serverTimestamp()
     }, { merge: true });
   });
@@ -303,7 +304,7 @@ export async function getUsers() {
 // Single active session enforcement
 export async function updateUserActiveSession(userId: string, sessionId: string) {
   const userRef = doc(db, 'users', userId);
-  await updateDoc(userRef, { activeSessionId: sessionId, lastLoginAt: serverTimestamp() });
+  await setDoc(userRef, { activeSessionId: sessionId, lastLoginAt: serverTimestamp() }, { merge: true });
 }
 
 // Find existing active attempt for fallback recovery

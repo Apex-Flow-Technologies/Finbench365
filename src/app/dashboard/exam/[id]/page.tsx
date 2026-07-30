@@ -17,6 +17,8 @@ import {
 } from '@/lib/firebase/db';
 import { Clock, AlertCircle, ChevronLeft, ChevronRight, CheckCircle2, LayoutGrid, AlertTriangle, ShieldCheck } from 'lucide-react';
 import { AdminPreviewBanner } from '@/components/AdminPreviewBanner';
+import NProgress from 'nprogress';
+import 'nprogress/nprogress.css';
 
 export default function ExamPage({ params }: { params: Promise<{ id: string }> }) {
   const unwrappedParams = use(params);
@@ -248,6 +250,48 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
     };
   }, [status]);
 
+  // Aggressive Anti-Cheat (Disable Right-Click, Selection, Copy, DevTools)
+  useEffect(() => {
+    if (status !== 'in_progress') return;
+
+    const preventDefault = (e: Event) => e.preventDefault();
+    
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Prevent F12
+      if (e.key === 'F12') e.preventDefault();
+      
+      // Prevent Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+U, Ctrl+P, Ctrl+C, etc.
+      if (e.ctrlKey || e.metaKey) {
+        const key = e.key.toLowerCase();
+        if (
+          key === 'i' || 
+          key === 'j' || 
+          key === 'u' || 
+          key === 'p' || 
+          key === 'c' || 
+          key === 'x'
+        ) {
+          e.preventDefault();
+        }
+      }
+    };
+
+    // Attach listeners
+    document.addEventListener('contextmenu', preventDefault);
+    document.addEventListener('selectstart', preventDefault);
+    document.addEventListener('copy', preventDefault);
+    document.addEventListener('cut', preventDefault);
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('contextmenu', preventDefault);
+      document.removeEventListener('selectstart', preventDefault);
+      document.removeEventListener('copy', preventDefault);
+      document.removeEventListener('cut', preventDefault);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [status]);
+
   // Timer Logic — Only for 'exam' type tests (Real Exam Feel)
   useEffect(() => {
     if (status !== 'in_progress' || test?.type !== 'exam') return;
@@ -268,6 +312,9 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
     if (!user) return;
     try {
       setIsSubmitting(true);
+      NProgress.start();
+      // Remove any lingering disconnect timer before starting a new exam
+      localStorage.removeItem(`cbt_last_active_${testId}`);
       const newAttemptId = await startTestAttempt(user.uid, testId);
       setAttemptId(newAttemptId);
       setStatus('in_progress');
@@ -276,6 +323,7 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
       alert("Failed to start exam. Check your connection.");
     } finally {
       setIsSubmitting(false);
+      NProgress.done();
     }
   };
 
@@ -333,6 +381,7 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
   const performSubmit = async () => {
     if (!attemptId || !user) return;
     setIsSubmitting(true);
+    NProgress.start();
     try {
       if (test?.type === 'practice') {
         const { correct } = calculateScore();
@@ -360,23 +409,25 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
           })
         });
 
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'Failed to grade exam');
-        setScore(data.score);
-      }
-      
-      localStorage.removeItem(`cbt_backup_${testId}`);
-      setStatus('completed');
-      
-      // Exit fullscreen if active
-      if (typeof document !== 'undefined' && document.fullscreenElement) {
-        document.exitFullscreen().catch(err => console.error("Exit fullscreen error:", err));
-      }
-    } catch (err: any) {
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to grade exam');
+      setScore(data.score);
+    }
+    
+    localStorage.removeItem(`cbt_backup_${testId}`);
+    localStorage.removeItem(`cbt_last_active_${testId}`); // Fix for timeout bug
+    setStatus('completed');
+    
+    // Exit fullscreen if active
+    if (typeof document !== 'undefined' && document.fullscreenElement) {
+      document.exitFullscreen().catch(err => console.error("Exit fullscreen error:", err));
+    }
+  } catch (err: any) {
       console.error(err);
       alert(err.message || "Failed to submit exam.");
     } finally {
       setIsSubmitting(false);
+      NProgress.done();
     }
   };
 

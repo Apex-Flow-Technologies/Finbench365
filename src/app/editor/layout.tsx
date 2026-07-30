@@ -17,6 +17,7 @@ export default function EditorLayout({ children }: { children: React.ReactNode }
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const handleLogout = async () => {
+    localStorage.removeItem('myexams_session_id');
     await signOut(auth);
     router.push('/login');
   };

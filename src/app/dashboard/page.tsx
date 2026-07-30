@@ -57,7 +57,9 @@ export default function DashboardPage() {
 
   const handleLogout = async () => {
     try {
+      localStorage.removeItem('myexams_session_id');
       await signOut(auth);
+      router.push('/login');
     } catch (error) {
       console.error("Error signing out:", error);
     }
