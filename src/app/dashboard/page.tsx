@@ -161,8 +161,8 @@ export default function DashboardPage() {
                     const diffDays = Math.ceil((entitlement.expiresAt.getTime() - new Date().getTime()) / (1000 * 3600 * 24));
                     const isExpired = !entitlement.isAdminPreview && diffDays <= 0;
                     const daysTotal = entitlement.durationDays;
-                    const daysPassed = daysTotal - (isExpired ? 0 : diffDays);
-                    const progressPct = isExpired ? 100 : Math.min(100, Math.max(0, (daysPassed / daysTotal) * 100));
+                    // Start full and drain as time passes
+                    const remainingPct = isExpired ? 0 : Math.min(100, Math.max(0, (diffDays / daysTotal) * 100));
                     const isPending = pendingCourseId === entitlement.courseId;
 
                     return (
@@ -201,7 +201,7 @@ export default function DashboardPage() {
                           <div className="w-full rounded-full h-2 mb-3 bg-slate-100 dark:bg-black/50 dark:border dark:border-white/5 overflow-hidden">
                             <motion.div 
                               initial={{ width: 0 }}
-                              animate={{ width: `${progressPct}%` }}
+                              animate={{ width: `${remainingPct}%` }}
                               transition={{ duration: 1, ease: "easeOut" }}
                               className={`${isExpired ? 'bg-red-500' : 'bg-amber-500'} h-full rounded-full shadow-[0_0_10px_rgba(245,158,11,0.5)]`}
                             />
