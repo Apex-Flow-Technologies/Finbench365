@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { PLAN_PRICING, GST_RATE } from '@/constants/pricing';
+import { Timestamp, FieldValue } from 'firebase-admin/firestore';
 
 export async function POST(req: Request) {
   try {
@@ -52,7 +53,33 @@ export async function POST(req: Request) {
     const finalTotal = Math.round((discountedPrice + gstAmount) * 100) / 100;
 
     if (finalTotal <= 0) {
-      return NextResponse.json({ error: 'Calculated price is zero or invalid' }, { status: 400 });
+      // 100% Discount applied! Bypass Razorpay and grant entitlement directly.
+      const days = planData.durationDays;
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + days);
+
+      // Increment coupon usage
+      if (couponCode) {
+        const sanitizedCode = couponCode.trim().toUpperCase();
+        await adminDb.collection('coupons').doc(sanitizedCode).update({
+          usedCount: FieldValue.increment(1)
+        });
+      }
+
+      // Grant entitlement
+      await adminDb.collection('users').doc(decodedToken.uid).set({
+        enrolledCourses: {
+          [courseId]: {
+            expiresAt: Timestamp.fromDate(expiresAt),
+            enrolledAt: FieldValue.serverTimestamp(),
+            durationDays: days,
+            planId: planId,
+            paymentId: `bypassed_coupon_${couponCode}`,
+          }
+        },
+      }, { merge: true });
+
+      return NextResponse.json({ success: true, bypassed: true });
     }
 
     const keyId = process.env.RAZORPAY_KEY_ID;

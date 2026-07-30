@@ -130,6 +130,15 @@ function CheckoutContent() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to create order');
 
+      if (data.bypassed) {
+        // 100% Discount was applied and access was granted directly by the server
+        setOrderCompleted(true);
+        setTimeout(() => {
+          router.push(`/dashboard/courses/${courseId}`);
+        }, 2000);
+        return;
+      }
+
       const { order } = data;
 
       const rzp = new (window as any).Razorpay({
