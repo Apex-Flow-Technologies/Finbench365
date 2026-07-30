@@ -157,11 +157,19 @@ export default function AdminEditorSettingsPage() {
 
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/10 pb-6">
-          <div>
-            <h1 className="text-3xl font-extrabold tracking-tight text-white flex items-center gap-3">
-              <Sliders className="w-8 h-8 text-amber-500" />
-              Admin Platform Controls
-            </h1>
+          <div className="flex items-start gap-4">
+            <button
+              onClick={() => window.location.href = '/editor'}
+              className="mt-1 p-2 bg-white/5 hover:bg-white/10 rounded-xl transition-colors text-slate-400 hover:text-white shrink-0"
+              title="Back to Dashboard"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><path d="m15 18-6-6 6-6"/></svg>
+            </button>
+            <div>
+              <h1 className="text-3xl font-extrabold tracking-tight text-white flex items-center gap-3">
+                <Sliders className="w-8 h-8 text-amber-500" />
+                Admin Platform Controls
+              </h1>
             <p className="text-slate-400 text-sm mt-1">
               Super-user management directory, feature flags configurator, tier pricing (INR ₹), and anti-tampering security rules.
             </p>
