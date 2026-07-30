@@ -230,14 +230,14 @@ function TestBuilderContent({ params }: { params: Promise<{ id: string }> }) {
       )}
 
       {/* Header */}
-      <header className="shrink-0 bg-white dark:bg-[#121419] transition-colors duration-300 border-b border-slate-200 dark:border-[#282C36] p-4 flex justify-between items-center z-10 sticky top-0">
-        <div className="flex items-center gap-4">
+      <header className="shrink-0 bg-white dark:bg-[#121419] transition-colors duration-300 border-b border-slate-200 dark:border-[#282C36] p-4 flex flex-wrap gap-4 justify-between items-center z-10 sticky top-0 overflow-x-auto min-h-[5rem]">
+        <div className="flex flex-wrap items-center gap-4">
           <button
             onClick={() => {
               const parentUrl = effectiveCourseId ? `/editor/courses/${effectiveCourseId}` : '/editor';
               router.push(parentUrl);
             }}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-slate-100 dark:bg-[#272B33] hover:bg-slate-200 dark:hover:bg-[#323842] text-slate-700 dark:text-slate-300 transition-colors text-xs font-bold shrink-0"
+            className="flex items-center justify-center gap-1.5 h-10 px-4 rounded-lg bg-slate-100 dark:bg-[#272B33] hover:bg-slate-200 dark:hover:bg-[#323842] text-slate-700 dark:text-slate-300 transition-colors text-xs font-bold shrink-0 whitespace-nowrap"
           >
             <ArrowLeft className="w-4 h-4" />
             <span>Back to Exam</span>
@@ -251,23 +251,25 @@ function TestBuilderContent({ params }: { params: Promise<{ id: string }> }) {
                   type="text" 
                   value={test?.title || ''} 
                   onChange={(e) => setTest({...test, title: e.target.value})}
-                  className="font-bold text-lg bg-transparent border-none outline-none text-slate-900 dark:text-white placeholder:text-slate-400 focus:ring-0 p-0"
-                  placeholder="Enter Test Title..."
+                  className="font-bold text-lg bg-transparent border-none outline-none text-slate-900 dark:text-white placeholder:text-slate-400 focus:ring-0 p-0 w-32 sm:w-48"
+                  placeholder="Enter Title..."
                 />
               </div>
               
               <div className="flex flex-col gap-1 border-l border-slate-200 dark:border-slate-800 pl-4 ml-2">
                 <label className="text-[10px] uppercase font-bold text-slate-500">Test Mode</label>
-                <select
-                  value={test?.type || 'exam'}
-                  onChange={(e) => setTest({...test, type: e.target.value})}
-                  className="bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white text-xs font-bold rounded px-2 py-1 border-none outline-none cursor-pointer"
-                >
-                  <option value="practice">Practice Mode (Instant Feedback)</option>
-                  <option value="exam">Exam Mode (Strict, No Feedback)</option>
-                </select>
+                <div className="flex items-center gap-3">
+                  <select
+                    value={test?.type || 'exam'}
+                    onChange={(e) => setTest({...test, type: e.target.value})}
+                    className="bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white text-xs font-bold rounded px-2 py-1 border-none outline-none cursor-pointer h-6"
+                  >
+                    <option value="practice">Practice Mode</option>
+                    <option value="exam">Exam Mode</option>
+                  </select>
+                  <span className="text-amber-500 font-mono text-[10px] tracking-widest px-2 py-1 bg-amber-500/10 rounded h-6 flex items-center">BUILDER</span>
+                </div>
               </div>
-              <span className="text-amber-500 font-mono text-xs tracking-widest mt-4">BUILDER</span>
             </div>
             <p className="text-slate-500 dark:text-slate-400 text-xs mt-1">
               {questions.length} Questions Loaded · Press Ctrl+S to save
@@ -275,8 +277,8 @@ function TestBuilderContent({ params }: { params: Promise<{ id: string }> }) {
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          <label className="flex items-center gap-2 cursor-pointer bg-slate-100 dark:bg-[#272B33] px-3 py-1.5 rounded-xl border border-slate-200 dark:border-white/10 hover:bg-slate-200 dark:hover:bg-[#323842] transition-colors">
+        <div className="flex items-center gap-2 flex-wrap">
+          <label className="flex items-center gap-2 cursor-pointer bg-slate-100 dark:bg-[#272B33] h-10 px-4 rounded-xl border border-slate-200 dark:border-white/10 hover:bg-slate-200 dark:hover:bg-[#323842] transition-colors shrink-0 whitespace-nowrap">
             <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
               {test?.isPublished ? 'Published' : 'Draft'}
             </span>
@@ -293,39 +295,39 @@ function TestBuilderContent({ params }: { params: Promise<{ id: string }> }) {
           <button
             onClick={() => fileInputRef.current?.click()}
             disabled={isSaving}
-            className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-100 dark:bg-[#272B33] text-slate-900 dark:text-white hover:bg-slate-200 dark:hover:bg-[#323842] transition-colors text-xs font-bold disabled:opacity-50"
+            className="flex items-center justify-center gap-2 h-10 px-4 rounded-xl bg-slate-100 dark:bg-[#272B33] text-slate-900 dark:text-white hover:bg-slate-200 dark:hover:bg-[#323842] transition-colors text-xs font-bold shrink-0 whitespace-nowrap disabled:opacity-50"
           >
             <UploadCloud className="w-4 h-4" />
-            Import .docx
+            <span>Import .docx</span>
           </button>
           <input type="file" accept=".docx" ref={fileInputRef} onChange={handleFileUpload} className="hidden" />
 
           <button
             onClick={() => setShowBulkImportModal(true)}
             disabled={isSaving}
-            className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 border border-indigo-500/30 transition-colors text-xs font-bold disabled:opacity-50"
+            className="flex items-center justify-center gap-2 h-10 px-4 rounded-xl bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 border border-indigo-500/30 transition-colors text-xs font-bold shrink-0 whitespace-nowrap disabled:opacity-50"
           >
             <UploadCloud className="w-4 h-4" />
-            Import JSON/CSV
+            <span>Import JSON/CSV</span>
           </button>
           
           <button
             onClick={handleSaveInPlace}
             disabled={isSaving}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-200 dark:bg-[#272B33] hover:bg-slate-300 dark:hover:bg-[#323842] text-slate-800 dark:text-slate-200 transition-colors text-xs font-bold disabled:opacity-50"
+            className="flex items-center justify-center gap-2 h-10 px-4 rounded-xl bg-slate-200 dark:bg-[#272B33] hover:bg-slate-300 dark:hover:bg-[#323842] text-slate-800 dark:text-slate-200 transition-colors text-xs font-bold shrink-0 whitespace-nowrap disabled:opacity-50"
             title="Save in-place (Ctrl+S)"
           >
-            {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-            Save
+            {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+            <span>Save</span>
           </button>
 
           <button
             onClick={handleSaveAndExit}
             disabled={isSaving}
-            className="flex items-center gap-2 px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-900 font-bold text-xs shadow-md shadow-amber-500/20 transition-all disabled:opacity-50 active:scale-95"
+            className="flex items-center justify-center gap-2 h-10 px-4 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-900 transition-all text-xs font-bold shrink-0 whitespace-nowrap disabled:opacity-50 active:scale-95 shadow-md shadow-amber-500/20"
           >
             {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
-            {isSaving ? 'Saving...' : 'Save & Exit'}
+            <span>{isSaving ? 'Saving...' : 'Save & Exit'}</span>
           </button>
         </div>
       </header>
