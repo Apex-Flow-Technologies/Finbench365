@@ -50,7 +50,7 @@ export default function EditorLayout({ children }: { children: React.ReactNode }
         </div>
 
         {/* Sidebar */}
-        <aside className={`w-64 bg-white dark:bg-[#121419] border-r border-slate-200 dark:border-[#282C36] flex-col transition-all duration-300 shrink-0 ${isMobileMenuOpen ? 'flex absolute inset-y-0 left-0 z-50 shadow-2xl' : 'hidden md:flex'}`}>
+        <aside className={`w-64 bg-white dark:bg-[#121419] border-r border-slate-200 dark:border-[#282C36] flex-col justify-between pb-6 transition-all duration-300 shrink-0 ${isMobileMenuOpen ? 'flex absolute inset-y-0 left-0 z-50 shadow-2xl' : 'hidden md:flex'}`}>
           <div className="p-6 hidden md:flex items-center gap-3">
             <div className="w-8 h-8 bg-amber-500 rounded flex items-center justify-center text-slate-900 font-black text-sm shrink-0">
               FB
@@ -109,8 +109,8 @@ export default function EditorLayout({ children }: { children: React.ReactNode }
           </nav>
 
           <div className="p-4 border-t border-slate-200 dark:border-[#282C36]">
-            <div className="flex justify-between items-center px-4 py-3 mb-2 rounded-xl bg-slate-50 dark:bg-[#181A1F] border border-slate-200 dark:border-[#282C36]">
-              <div className="flex items-center gap-3">
+            <div className="flex justify-between items-center px-4 py-3 mb-4 rounded-xl bg-slate-50 dark:bg-[#181A1F] border border-slate-200 dark:border-[#282C36]">
+              <div className="flex items-center gap-3 overflow-hidden">
                 <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-[#272B33] flex items-center justify-center text-xs font-bold text-slate-600 dark:text-white shrink-0">
                   {user?.displayName?.charAt(0) || user?.email?.charAt(0) || 'E'}
                 </div>
@@ -119,18 +119,20 @@ export default function EditorLayout({ children }: { children: React.ReactNode }
                   <div className="text-xs text-slate-500 truncate">{user?.email}</div>
                 </div>
               </div>
-              <div className="hidden md:block">
+            </div>
+            
+            <div className="flex justify-between items-center gap-4">
+              <button
+                onClick={handleLogout}
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-slate-500 hover:text-red-500 hover:bg-red-50 dark:text-slate-400 dark:hover:text-red-400 dark:hover:bg-[#181A1F] transition-colors text-sm font-medium"
+              >
+                <LogOut className="w-4 h-4" />
+                Sign Out
+              </button>
+              <div className="hidden md:block shrink-0">
                 <ThemeToggle />
               </div>
             </div>
-            
-            <button
-              onClick={handleLogout}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-slate-500 hover:text-red-500 hover:bg-red-50 dark:text-slate-400 dark:hover:text-red-400 dark:hover:bg-[#181A1F] transition-colors text-sm font-medium"
-            >
-              <LogOut className="w-4 h-4" />
-              Sign Out
-            </button>
           </div>
         </aside>
 

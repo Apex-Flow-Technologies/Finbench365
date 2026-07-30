@@ -127,7 +127,7 @@ export default function EditorDashboard() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: idx * 0.06, duration: 0.3 }}
                 onClick={() => handleOpenEditor(exam.id)}
-                className="bg-white border-slate-200 dark:bg-[#181A1F] dark:border-[#282C36] border rounded-2xl p-6 hover:border-amber-500/40 hover:shadow-lg dark:hover:shadow-black/40 hover:shadow-amber-100 transition-all group cursor-pointer"
+                className="bg-white border-slate-200 dark:bg-[#181A1F] dark:border-[#282C36] border rounded-2xl p-6 flex flex-col h-full hover:border-amber-500/40 hover:shadow-lg dark:hover:shadow-black/40 hover:shadow-amber-100 transition-all group cursor-pointer"
               >
                 <div className="flex justify-between items-start mb-5">
                   <div className="w-12 h-12 rounded-xl bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-500 flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -147,7 +147,7 @@ export default function EditorDashboard() {
                 </h3>
                 <p className="text-sm text-slate-500 dark:text-slate-400 mb-5 line-clamp-2">{exam.description}</p>
 
-                <div className="flex gap-2 mt-auto">
+                <div className="flex gap-2 mt-auto pt-2">
                   <div className="flex-1 py-2 rounded-lg border border-slate-100 dark:border-[#282C36] text-xs font-mono text-slate-500 dark:text-slate-400 flex items-center justify-center gap-1.5">
                     <ClipboardList className="w-3.5 h-3.5" />
                     {(exam.materials || []).length} materials

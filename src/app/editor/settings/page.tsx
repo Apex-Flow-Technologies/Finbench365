@@ -209,7 +209,7 @@ export default function AdminEditorSettingsPage() {
                 <tr className="border-b border-white/10 text-xs font-mono text-slate-400 uppercase">
                   <th className="pb-3 px-4">User</th>
                   <th className="pb-3 px-4">Role</th>
-                  <th className="pb-3 px-4">Enrolled Exams</th>
+                  <th className="pb-3 px-4 text-center">Enrolled Exams</th>
                   <th className="pb-3 px-4 text-right">Actions</th>
                 </tr>
               </thead>
@@ -254,7 +254,7 @@ export default function AdminEditorSettingsPage() {
                         </span>
                       </td>
 
-                      <td className="py-4 px-4 text-xs font-mono text-slate-400">
+                      <td className="py-4 px-4 text-xs font-mono text-slate-400 text-center">
                         {usr.role === 'admin' || usr.role === 'editor' ? (
                           <span className="text-amber-400 font-bold">Universal Bypass (All Exams)</span>
                         ) : (
