@@ -3,7 +3,6 @@
 import React, { useEffect, useState } from 'react';
 import { collection, query, getDocs, orderBy, doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
-import { format } from 'date-fns';
 import { CreditCard, CheckCircle2, ShieldCheck, Download, Search } from 'lucide-react';
 import { PLAN_PRICING } from '@/constants/pricing';
 
@@ -182,7 +181,7 @@ export default function AdminOrdersPage() {
                         )}
                       </td>
                       <td className="py-4 px-6 text-sm text-slate-500 dark:text-slate-400 whitespace-nowrap">
-                        {order.createdAt?.toDate ? format(order.createdAt.toDate(), 'MMM dd, yyyy HH:mm') : 'Unknown'}
+                        {order.createdAt?.toDate ? order.createdAt.toDate().toLocaleString('en-US', { month: 'short', day: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false }) : 'Unknown'}
                       </td>
                     </tr>
                   );
