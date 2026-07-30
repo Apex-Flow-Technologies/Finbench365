@@ -60,6 +60,7 @@ function CheckoutContent() {
   const [formError, setFormError] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [orderCompleted, setOrderCompleted] = useState(false);
+  const [completedOrderId, setCompletedOrderId] = useState('');
   const [agreeLegal, setAgreeLegal] = useState(false);
   
   const [course, setCourse] = useState<any>(null);
@@ -145,6 +146,7 @@ function CheckoutContent() {
 
       if (data.bypassed) {
         // 100% Discount was applied and access was granted directly by the server
+        setCompletedOrderId(`BYPASS-${Math.floor(1000 + Math.random() * 9000)}`);
         setOrderCompleted(true);
         setTimeout(() => {
           router.push(`/dashboard/courses/${courseId}`);
@@ -190,6 +192,7 @@ function CheckoutContent() {
             console.error('Verify call failed:', verifyErr);
           }
           // Show success regardless
+          setCompletedOrderId(response.razorpay_order_id);
           setOrderCompleted(true);
         },
         prefill: { name, email, contact: phone.replace(/\s+/g, '') },
@@ -220,7 +223,7 @@ function CheckoutContent() {
 
           <div className="space-y-2">
             <span className="px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 font-mono text-xs font-bold uppercase tracking-wider">
-              Razorpay Verified • Order #FB-{Math.floor(100000 + Math.random() * 900000)}
+              Razorpay Verified • Order #{completedOrderId || `FB-${Math.floor(100000 + Math.random() * 900000)}`}
             </span>
             <h2 className="text-2xl sm:text-3xl font-bold font-sans text-white">
               Enrollment Successful!
@@ -245,7 +248,7 @@ function CheckoutContent() {
             </div>
             <div className="flex justify-between pt-1">
               <span className="text-slate-400">GST Invoice status:</span>
-              <span className="text-emerald-500 font-semibold">Dispatched via Email</span>
+              <span className="text-emerald-500 font-semibold">Available in Dashboard</span>
             </div>
           </div>
 

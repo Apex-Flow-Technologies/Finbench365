@@ -63,8 +63,14 @@ export default function SuperAdminDashboard() {
         };
       });
 
+      // Calculate Net Revenue
+      // Gross = Pack Price + 18% GST -> Pack Price = Gross / 1.18
+      // Razorpay Fee = 2% of Gross + 18% GST on fee = 2.36% of Gross
+      // Net Revenue = Pack Price - Razorpay Fee
+      const netRevenue = (revenueSum / 1.18) - (revenueSum * 0.0236);
+
       setTotalEnrollments(enrollmentsCount);
-      setTotalRevenue(revenueSum);
+      setTotalRevenue(Math.round(netRevenue));
       setRecentUsers(usersList.slice(0, 10)); // Top 10 most recent
     });
 
@@ -74,7 +80,7 @@ export default function SuperAdminDashboard() {
   const stats = [
     { label: 'Total Registered Users', value: totalUsers, icon: Users, color: 'text-blue-500', bg: 'bg-blue-500/10' },
     { label: 'Total Active Enrollments', value: totalEnrollments, icon: FileText, color: 'text-amber-500', bg: 'bg-amber-500/10' },
-    { label: 'Total Revenue Generated', value: totalRevenue !== null ? `₹${totalRevenue.toLocaleString('en-IN')}` : null, icon: IndianRupee, color: 'text-emerald-500', bg: 'bg-emerald-500/10' }
+    { label: 'Net Revenue Generated', value: totalRevenue !== null ? `₹${totalRevenue.toLocaleString('en-IN')}` : null, icon: IndianRupee, color: 'text-emerald-500', bg: 'bg-emerald-500/10' }
   ];
 
   return (

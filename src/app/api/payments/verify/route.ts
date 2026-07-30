@@ -71,6 +71,19 @@ export async function POST(req: Request) {
       lastPaymentAt: FieldValue.serverTimestamp(),
     }, { merge: true });
 
+    // Store a unique order record for auditing and reference
+    const orderRef = adminDb.collection('orders').doc(razorpay_order_id);
+    await orderRef.set({
+      userId,
+      courseId: effectiveCourseId,
+      planId,
+      paymentId: razorpay_payment_id,
+      orderId: razorpay_order_id,
+      amount: planData.price, // Note: For future reference, this is base price without GST in DB
+      status: 'success',
+      createdAt: FieldValue.serverTimestamp(),
+    });
+
     console.log(`Course access granted: userId=${userId}, courseId=${effectiveCourseId}`);
 
     return NextResponse.json({ success: true });
