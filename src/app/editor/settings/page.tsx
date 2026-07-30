@@ -315,8 +315,6 @@ export default function AdminEditorSettingsPage() {
               {[
                 { key: 'pdfExport' as const, label: 'PDF Export & Study Downloads', desc: 'Allow candidates to download flat PDF materials.' },
                 { key: 'excelMetrics' as const, label: 'Excel Score Metrics', desc: 'Enable downloadable CSV/XLSX analytics reports.' },
-                { key: 'serverTimers' as const, label: 'Server-Authoritative Timers', desc: 'Force CBT timer sync with Firebase Cloud Timestamp.' },
-                { key: 'rateLimiting' as const, label: 'API Rate Limiting Guard', desc: 'Restrict submit endpoints to 60 requests/minute.' },
                 { key: 'aiExplainer' as const, label: 'AI Question Explainer', desc: 'Automated solution breakdowns for mock exam MCQs.' },
               ].map((flag) => {
                 const isActive = featureFlags[flag.key];
