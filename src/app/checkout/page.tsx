@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { PLAN_PRICING, GST_RATE } from '@/constants/pricing';
+import { getCourse } from '@/lib/firebase/db';
 
 function CheckoutContent() {
   const searchParams = useSearchParams();
@@ -29,7 +30,6 @@ function CheckoutContent() {
 
   const planId = searchParams?.get('planId') || 'plan-30';
   const courseId = searchParams?.get('courseId') || 'nism-va-mock-test-series';
-  const trackTitle = 'Institutional Quantitative Certification Track';
   
   const planData = PLAN_PRICING[planId] || PLAN_PRICING['plan-30'];
   const planName = planData.name;
@@ -61,6 +61,14 @@ function CheckoutContent() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [orderCompleted, setOrderCompleted] = useState(false);
   const [agreeLegal, setAgreeLegal] = useState(false);
+  
+  const [course, setCourse] = useState<any>(null);
+
+  useEffect(() => {
+    if (courseId) {
+      getCourse(courseId).then(setCourse).catch(console.error);
+    }
+  }, [courseId]);
 
   // Auto-populate from Firebase Auth (not stale localStorage)
   useEffect(() => {
@@ -218,7 +226,7 @@ function CheckoutContent() {
               Enrollment Successful!
             </h2>
             <p className="text-sm leading-relaxed text-slate-300">
-              Welcome aboard, <span className="font-semibold">{name}</span>. Your {planDays} package for <span className="text-amber-500 font-semibold">{trackTitle}</span> is now active.
+              Welcome aboard, <span className="font-semibold">{name}</span>. Your {planDays} package for <span className="text-amber-500 font-semibold">{course?.title || 'Certification Track'}</span> is now active.
             </p>
           </div>
 
@@ -424,7 +432,7 @@ function CheckoutContent() {
                       Target Curriculum
                     </span>
                     <h3 className="font-bold text-base leading-snug text-white">
-                      {trackTitle}
+                      {course ? course.title : 'Loading Course Details...'}
                     </h3>
                   </div>
                 </div>
@@ -441,11 +449,11 @@ function CheckoutContent() {
               <div className="space-y-2.5 text-xs text-slate-300">
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                  <span>400+ Algorithmic derivations with explanations</span>
+                  <span>{course?.mockCount || 0} Full-length CBT mock exams</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                  <span>Full-length CBT mock exams & formula notes</span>
+                  <span>{course?.notesCount || 0} PDF formula notes & derivations</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0" />
