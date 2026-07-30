@@ -11,7 +11,8 @@ import {
   updateDoc,
   serverTimestamp,
   writeBatch,
-  Timestamp
+  Timestamp,
+  deleteDoc
 } from 'firebase/firestore';
 
 // --- Courses & Chapters ---
@@ -20,6 +21,11 @@ export async function getCourses() {
   const q = query(collection(db, 'courses'));
   const snapshot = await getDocs(q);
   return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+}
+
+export async function deleteCourse(courseId: string) {
+  const ref = doc(db, 'courses', courseId);
+  await deleteDoc(ref);
 }
 
 export async function getCourse(courseId: string) {

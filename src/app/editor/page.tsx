@@ -3,8 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { getCourses, createCourse } from '@/lib/firebase/db';
-import { Plus, ClipboardList, Loader2, BookOpen } from 'lucide-react';
+import { getCourses, createCourse, deleteCourse } from '@/lib/firebase/db';
+import { Plus, ClipboardList, Loader2, BookOpen, Trash2 } from 'lucide-react';
 
 // Skeleton card for loading
 function ExamSkeletonCard() {
@@ -58,6 +58,19 @@ export default function EditorDashboard() {
     } catch (err) {
       alert('Failed to create exam. Please try again.');
       setIsCreating(false);
+    }
+  };
+
+  const handleDeleteExam = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (window.confirm('Are you sure you want to delete this exam? This action cannot be undone.')) {
+      try {
+        await deleteCourse(id);
+        setExams(exams.filter(exam => exam.id !== id));
+      } catch (error) {
+        console.error("Error deleting exam:", error);
+        alert('Failed to delete exam.');
+      }
     }
   };
 
@@ -133,13 +146,22 @@ export default function EditorDashboard() {
                   <div className="w-12 h-12 rounded-xl bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-500 flex items-center justify-center group-hover:scale-110 transition-transform">
                     <ClipboardList className="w-6 h-6" />
                   </div>
-                  <span className={`px-3 py-1 rounded-full text-xs font-bold ${
-                    exam.isPublished
-                      ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400'
-                      : 'bg-slate-100 text-slate-500 dark:bg-[#272B33] dark:text-slate-400'
-                  }`}>
-                    {exam.isPublished ? '● Live' : '○ Draft'}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={(e) => handleDeleteExam(exam.id, e)}
+                      className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-colors"
+                      title="Delete Exam"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                    <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                      exam.isPublished
+                        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400'
+                        : 'bg-slate-100 text-slate-500 dark:bg-[#272B33] dark:text-slate-400'
+                    }`}>
+                      {exam.isPublished ? '● Live' : '○ Draft'}
+                    </span>
+                  </div>
                 </div>
 
                 <h3 className="font-bold text-base text-slate-900 dark:text-white mb-2 group-hover:text-amber-600 dark:group-hover:text-amber-500 transition-colors line-clamp-2">
