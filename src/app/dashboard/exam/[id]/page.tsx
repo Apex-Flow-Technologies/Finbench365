@@ -323,21 +323,32 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
   }, [status, test?.type]);
 
   const handleStartExam = async () => {
-    if (!user) return;
+    if (!user) {
+      alert("Your session has expired. Please sign in again.");
+      return;
+    }
     try {
       setIsSubmitting(true);
-      NProgress.start();
       // Remove any lingering disconnect timer before starting a new exam
       localStorage.removeItem(`cbt_last_active_${testId}`);
       const newAttemptId = await startTestAttempt(user.uid, testId);
       setAttemptId(newAttemptId);
       setStatus('in_progress');
-    } catch (err) {
-      console.error(err);
-      alert("Failed to start exam. Check your connection.");
+    } catch (err: any) {
+      console.error("[StartExam] Failed to start attempt:", err);
+      // Determine error type based on message or default to generic
+      const errMsg = err?.message || err?.toString() || "";
+      if (errMsg.includes("permission")) {
+        alert("You don't have permission to start this exam. Please check your enrollment.");
+      } else if (errMsg.includes("not found")) {
+        alert("This exam could not be found or has been unpublished.");
+      } else if (errMsg.includes("NProgress is not defined")) {
+        alert("A system error occurred. Please refresh the page and try again.");
+      } else {
+        alert("Unable to start the exam right now. Please check your connection and try again.");
+      }
     } finally {
       setIsSubmitting(false);
-      NProgress.done();
     }
   };
 
@@ -395,7 +406,6 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
   const performSubmit = async () => {
     if (!attemptId || !user) return;
     setIsSubmitting(true);
-    NProgress.start();
     try {
       if (test?.type === 'practice') {
         const { correct } = calculateScore();
@@ -437,11 +447,15 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
       document.exitFullscreen().catch(err => console.error("Exit fullscreen error:", err));
     }
   } catch (err: any) {
-      console.error(err);
-      alert(err.message || "Failed to submit exam.");
+      console.error("[SubmitExam] Failed to submit:", err);
+      const errMsg = err?.message || err?.toString() || "";
+      if (errMsg.includes("permission-denied")) {
+        alert("Submission rejected. You don't have permission.");
+      } else {
+        alert(err.message || "Failed to submit exam. Please try again.");
+      }
     } finally {
       setIsSubmitting(false);
-      NProgress.done();
     }
   };
 
@@ -578,13 +592,14 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
               </ul>
             </div>
 
-            <button
+            <LoadingButton
               onClick={handleStartExam}
-              disabled={isExhausted || isSubmitting || questions.length === 0}
-              className="w-full py-4 bg-amber-500 hover:bg-amber-400 disabled:opacity-50 text-slate-950 font-bold rounded-xl text-base transition-all"
+              loading={isSubmitting}
+              disabled={isExhausted || questions.length === 0}
+              className="w-full py-4 bg-amber-500 hover:bg-amber-400 disabled:opacity-50 text-slate-950 font-bold rounded-xl text-base transition-all h-14"
             >
-              {isSubmitting ? 'Initializing Engine...' : 'I Am Ready, Start CBT Exam'}
-            </button>
+              I Am Ready, Start CBT Exam
+            </LoadingButton>
           </div>
         </div>
       </ProtectedRoute>
@@ -642,13 +657,13 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
               <Clock className="w-4 h-4" />
               {test?.type === 'exam' ? formatTime(timeRemaining) : 'Practice Mode'}
             </div>
-            <button 
+            <LoadingButton 
               onClick={handleManualSubmit}
-              disabled={isSubmitting}
-              className="px-4 py-1.5 rounded-xl bg-emerald-500 text-slate-950 font-bold text-xs hover:bg-emerald-400 transition-all"
+              loading={isSubmitting}
+              className="px-4 py-2 h-9 rounded-xl bg-emerald-500 text-slate-950 font-bold text-xs hover:bg-emerald-400 transition-all"
             >
               Submit Exam
-            </button>
+            </LoadingButton>
           </div>
         </div>
 
