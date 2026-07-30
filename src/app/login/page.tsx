@@ -21,8 +21,7 @@ import { auth, db } from '@/lib/firebase/config';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, updateProfile } from 'firebase/auth';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { useAuth } from '@/context/AuthContext';
-import NProgress from 'nprogress';
-import 'nprogress/nprogress.css';
+import { LoadingButton } from '@/components/ui/LoadingButton';
 
 function LoginContent() {
   const searchParams = useSearchParams();
@@ -69,7 +68,6 @@ function LoginContent() {
     }
 
     setIsSubmitting(true);
-    NProgress.start();
     
     try {
       localStorage.removeItem('myexams_session_id'); // FORCE new session on explicit login
@@ -103,7 +101,6 @@ function LoginContent() {
       setErrorMsg(error.message || 'Authentication failed. Please try again.');
     } finally {
       setIsSubmitting(false);
-      NProgress.done();
     }
   };
 
@@ -303,20 +300,15 @@ function LoginContent() {
                   </div>
                 )}
 
-                <button
+                <LoadingButton
                   type="submit"
-                  disabled={isSubmitting}
-                  className="w-full mt-3 py-3.5 px-6 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-900 font-bold text-sm shadow-[0_4px_14px_rgba(245,158,11,0.3)] transition-all flex items-center justify-center gap-2 focus:outline-none active:scale-[0.98]"
+                  isLoading={isSubmitting}
+                  loadingText={activeTab === 'signin' ? 'Signing In...' : 'Creating Account...'}
+                  className="w-full mt-3 py-3.5 px-6 rounded-xl bg-amber-500 hover:bg-amber-400 disabled:opacity-75 disabled:pointer-events-none text-slate-900 font-bold text-sm shadow-[0_4px_14px_rgba(245,158,11,0.3)] transition-all flex items-center justify-center gap-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 active:scale-[0.98]"
                 >
-                  {isSubmitting ? (
-                    <span className="animate-pulse">Authenticating with Portal...</span>
-                  ) : (
-                    <>
-                      <span>{activeTab === 'signin' ? 'Sign In & Proceed to Checkout' : 'Create Account & Proceed'}</span>
-                      <ArrowRight className="w-4 h-4" />
-                    </>
-                  )}
-                </button>
+                  <span>{activeTab === 'signin' ? 'Sign In & Proceed to Checkout' : 'Create Account & Proceed'}</span>
+                  <ArrowRight className="w-4 h-4" />
+                </LoadingButton>
               </form>
 
           <div className="mt-6 pt-5 border-t border-slate-200 dark:border-[#282C36]/50 flex items-center justify-center gap-2 text-[11px] font-mono text-slate-500 dark:text-slate-400">

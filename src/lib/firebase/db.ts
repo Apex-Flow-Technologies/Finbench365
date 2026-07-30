@@ -255,28 +255,30 @@ export async function getUserEntitlements(userId: string) {
   
   const userData = userSnap.data();
   const enrolled = userData.enrolledCourses || {};
+  const entries = Object.entries<any>(enrolled);
   
-  const entitlements = [];
+  if (entries.length === 0) return [];
+
+  // Fetch all course docs in PARALLEL instead of sequential for-loop (eliminates N+1 pattern)
+  const courseSnaps = await Promise.all(
+    entries.map(([courseId]) => getDoc(doc(db, 'courses', courseId)))
+  );
   
-  for (const [courseId, data] of Object.entries<any>(enrolled)) {
-    const courseSnap = await getDoc(doc(db, 'courses', courseId));
-    let courseData: any = { id: courseId, title: courseId.replace(/-/g, ' ').toUpperCase(), tier: 'Professional' };
+  return entries.map(([courseId, data], i) => {
+    const courseSnap = courseSnaps[i];
+    const courseData = courseSnap.exists()
+      ? { id: courseSnap.id, ...courseSnap.data() }
+      : { id: courseId, title: courseId.replace(/-/g, ' ').toUpperCase(), tier: 'Professional' };
 
-    if (courseSnap.exists()) {
-      courseData = { id: courseSnap.id, ...courseSnap.data() };
-    }
-
-    entitlements.push({
+    return {
       courseId,
       course: courseData,
       enrolledAt: data.enrolledAt?.toDate() || new Date(),
       expiresAt: data.expiresAt?.toDate() || new Date(),
       durationDays: data.durationDays,
       isActive: new Date() < (data.expiresAt?.toDate() || new Date(0))
-    });
-  }
-  
-  return entitlements;
+    };
+  });
 }
 
 // --- Admin Portal ---

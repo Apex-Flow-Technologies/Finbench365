@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, use } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter } from 'next-nprogress-bar';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { useAuth } from '@/context/AuthContext';
 import { 
@@ -17,8 +17,7 @@ import {
 } from '@/lib/firebase/db';
 import { Clock, AlertCircle, ChevronLeft, ChevronRight, CheckCircle2, LayoutGrid, AlertTriangle, ShieldCheck } from 'lucide-react';
 import { AdminPreviewBanner } from '@/components/AdminPreviewBanner';
-import NProgress from 'nprogress';
-import 'nprogress/nprogress.css';
+import { LoadingButton } from '@/components/ui/LoadingButton';
 
 export default function ExamPage({ params }: { params: Promise<{ id: string }> }) {
   const unwrappedParams = use(params);

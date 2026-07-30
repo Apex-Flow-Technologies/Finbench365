@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter } from 'next-nprogress-bar';
 import { useAuth } from '@/context/AuthContext';
 import { Eye } from 'lucide-react';
 

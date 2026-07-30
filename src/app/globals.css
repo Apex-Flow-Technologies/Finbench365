@@ -8,6 +8,18 @@
     --card: #FFFFFF;
     --card-foreground: #181A1F;
     --border: #E3E3DE;
+    --muted: #F1F5F9;
+    --muted-foreground: #64748B;
+  }
+
+  .dark {
+    --background: #0B0C10;
+    --foreground: #FBFBF9;
+    --card: #181A1F;
+    --card-foreground: #FBFBF9;
+    --border: #282C36;
+    --muted: #1E2028;
+    --muted-foreground: #94A3B8;
   }
 
   html {
@@ -79,15 +91,28 @@
 }
 
 ::-webkit-scrollbar-track {
+  background: #F1F5F9;
+}
+
+.dark ::-webkit-scrollbar-track {
   background: #14171E;
 }
 
 ::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 4px;
+}
+
+.dark ::-webkit-scrollbar-thumb {
   background: #2D323E;
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
+  background: #94A3B8;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
   background: #42495B;
 }
 

@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, useMemo, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { useRouter } from 'next-nprogress-bar';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Search,
@@ -43,6 +43,7 @@ export default function ExamsPage() {
   const { user } = useAuth();
   
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [purchasingId, setPurchasingId] = useState<string | null>(null);
@@ -50,6 +51,12 @@ export default function ExamsPage() {
   const [coursesData, setCoursesData] = useState<CoursePackage[]>([]);
   const [entitlements, setEntitlements] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Debounce the search input by 300ms to avoid filtering on every keystroke
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(searchQuery), 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   useEffect(() => {
     if (user?.uid) {
@@ -105,16 +112,17 @@ export default function ExamsPage() {
 
   const filteredCourses = useMemo(() => {
     return coursesData.filter((course) => {
+      const q = debouncedSearch.toLowerCase();
       const matchesSearch =
-        course.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        course.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        course.trackBadge.toLowerCase().includes(searchQuery.toLowerCase());
+        course.title.toLowerCase().includes(q) ||
+        course.description.toLowerCase().includes(q) ||
+        course.trackBadge.toLowerCase().includes(q);
 
       const matchesCategory = selectedCategory === 'All' || course.category === selectedCategory;
 
       return matchesSearch && matchesCategory;
     });
-  }, [coursesData, searchQuery, selectedCategory]);
+  }, [coursesData, debouncedSearch, selectedCategory]);
 
   const getCourseStatus = (courseId: string) => {
     const entitlement = entitlements.find(e => e.courseId === courseId);

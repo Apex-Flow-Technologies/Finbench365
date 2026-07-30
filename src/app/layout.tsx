@@ -63,16 +63,16 @@ export default function RootLayout({
             <Toaster
               position="top-right"
               toastOptions={{
+                className: 'dark:!bg-[#181A1F] dark:!text-[#FBFBF9] dark:!border-[#282C36] !bg-white !text-slate-900 !border-slate-200',
                 style: {
-                  background: '#181A1F',
-                  color: '#FBFBF9',
-                  border: '1px solid #282C36',
                   borderRadius: '12px',
                   fontFamily: 'var(--font-sans)',
                   fontSize: '14px',
+                  border: '1px solid',
+                  boxShadow: '0 4px 24px rgba(0,0,0,0.08)',
                 },
-                success: { iconTheme: { primary: '#10b981', secondary: '#181A1F' } },
-                error: { iconTheme: { primary: '#ef4444', secondary: '#181A1F' } },
+                success: { iconTheme: { primary: '#10b981', secondary: 'white' } },
+                error: { iconTheme: { primary: '#ef4444', secondary: 'white' } },
               }}
             />
           </AuthProvider>
