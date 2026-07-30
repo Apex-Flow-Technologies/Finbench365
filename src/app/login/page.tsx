@@ -22,6 +22,7 @@ import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, up
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { useAuth } from '@/context/AuthContext';
 import { LoadingButton } from '@/components/ui/LoadingButton';
+import toast from 'react-hot-toast';
 
 function LoginContent() {
   const searchParams = useSearchParams();
@@ -49,7 +50,9 @@ function LoginContent() {
       if (user.role === 'admin' || user.role === 'editor') {
         router.push('/admin');
       } else {
-        router.push(redirectUrl);
+        // Use explicit dashboard route or the redirectUrl search param, falling back to /dashboard
+        const target = redirectUrl === '/' ? '/dashboard' : redirectUrl;
+        router.push(target);
       }
     }
   }, [user, loading, router, redirectUrl]);
@@ -96,10 +99,11 @@ function LoginContent() {
         
         // On success, the useEffect above will redirect them based on role
       }
+      toast.success('Login successful. Redirecting...');
+      // We intentionally do not set isSubmitting(false) here so the button stays in the loading state until the redirect happens.
     } catch (error: any) {
       console.error("Auth error:", error);
       setErrorMsg(error.message || 'Authentication failed. Please try again.');
-    } finally {
       setIsSubmitting(false);
     }
   };
@@ -121,20 +125,8 @@ function LoginContent() {
     );
   }
 
-  // If user is logged in, show a brief connecting screen before redirect happens
-  if (user) {
-    return (
-      <div className="min-h-screen bg-slate-50 dark:bg-[#0B0C10] flex flex-col items-center justify-center space-y-6 transition-colors duration-300">
-        <div className="w-16 h-16 rounded-2xl bg-white border-slate-200 dark:bg-[#181A1F] dark:border-[#282C36] border flex items-center justify-center shadow-lg">
-          <CheckCircle2 className="w-8 h-8 text-emerald-500" />
-        </div>
-        <div className="text-center space-y-2">
-          <h2 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">Authentication Confirmed</h2>
-          <p className="text-sm text-slate-500 dark:text-slate-400 font-mono">Routing to secure portal...</p>
-        </div>
-      </div>
-    );
-  }
+  // We removed the blocking "Authentication Confirmed" screen to prevent UI freezing
+  // and instead use a toast notification and keep the loading button active.
 
   return (
     <div className="min-h-screen pt-24 pb-20 px-6 flex flex-col justify-between bg-slate-50 dark:bg-[#0B0C10] text-slate-900 dark:text-[#FBFBF9] transition-colors duration-300">
