@@ -1,8 +1,10 @@
 import { NextResponse } from 'next/server';
-import { adminDb } from '@/lib/firebase/admin';
+import { adminDb, adminAuth } from '@/lib/firebase/admin';
 import { PLAN_PRICING } from '@/constants/pricing';
 import { Timestamp, FieldValue } from 'firebase-admin/firestore';
 import crypto from 'crypto';
+import { sendInvoiceEmail } from '@/lib/email';
+import { GST_RATE } from '@/constants/pricing';
 
 export async function POST(req: Request) {
   try {
@@ -70,6 +72,33 @@ export async function POST(req: Request) {
         }, { merge: true });
 
         console.log(`Webhook entitlement granted: userId=${userId}, courseId=${effectiveCourseId}, durationDays=${days}`);
+        
+        // Dispatch Invoice Email
+        try {
+          const userRecord = await adminAuth.getUser(userId);
+          if (userRecord.email) {
+            const courseDoc = await adminDb.collection('courses').doc(effectiveCourseId).get();
+            const courseTitle = courseDoc.exists ? courseDoc.data()?.title : 'Certification Track';
+            
+            const basePrice = planData.price;
+            const gstAmount = basePrice * GST_RATE;
+            
+            await sendInvoiceEmail({
+              email: userRecord.email,
+              name: userRecord.displayName || 'Candidate',
+              courseTitle: courseTitle,
+              planName: planData.name,
+              orderId: paymentData.order_id || paymentData.id,
+              amount: basePrice,
+              gstAmount: gstAmount,
+              total: amountPaid,
+            });
+          }
+        } catch (emailErr) {
+          console.error('Failed to send invoice email from webhook:', emailErr);
+          // Do not throw, webhook should still return 200 OK
+        }
+
       } else {
         console.warn('Webhook received but missing userId or courseId in notes:', paymentData.notes);
       }

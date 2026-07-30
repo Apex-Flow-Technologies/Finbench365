@@ -248,7 +248,7 @@ function CheckoutContent() {
             </div>
             <div className="flex justify-between pt-1">
               <span className="text-slate-400">GST Invoice status:</span>
-              <span className="text-emerald-500 font-semibold">Available in Dashboard</span>
+              <span className="text-emerald-500 font-semibold">Dispatched via Email</span>
             </div>
           </div>
 

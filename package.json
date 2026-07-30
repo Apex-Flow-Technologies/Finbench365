@@ -24,7 +24,8 @@
     "razorpay": "^2.9.8",
     "react": "19.1.0",
     "react-dom": "19.1.0",
-    "react-hot-toast": "^2.6.0"
+    "react-hot-toast": "^2.6.0",
+    "resend": "^6.18.1"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
