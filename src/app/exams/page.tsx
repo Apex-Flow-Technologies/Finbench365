@@ -238,7 +238,13 @@ export default function ExamsPage() {
       {/* Main Content Grid/List */}
       <div className="max-w-[1240px] mx-auto px-6 md:px-8 py-12 md:py-16">
         {filteredCourses.length === 0 ? (
-          <div className="text-center py-20 bg-white border border-slate-200 dark:bg-[#181A1F] dark:border-[#282C36] rounded-2xl p-8 max-w-xl mx-auto space-y-4 shadow-sm transition-colors duration-300">
+          <motion.div
+            key="empty"
+            initial={{ opacity: 0, scale: 0.97 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.25, ease: 'easeOut' }}
+            className="text-center py-20 bg-white border border-slate-200 dark:bg-[#181A1F] dark:border-[#282C36] rounded-2xl p-8 max-w-xl mx-auto space-y-4 shadow-sm transition-colors duration-300"
+          >
             <Layers className="w-12 h-12 text-slate-400 dark:text-slate-500 mx-auto" />
             <h3 className="text-xl font-semibold text-slate-900 dark:text-white">No Examination Tracks Found</h3>
             <p className="text-slate-500 dark:text-slate-400 text-sm">
@@ -250,23 +256,28 @@ export default function ExamsPage() {
             >
               Reset Filters
             </button>
-          </div>
+          </motion.div>
         ) : (
           <AnimatePresence mode="wait">
             {viewMode === 'grid' ? (
               /* CARD FORM LAYOUT */
               <motion.div
                 key="grid-view"
-                initial={{ opacity: 0, y: 16 }}
-                animate={{ opacity: 1, y: 0 }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                transition={{ duration: 0.35 }}
+                transition={{ duration: 0.2 }}
                 className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
               >
-                {filteredCourses.map((course) => (
-                  <div
+                {filteredCourses.map((course, i) => (
+                  <motion.div
                     key={course.id}
-                    className={`bg-white border dark:bg-[#181A1F] rounded-2xl p-6 sm:p-7 flex flex-col justify-between transition-all duration-300 relative group shadow-sm hover:shadow-lg dark:hover:shadow-black/40 ${course.levelColor}`}
+                    initial={{ opacity: 0, y: 16 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.26, delay: i * 0.05, ease: [0.22, 1, 0.36, 1] }}
+                    whileHover={{ y: -4, transition: { duration: 0.18 } }}
+                    whileTap={{ scale: 0.98 }}
+                    className={`bg-white border dark:bg-[#181A1F] rounded-2xl p-6 sm:p-7 flex flex-col justify-between transition-colors duration-300 relative group shadow-sm hover:shadow-lg dark:hover:shadow-black/40 ${course.levelColor}`}
                   >
                     <div>
                       {/* Top Icon */}
@@ -363,16 +374,21 @@ export default function ExamsPage() {
               /* HORIZONTAL BAR TYPE LAYOUT */
               <motion.div
                 key="list-view"
-                initial={{ opacity: 0, y: 16 }}
-                animate={{ opacity: 1, y: 0 }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                transition={{ duration: 0.35 }}
+                transition={{ duration: 0.2 }}
                 className="flex flex-col gap-5"
               >
-                {filteredCourses.map((course) => (
-                  <div
+                {filteredCourses.map((course, i) => (
+                  <motion.div
                     key={course.id}
-                    className={`bg-white border dark:bg-[#181A1F] rounded-2xl p-6 sm:p-7 transition-all duration-300 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 relative group shadow-sm hover:shadow-lg dark:hover:shadow-black/40 ${course.levelColor}`}
+                    initial={{ opacity: 0, x: -12 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.24, delay: i * 0.04, ease: [0.22, 1, 0.36, 1] }}
+                    whileHover={{ x: 4, transition: { duration: 0.15 } }}
+                    whileTap={{ scale: 0.99 }}
+                    className={`bg-white border dark:bg-[#181A1F] rounded-2xl p-6 sm:p-7 transition-colors duration-300 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 relative group shadow-sm hover:shadow-lg dark:hover:shadow-black/40 ${course.levelColor}`}
                   >
                     {/* Left: Title, Badge, Description */}
                     <div className="flex-1 space-y-2.5">
@@ -446,7 +462,7 @@ export default function ExamsPage() {
                           );
                         })()}
                       </div>
-                  </div>
+                  </motion.div>
                 ))}
               </motion.div>
             )}

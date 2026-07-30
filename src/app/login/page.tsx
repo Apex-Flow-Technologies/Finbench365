@@ -168,11 +168,19 @@ function LoginContent() {
             </p>
           </div>
 
+              <AnimatePresence>
               {errorMsg && (
-                <div className="p-3 bg-red-50 border-red-200 text-red-600 dark:bg-red-500/10 dark:border-red-500/20 border dark:text-red-400 rounded-lg text-xs font-mono mb-4 text-center">
+                <motion.div
+                  initial={{ opacity: 0, y: -8, scaleY: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scaleY: 1 }}
+                  exit={{ opacity: 0, y: -4, scaleY: 0.97 }}
+                  transition={{ duration: 0.2, ease: 'easeOut' }}
+                  className="p-3 bg-red-50 border-red-200 text-red-600 dark:bg-red-500/10 dark:border-red-500/20 border dark:text-red-400 rounded-lg text-xs font-mono mb-4 text-center origin-top"
+                >
                   {errorMsg}
-                </div>
+                </motion.div>
               )}
+            </AnimatePresence>
               {/* Tabs */}
               <div className="grid grid-cols-2 gap-1 p-1 rounded-xl bg-slate-100 border-slate-200 dark:bg-[#121419] border dark:border-[#282C36] mb-6">
                 <button

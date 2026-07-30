@@ -3,6 +3,7 @@
 import { usePathname } from 'next/navigation';
 import { Navbar } from './navbar';
 import { Footer } from './footer';
+import { PageTransition } from '@/components/ui/PageTransition';
 
 export function LayoutWrapper({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -15,7 +16,9 @@ export function LayoutWrapper({ children }: { children: React.ReactNode }) {
     <>
       {!isExamPage && <Navbar />}
       <main className="flex-1 relative z-10">
-        {children}
+        <PageTransition key={pathname}>
+          {children}
+        </PageTransition>
       </main>
       {!isExamPage && <Footer />}
     </>

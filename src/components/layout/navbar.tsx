@@ -98,7 +98,7 @@ export function Navbar() {
             { label: 'FAQ', href: '#faq' },
             { label: 'Contact', href: '#contact' },
           ].map((item) => (
-            <a
+            <motion.a
               key={item.label}
               href={item.href}
               onClick={(e) => {
@@ -106,11 +106,13 @@ export function Navbar() {
                   scrollToSection(e, item.href.replace('#', ''));
                 }
               }}
+              whileHover={{ y: -1 }}
+              transition={{ duration: 0.15 }}
               className={`text-sm font-medium transition-colors hover:text-amber-500 dark:hover:text-amber-400 relative py-1 ${isScrolled ? 'text-slate-700 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white' : 'text-slate-300 hover:text-white'
                 }`}
             >
               {item.label}
-            </a>
+            </motion.a>
           ))}
         </nav>
 

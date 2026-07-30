@@ -69,13 +69,13 @@ export default function DashboardPage() {
     hidden: { opacity: 0 },
     show: {
       opacity: 1,
-      transition: { staggerChildren: 0.1 }
+      transition: { staggerChildren: 0.07, delayChildren: 0.05 }
     }
   };
 
   const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    show: { opacity: 1, y: 0, transition: { type: "spring" as const, stiffness: 300, damping: 24 } }
+    hidden: { opacity: 0, y: 16 },
+    show: { opacity: 1, y: 0, transition: { duration: 0.28, ease: [0.22, 1, 0.36, 1] } }
   };
 
   const [pendingCourseId, setPendingCourseId] = useState<string | null>(null);
@@ -169,6 +169,7 @@ export default function DashboardPage() {
                       <motion.div 
                         variants={itemVariants}
                         whileHover={{ scale: 1.02, y: -4 }}
+                        whileTap={{ scale: 0.98 }}
                         key={entitlement.courseId} 
                         className="rounded-2xl border transition-all duration-300 overflow-hidden flex flex-col bg-white border-slate-200 hover:shadow-xl dark:bg-[#181A1F] dark:border-white/10 dark:hover:border-white/20 dark:hover:shadow-[0_8px_30px_rgba(0,0,0,0.4)] relative group"
                       >
