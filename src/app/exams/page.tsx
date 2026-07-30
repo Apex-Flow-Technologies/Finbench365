@@ -367,7 +367,7 @@ export default function ExamsPage() {
                         </button>
                       );
                     })()}
-                  </div>
+                  </motion.div>
                 ))}
               </motion.div>
             ) : (
