@@ -66,5 +66,11 @@ service cloud.firestore {
       
       allow delete: if isAdmin();
     }
+
+    // Orders Collection
+    match /orders/{orderId} {
+      allow read: if isAdmin();
+      allow write: if false; // Only server (Admin SDK) should write orders
+    }
   }
 }
