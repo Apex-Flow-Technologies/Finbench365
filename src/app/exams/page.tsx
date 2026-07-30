@@ -176,24 +176,7 @@ export default function ExamsPage() {
 
       {/* Sticky Control Toolbar with Search Bar and View Switcher */}
       <div className="sticky top-[64px] z-30 bg-white/95 dark:bg-[#16181D]/95 backdrop-blur-md border-b border-slate-200 dark:border-[#282C36] shadow-sm py-4 px-6 md:px-8 transition-colors duration-300">
-        <div className="max-w-[1240px] mx-auto flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
-          {/* Category Filter Pills */}
-          <div className="flex items-center gap-2 overflow-x-auto pb-2 sm:pb-0 no-scrollbar">
-            {categories.map((cat) => (
-              <button
-                key={cat}
-                onClick={() => setSelectedCategory(cat)}
-                className={`px-4 py-2 rounded-lg text-xs font-mono uppercase tracking-wider transition-all duration-200 whitespace-nowrap border ${selectedCategory === cat
-                    ? 'bg-amber-500 text-slate-900 font-bold border-amber-500 shadow-sm'
-                    : 'bg-white text-slate-600 hover:text-slate-900 border-slate-200 hover:border-slate-300 dark:bg-[#181A1F] dark:text-slate-300 dark:hover:text-white dark:border-[#282C36] dark:hover:border-slate-600'
-                  }`}
-              >
-                {cat === 'All' ? 'All Tracks' : cat}
-              </button>
-            ))}
-          </div>
-
-          {/* Right Controls: Small Search Bar + Card/Horizontal View Switcher */}
+        <div className="max-w-[1240px] mx-auto flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-4">          {/* Right Controls: Small Search Bar + Card/Horizontal View Switcher */}
           <div className="flex items-center justify-between sm:justify-end gap-3">
             {/* Small Search Bar */}
             <div className="relative flex-1 sm:w-64 md:w-72">
@@ -278,11 +261,8 @@ export default function ExamsPage() {
                     className={`bg-white border dark:bg-[#181A1F] rounded-2xl p-6 sm:p-7 flex flex-col justify-between transition-all duration-300 relative group shadow-sm hover:shadow-lg dark:hover:shadow-black/40 ${course.levelColor}`}
                   >
                     <div>
-                      {/* Top Track Badge */}
-                      <div className="flex items-center justify-between gap-3 mb-4">
-                        <span className={`px-3 py-1 rounded-full border font-mono text-[11px] font-semibold tracking-wide ${course.badgeBg} ${course.badgeText}`}>
-                          {course.trackBadge}
-                        </span>
+                      {/* Top Icon */}
+                      <div className="flex justify-end mb-4">
                         <BookOpen className="w-4 h-4 text-slate-400 group-hover:text-amber-500 dark:text-slate-500 dark:group-hover:text-amber-400 transition-colors" />
                       </div>
 
@@ -389,9 +369,6 @@ export default function ExamsPage() {
                     {/* Left: Title, Badge, Description */}
                     <div className="flex-1 space-y-2.5">
                       <div className="flex flex-wrap items-center gap-3">
-                        <span className={`px-2.5 py-0.5 rounded border font-mono text-[10px] font-semibold tracking-wide ${course.badgeBg} ${course.badgeText}`}>
-                          {course.trackBadge}
-                        </span>
                         <h3 className="text-xl font-bold text-slate-900 dark:text-white leading-tight transition-colors">
                           {course.title}
                         </h3>
