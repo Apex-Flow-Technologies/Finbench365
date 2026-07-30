@@ -173,6 +173,7 @@ export default function AdminEditorSettingsPage() {
             <p className="text-slate-400 text-sm mt-1">
               Super-user management directory, feature flags configurator, tier pricing (INR ₹), and anti-tampering security rules.
             </p>
+            </div>
           </div>
         </div>
 
