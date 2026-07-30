@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { Inter, Plus_Jakarta_Sans, JetBrains_Mono } from 'next/font/google';
 import './globals.css';
-import NextTopLoader from 'nextjs-toploader';
+import { ProgressBarProvider } from '@/components/ProgressBarProvider';
 import Script from 'next/script';
 import { Navbar } from '@/components/layout/navbar';
 import { AmbientBackground } from '@/components/ui/ambient-background';
@@ -53,18 +53,7 @@ export default function RootLayout({
           src="https://checkout.razorpay.com/v1/checkout.js"
           strategy="lazyOnload"
         />
-        <NextTopLoader
-          color="#F59E0B"
-          initialPosition={0.08}
-          crawlSpeed={200}
-          height={3}
-          crawl={true}
-          showSpinner={false}
-          easing="ease"
-          speed={200}
-          shadow="0 0 10px #F59E0B,0 0 5px #F59E0B"
-          zIndex={1600}
-        />
+        <ProgressBarProvider>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
           <AuthProvider>
             <AmbientBackground />
@@ -88,6 +77,7 @@ export default function RootLayout({
             />
           </AuthProvider>
         </ThemeProvider>
+        </ProgressBarProvider>
       </body>
     </html>
   );
