@@ -59,10 +59,9 @@ export function Navbar() {
 
   return (
     <header
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${isScrolled
-          ? 'bg-white/90 dark:bg-[#0B0C10]/90 backdrop-blur-md border-b border-slate-200 dark:border-white/10 py-3 shadow-[0_4px_24px_-8px_rgba(0,0,0,0.05)]'
-          : 'bg-transparent py-6 border-b border-transparent'
-        }`}
+      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 bg-white/90 dark:bg-[#0B0C10]/90 backdrop-blur-md border-b border-slate-200 dark:border-white/10 shadow-sm ${
+        isScrolled ? 'py-3' : 'py-4 md:py-5'
+      }`}
     >
       <AdminPreviewBanner />
       <div className="max-w-[1240px] mx-auto px-6 md:px-8 flex items-center justify-between">
@@ -72,19 +71,14 @@ export function Navbar() {
           onClick={(e) => scrollToSection(e, 'hero')}
           className="flex items-center gap-2.5 group focus:outline-none"
         >
-          <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-mono font-bold text-sm tracking-tighter transition-colors ${isScrolled
-              ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-sm'
-              : 'bg-white/10 text-white border border-white/20 backdrop-blur-sm'
-            }`}>
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center font-mono font-bold text-sm tracking-tighter transition-colors bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-sm">
             FB
           </div>
           <div className="flex flex-col">
-            <span className={`font-semibold tracking-tight text-base transition-colors ${isScrolled ? 'text-slate-900 dark:text-white' : 'text-white'
-              }`}>
-              MyExams<span className={isScrolled ? 'text-amber-600 dark:text-amber-500 font-mono text-xs ml-0.5' : 'text-amber-400 font-mono text-xs ml-0.5'}>365</span>
+            <span className="font-semibold tracking-tight text-base text-slate-900 dark:text-white transition-colors">
+              MyExams<span className="text-amber-500 font-mono text-xs ml-0.5">365</span>
             </span>
-            <span className={`text-[10px] tracking-widest uppercase font-mono transition-colors ${isScrolled ? 'text-slate-500 dark:text-slate-400' : 'text-slate-400'
-              }`}>
+            <span className="text-[10px] tracking-widest uppercase font-mono text-slate-500 dark:text-slate-400 transition-colors">
               By MentraEdge
             </span>
           </div>
@@ -108,8 +102,11 @@ export function Navbar() {
               }}
               whileHover={{ y: -1 }}
               transition={{ duration: 0.15 }}
-              className={`text-sm font-medium transition-colors hover:text-amber-500 dark:hover:text-amber-400 relative py-1 ${isScrolled ? 'text-slate-700 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white' : 'text-slate-300 hover:text-white'
-                }`}
+              className={`text-sm font-medium transition-colors relative py-1 ${
+                pathname === item.href || (pathname === '/' && item.href === '#hero')
+                  ? 'text-amber-600 dark:text-amber-400 font-semibold'
+                  : 'text-slate-700 hover:text-amber-600 dark:text-slate-300 dark:hover:text-amber-400'
+              }`}
             >
               {item.label}
             </motion.a>
@@ -129,10 +126,7 @@ export function Navbar() {
                 router.push('/dashboard');
               }
             }}
-            className={`px-5 py-2.5 text-sm font-bold rounded-lg transition-all duration-300 shadow-sm ${isScrolled
-                ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 hover:opacity-90 hover:shadow-md'
-                : 'bg-white text-slate-900 hover:bg-white/90 hover:shadow-[0_0_24px_rgba(255,255,255,0.2)]'
-              }`}
+            className="px-5 py-2.5 text-sm font-bold rounded-lg transition-all duration-300 shadow-sm bg-slate-900 text-white dark:bg-white dark:text-slate-900 hover:opacity-90 hover:shadow-md press-effect focus-ring"
           >
             {user ? (user.role === 'admin' || user.role === 'editor' ? 'Admin Portal' : 'My Dashboard') : 'Login'}
           </button>
@@ -141,8 +135,7 @@ export function Navbar() {
         {/* Mobile menu toggle */}
         <button
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          className={`md:hidden p-2 rounded-lg transition-colors ${isScrolled ? 'text-slate-800 hover:bg-slate-200/60' : 'text-white hover:bg-white/10'
-            }`}
+          className="md:hidden p-2 rounded-lg transition-colors text-slate-800 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"
           aria-label="Toggle Navigation Menu"
         >
           {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
@@ -157,7 +150,7 @@ export function Navbar() {
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.3, ease: 'easeInOut' }}
-            className="md:hidden border-b border-[#E3E3DE] bg-[#FBFBF9] shadow-lg overflow-hidden px-6 py-6"
+            className="md:hidden border-b border-slate-200 dark:border-white/10 bg-white dark:bg-[#0B0C10] shadow-lg overflow-hidden px-6 py-6"
           >
             <div className="flex flex-col gap-4">
               {[
@@ -176,10 +169,10 @@ export function Navbar() {
                       setMobileMenuOpen(false);
                     }
                   }}
-                  className="text-base font-medium text-slate-800 hover:text-amber-700 py-1.5 border-b border-slate-100 flex items-center justify-between"
+                  className="text-base font-medium text-slate-800 hover:text-amber-600 dark:text-slate-200 dark:hover:text-amber-400 py-2.5 border-b border-slate-100 dark:border-slate-800/50 flex items-center justify-between transition-colors"
                 >
                   <span>{item.label}</span>
-                  <ArrowUpRight className="w-4 h-4 text-slate-400" />
+                  <ArrowUpRight className="w-4 h-4 text-slate-400 dark:text-slate-500" />
                 </a>
               ))}
               <div className="pt-4 flex flex-col gap-3">
@@ -194,7 +187,7 @@ export function Navbar() {
                       router.push('/dashboard');
                     }
                   }}
-                  className="w-full py-3 text-center rounded-lg bg-[#181A1F] text-white font-bold flex items-center justify-center gap-2 shadow-sm hover:bg-[#272B33] transition-colors"
+                  className="w-full py-3.5 text-center rounded-lg bg-slate-900 text-white dark:bg-white dark:text-slate-900 font-bold flex items-center justify-center gap-2 shadow-sm hover:opacity-90 transition-all press-effect"
                 >
                   {user ? (user.role === 'admin' || user.role === 'editor' ? 'Admin Portal' : 'My Dashboard') : 'Login'}
                 </button>
