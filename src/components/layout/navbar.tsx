@@ -9,6 +9,7 @@ import { useRouter } from 'next-nprogress-bar';
 import { useAuth } from '@/context/AuthContext';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { AdminPreviewBanner } from '@/components/AdminPreviewBanner';
+import { LoadingButton } from '@/components/ui/LoadingButton';
 
 export function Navbar() {
   const [mounted, setMounted] = useState(false);
@@ -17,6 +18,11 @@ export function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
   const { user } = useAuth();
+  const [isNavigating, setIsNavigating] = useState(false);
+
+  useEffect(() => {
+    setIsNavigating(false);
+  }, [pathname]);
 
   useEffect(() => {
     setMounted(true);
@@ -116,20 +122,27 @@ export function Navbar() {
         {/* Action CTAs */}
         <div className="hidden sm:flex items-center gap-3">
           <ThemeToggle />
-          <button
+          <LoadingButton
+            isLoading={isNavigating}
+            loadingText={user ? 'Opening...' : 'Logging in...'}
             onClick={() => {
-              if (!user) {
-                router.push('/login');
-              } else if (user.role === 'admin' || user.role === 'editor') {
-                router.push('/admin');
-              } else {
-                router.push('/dashboard');
+              setIsNavigating(true);
+              try {
+                if (!user) {
+                  router.push('/login');
+                } else if (user.role === 'admin' || user.role === 'editor') {
+                  router.push('/admin');
+                } else {
+                  router.push('/dashboard');
+                }
+              } catch (e) {
+                setIsNavigating(false);
               }
             }}
             className="px-5 py-2.5 text-sm font-bold rounded-lg transition-all duration-300 shadow-sm bg-slate-900 text-white dark:bg-white dark:text-slate-900 hover:opacity-90 hover:shadow-md press-effect focus-ring"
           >
             {user ? (user.role === 'admin' || user.role === 'editor' ? 'Admin Portal' : 'My Dashboard') : 'Login'}
-          </button>
+          </LoadingButton>
         </div>
 
         {/* Mobile menu toggle */}
@@ -176,21 +189,28 @@ export function Navbar() {
                 </a>
               ))}
               <div className="pt-4 flex flex-col gap-3">
-                <button
+                <LoadingButton
+                  isLoading={isNavigating}
+                  loadingText={user ? 'Opening...' : 'Logging in...'}
                   onClick={() => {
                     setMobileMenuOpen(false);
-                    if (!user) {
-                      router.push('/login');
-                    } else if (user.role === 'admin' || user.role === 'editor') {
-                      router.push('/admin');
-                    } else {
-                      router.push('/dashboard');
+                    setIsNavigating(true);
+                    try {
+                      if (!user) {
+                        router.push('/login');
+                      } else if (user.role === 'admin' || user.role === 'editor') {
+                        router.push('/admin');
+                      } else {
+                        router.push('/dashboard');
+                      }
+                    } catch (e) {
+                      setIsNavigating(false);
                     }
                   }}
                   className="w-full py-3.5 text-center rounded-lg bg-slate-900 text-white dark:bg-white dark:text-slate-900 font-bold flex items-center justify-center gap-2 shadow-sm hover:opacity-90 transition-all press-effect"
                 >
                   {user ? (user.role === 'admin' || user.role === 'editor' ? 'Admin Portal' : 'My Dashboard') : 'Login'}
-                </button>
+                </LoadingButton>
               </div>
             </div>
           </motion.div>
