@@ -49,31 +49,20 @@ export function InteractiveSandbox() {
   };
 
   return (
-    <section id="sandbox" className="py-24 md:py-32 bg-[#FAFAF8] text-[#181A1F] border-b border-[#E4E4E0] relative overflow-hidden">
-      {/* Background ambient fine grid lines */}
-      <div 
-        className="absolute inset-0 opacity-[0.03] pointer-events-none"
-        style={{
-          backgroundImage: `
-            linear-gradient(to right, #181A1F 1px, transparent 1px),
-            linear-gradient(to bottom, #181A1F 1px, transparent 1px)
-          `,
-          backgroundSize: '80px 80px'
-        }}
-      />
+    <section id="sandbox" className="py-24 md:py-32 bg-transparent transition-colors duration-300 text-slate-900 dark:text-[#FBFBF9] border-b border-[#E4E4E0] dark:border-[#282C36] relative overflow-hidden">
 
       <div className="max-w-[1240px] mx-auto px-6 md:px-8 relative z-10">
         {/* Section Header */}
         <div className="text-center max-w-3xl mx-auto mb-12 space-y-4">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-200/80 border border-slate-300/80 text-slate-800 font-mono text-xs font-semibold uppercase tracking-wider">
-            <Target className="w-3.5 h-3.5 text-amber-700" />
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-200/80 dark:bg-slate-800/80 border border-slate-300/80 dark:border-slate-700 text-slate-800 dark:text-amber-400 font-mono text-xs font-semibold uppercase tracking-wider">
+            <Target className="w-3.5 h-3.5 text-amber-700 dark:text-amber-400" />
             <span>3D Spiral Interactive Deck</span>
           </div>
-          <h2 className="text-3xl sm:text-4xl md:text-5xl font-semibold tracking-tight text-slate-900 leading-[1.16]">
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-semibold tracking-tight text-slate-900 dark:text-white leading-[1.16]">
             Experience Institutional Fidelity. <br />
             Test the Diagnostic Sandbox.
           </h2>
-          <p className="text-slate-600 text-base md:text-lg leading-relaxed max-w-2xl mx-auto">
+          <p className="text-slate-600 dark:text-slate-300 text-base md:text-lg leading-relaxed max-w-2xl mx-auto">
             Spin the spiral carousel from left to right. Click any option on the center viewing card to test real-time formula derivations and Two-Parameter Logistic (2PL) distractor deconstruction.
           </p>
         </div>

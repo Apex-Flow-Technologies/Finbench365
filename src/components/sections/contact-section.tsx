@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { CheckCircle2, Building2, ArrowUpRight } from 'lucide-react';
 
 export function ContactSection() {
@@ -21,9 +21,9 @@ export function ContactSection() {
   };
 
   return (
-    <section id="contact" className="py-24 md:py-32 bg-[#F2F2EC] text-[#181A1F] border-b border-[#E0E0D8] relative">
+    <section id="contact" className="py-24 md:py-32 bg-transparent transition-colors duration-300 text-slate-900 dark:text-[#FBFBF9] border-b border-[#E0E0D8] dark:border-[#282C36] relative">
       <div className="max-w-[1240px] mx-auto px-6 md:px-8">
-        <div className="bg-white border border-[#DDDDCF] rounded-2xl shadow-[0_16px_56px_-16px_rgba(0,0,0,0.06)] overflow-hidden grid grid-cols-1 lg:grid-cols-12">
+        <div className="bg-white dark:bg-[#121419] border border-[#DDDDCF] dark:border-[#2D323E] rounded-2xl shadow-[0_16px_56px_-16px_rgba(0,0,0,0.06)] overflow-hidden grid grid-cols-1 lg:grid-cols-12">
 
           {/* Left Column: Institutional Pitch */}
           <div className="lg:col-span-5 bg-white dark:bg-[#181A1F] transition-colors duration-300 text-slate-900 dark:text-[#FBFBF9] p-8 md:p-12 flex flex-col justify-between relative overflow-hidden">
@@ -58,32 +58,33 @@ export function ContactSection() {
               </div>
             </div>
 
-            <div className="pt-10 mt-10 border-t border-slate-200 dark:border-slate-800/80 flex items-center justify-between text-xs text-slate-400 dark:text-slate-500 dark:text-slate-400 font-mono">
+            <div className="pt-10 mt-10 border-t border-slate-200 dark:border-slate-800/80 flex items-center justify-between text-xs text-slate-400 dark:text-slate-500 font-mono">
               <span>Direct Inquiry: academic@myexams365.com</span>
-              <span className="text-amber-400">Response &lt; 4 Hours</span>
+              <span className="text-amber-600 dark:text-amber-400">Response &lt; 4 Hours</span>
             </div>
           </div>
 
-          {/* Right Column: Contact Form / Interactive Banner */}
-          <div className="lg:col-span-7 p-8 md:p-12 flex flex-col justify-center">
+          {/* Right Column: Contact Form */}
+          <div className="lg:col-span-7 bg-[#FAFAF8] dark:bg-[#181A1F] p-8 md:p-12 relative">
+            <AnimatePresence mode="wait">
             {submitted ? (
               <motion.div
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className="text-center py-12 px-6 bg-[#FAFAF8] border border-[#E0E0D8] rounded-xl space-y-4"
+                className="text-center py-12 px-6 bg-white dark:bg-[#121419] border border-[#E0E0D8] dark:border-[#282C36] rounded-xl shadow-sm space-y-4"
               >
-                <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center mx-auto shadow-sm">
+                <div className="w-16 h-16 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 flex items-center justify-center mx-auto shadow-sm">
                   <CheckCircle2 className="w-8 h-8 stroke-[2.5]" />
                 </div>
-                <h4 className="text-2xl font-semibold text-slate-900">
+                <h4 className="text-2xl font-semibold text-slate-900 dark:text-white">
                   Academic Consultation Logged
                 </h4>
-                <p className="text-slate-600 text-base max-w-md mx-auto leading-relaxed">
-                  Thank you, <strong className="text-slate-900">{formData.fullName}</strong>. Our quantitative curriculum director will review your targets for <strong className="text-slate-900">{formData.certification}</strong> and respond within 4 business hours.
+                <p className="text-slate-600 dark:text-slate-300 text-base max-w-md mx-auto leading-relaxed">
+                  Thank you, <strong className="text-slate-900 dark:text-white">{formData.fullName}</strong>. Our quantitative curriculum director will review your targets for <strong className="text-slate-900 dark:text-white">{formData.certification}</strong> and respond within 4 business hours.
                 </p>
                 <button
                   onClick={() => setSubmitted(false)}
-                  className="mt-4 px-6 py-2.5 rounded-lg bg-white dark:bg-[#181A1F] transition-colors duration-300 text-slate-900 dark:text-white text-sm font-medium hover:bg-[#282C36] transition-colors"
+                  className="mt-4 px-6 py-2.5 rounded-lg border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 text-sm font-medium hover:bg-slate-100 dark:hover:bg-[#282C36] transition-colors"
                 >
                   Submit Another Inquiry
                 </button>
@@ -91,17 +92,17 @@ export function ContactSection() {
             ) : (
               <form onSubmit={handleSubmit} className="space-y-5">
                 <div>
-                  <h4 className="text-xl font-semibold text-slate-900 mb-1">
+                  <h4 className="text-xl font-semibold text-slate-900 dark:text-white mb-1">
                     Request Candidate or Institutional Access
                   </h4>
-                  <p className="text-sm text-slate-400 dark:text-slate-500 mb-6">
+                  <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
                     Fill out the form below for immediate sandbox credentials or curriculum orientation.
                   </p>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-mono font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+                    <label className="block text-xs font-mono font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-1.5">
                       Full Name *
                     </label>
                     <input
@@ -110,11 +111,11 @@ export function ContactSection() {
                       placeholder="e.g. Name"
                       value={formData.fullName}
                       onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-                      className="w-full px-4 py-2.5 rounded-lg border border-[#D4D4CE] bg-[#FAFAF8] text-slate-900 text-sm focus:outline-none focus:border-[#181A1F] focus:bg-white transition-all"
+                      className="w-full px-4 py-2.5 rounded-lg border border-[#D4D4CE] dark:border-[#2D323E] bg-white dark:bg-[#121419] text-slate-900 dark:text-white text-sm focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-mono font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+                    <label className="block text-xs font-mono font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-1.5">
                       Professional / University Email *
                     </label>
                     <input
@@ -123,20 +124,20 @@ export function ContactSection() {
                       placeholder="e.g. a.@Email.com"
                       value={formData.email}
                       onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      className="w-full px-4 py-2.5 rounded-lg border border-[#D4D4CE] bg-[#FAFAF8] text-slate-900 text-sm focus:outline-none focus:border-[#181A1F] focus:bg-white transition-all"
+                      className="w-full px-4 py-2.5 rounded-lg border border-[#D4D4CE] dark:border-[#2D323E] bg-white dark:bg-[#121419] text-slate-900 dark:text-white text-sm focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all"
                     />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-mono font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+                    <label className="block text-xs font-mono font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-1.5">
                       Target Examination Track
                     </label>
                     <select
                       value={formData.certification}
                       onChange={(e) => setFormData({ ...formData, certification: e.target.value })}
-                      className="w-full px-4 py-2.5 rounded-lg border border-[#D4D4CE] bg-[#FAFAF8] text-slate-900 text-sm focus:outline-none focus:border-[#181A1F] focus:bg-white transition-all"
+                      className="w-full px-4 py-2.5 rounded-lg border border-[#D4D4CE] dark:border-[#2D323E] bg-white dark:bg-[#121419] text-slate-900 dark:text-white text-sm focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all"
                     >
                       <option value="CFA Level I">CFA® Level I (Nov 2026 / Feb 2027)</option>
                       <option value="CFA Level II">CFA® Level II (Aug 2026 / Nov 2026)</option>
@@ -148,7 +149,7 @@ export function ContactSection() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs font-mono font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+                    <label className="block text-xs font-mono font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-1.5">
                       Organization / University (Optional)
                     </label>
                     <input
@@ -156,13 +157,13 @@ export function ContactSection() {
                       placeholder="e.g. Nomura / Columbia Business School"
                       value={formData.institution}
                       onChange={(e) => setFormData({ ...formData, institution: e.target.value })}
-                      className="w-full px-4 py-2.5 rounded-lg border border-[#D4D4CE] bg-[#FAFAF8] text-slate-900 text-sm focus:outline-none focus:border-[#181A1F] focus:bg-white transition-all"
+                      className="w-full px-4 py-2.5 rounded-lg border border-[#D4D4CE] dark:border-[#2D323E] bg-white dark:bg-[#121419] text-slate-900 dark:text-white text-sm focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-mono font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+                  <label className="block text-xs font-mono font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-1.5">
                     Consultation Topic / Background
                   </label>
                   <textarea
@@ -170,24 +171,25 @@ export function ContactSection() {
                     placeholder="Tell us about your preparation window or institutional requirements..."
                     value={formData.message}
                     onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-                    className="w-full px-4 py-2.5 rounded-lg border border-[#D4D4CE] bg-[#FAFAF8] text-slate-900 text-sm focus:outline-none focus:border-[#181A1F] focus:bg-white transition-all resize-none"
+                    className="w-full px-4 py-2.5 rounded-lg border border-[#D4D4CE] dark:border-[#2D323E] bg-white dark:bg-[#121419] text-slate-900 dark:text-white text-sm focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all resize-none"
                   />
                 </div>
 
                 <div className="pt-2">
-                  <button
-                    type="submit"
-                    className="w-full py-3.5 px-6 rounded-xl bg-white dark:bg-[#181A1F] transition-colors duration-300 hover:bg-[#282C36] text-slate-900 dark:text-white font-semibold text-sm flex items-center justify-center gap-2 shadow-sm transition-all duration-200"
-                  >
-                    <span>Submit Academic Inquiry</span>
-                    <ArrowUpRight className="w-4 h-4" />
-                  </button>
-                  <p className="text-[11px] text-center text-slate-400 dark:text-slate-500 mt-2 font-mono">
-                    Protected by 256-bit SSL encryption. We never share candidate credentials with third parties.
-                  </p>
+                    <button
+                      type="submit"
+                      className="w-full py-3.5 px-6 rounded-xl bg-slate-900 text-white dark:bg-amber-500 dark:text-slate-950 font-bold text-sm tracking-wide shadow-md transition-all duration-300 flex items-center justify-center gap-2 hover:bg-slate-800 dark:hover:bg-amber-400 group/btn"
+                    >
+                      <span>Submit Secure Inquiry</span>
+                      <ArrowUpRight className="w-4 h-4 transition-transform group-hover/btn:translate-x-0.5 group-hover/btn:-translate-y-0.5" />
+                    </button>
+                    <p className="text-xs text-center text-slate-500 dark:text-slate-400 mt-4 px-4 leading-relaxed">
+                      All data submitted is encrypted in transit and securely transmitted to our curriculum architecture team. Read our <a href="/privacy" className="underline hover:text-slate-800 dark:hover:text-slate-300">Privacy Policy</a>.
+                    </p>
                 </div>
               </form>
             )}
+            </AnimatePresence>
           </div>
 
         </div>

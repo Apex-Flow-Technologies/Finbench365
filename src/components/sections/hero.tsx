@@ -9,18 +9,8 @@ export function Hero() {
   return (
     <section
       id="hero"
-      className="relative min-h-[92vh] pt-32 pb-24 md:pt-40 md:pb-32 flex items-center justify-center overflow-hidden bg-slate-50 dark:bg-[#16181D] transition-colors duration-300 text-slate-900 dark:text-[#FBFBF9] border-b border-slate-200 dark:border-[#282C36]"
+      className="relative min-h-[92vh] pt-32 pb-24 md:pt-40 md:pb-32 flex items-center justify-center overflow-hidden bg-transparent transition-colors duration-300 text-slate-900 dark:text-[#FBFBF9] border-b border-slate-200 dark:border-[#282C36]"
     >
-      {/* Subtle background architectural pattern specific to Hero */}
-      <div
-        className="absolute inset-0 opacity-[0.045] pointer-events-none"
-        style={{
-          backgroundImage: `
-            radial-gradient(circle at 2px 2px, rgba(255,255,255,0.4) 1px, transparent 0)
-          `,
-          backgroundSize: '40px 40px'
-        }}
-      />
 
       <div className="relative max-w-[1240px] w-full mx-auto px-6 md:px-8 grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center z-10">
         {/* Left Column: Headline, Subtitle, CTAs, Trust Indicators */}

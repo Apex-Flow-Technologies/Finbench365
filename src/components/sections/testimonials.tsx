@@ -103,18 +103,7 @@ export function Testimonials() {
   const [hoveredId, setHoveredId] = useState<string | null>(null);
 
   return (
-    <section id="testimonials" className="py-24 md:py-32 bg-white dark:bg-[#181A1F] transition-colors duration-300 text-slate-900 dark:text-[#FBFBF9] border-b border-slate-200 dark:border-[#282C36] relative overflow-hidden">
-      {/* Background Bloomberg Grid */}
-      <div
-        className="absolute inset-0 opacity-[0.04] pointer-events-none"
-        style={{
-          backgroundImage: `
-            linear-gradient(to right, #333947 1px, transparent 1px),
-            linear-gradient(to bottom, #333947 1px, transparent 1px)
-          `,
-          backgroundSize: '48px 48px'
-        }}
-      />
+    <section id="testimonials" className="py-24 md:py-32 bg-transparent transition-colors duration-300 text-slate-900 dark:text-[#FBFBF9] border-b border-slate-200 dark:border-[#282C36] relative overflow-hidden">
 
       <div className="max-w-[1240px] mx-auto px-6 md:px-8 relative z-10">
         {/* Section Header */}

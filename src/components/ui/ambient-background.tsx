@@ -8,13 +8,24 @@ export function AmbientBackground() {
 
   return (
     <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
-      {/* Soft architectural grid movement at 3.5% opacity */}
+      {/* Light Mode Grid (Dark Lines) */}
       <div 
-        className="absolute inset-0 opacity-[0.035]"
+        className="absolute inset-0 dark:hidden opacity-[0.03]"
         style={{
           backgroundImage: `
-            linear-gradient(to right, #1F242D 1px, transparent 1px),
-            linear-gradient(to bottom, #1F242D 1px, transparent 1px)
+            linear-gradient(to right, #000000 1px, transparent 1px),
+            linear-gradient(to bottom, #000000 1px, transparent 1px)
+          `,
+          backgroundSize: '72px 72px'
+        }}
+      />
+      {/* Dark Mode Grid (Light Lines) */}
+      <div 
+        className="absolute inset-0 hidden dark:block opacity-[0.035]"
+        style={{
+          backgroundImage: `
+            linear-gradient(to right, #ffffff 1px, transparent 1px),
+            linear-gradient(to bottom, #ffffff 1px, transparent 1px)
           `,
           backgroundSize: '72px 72px'
         }}

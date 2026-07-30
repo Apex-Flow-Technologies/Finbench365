@@ -51,15 +51,15 @@ export function Faq() {
   };
 
   return (
-    <section id="faq" className="py-24 md:py-32 bg-[#FAFAF8] text-[#181A1F] border-b border-[#E4E4E0] relative">
+    <section id="faq" className="py-24 md:py-32 bg-transparent transition-colors duration-300 text-slate-900 dark:text-[#FBFBF9] border-b border-[#E4E4E0] dark:border-[#282C36] relative">
       <div className="max-w-[1040px] mx-auto px-6 md:px-8">
         {/* Section Header */}
         <div className="text-center max-w-3xl mx-auto mb-16 space-y-4">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-200/80 border border-slate-300/80 text-slate-800 font-mono text-xs font-semibold uppercase tracking-wider">
-            <HelpCircle className="w-3.5 h-3.5 text-amber-700" />
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-200/80 dark:bg-slate-800/80 border border-slate-300/80 dark:border-slate-700 text-slate-800 dark:text-amber-400 font-mono text-xs font-semibold uppercase tracking-wider">
+            <HelpCircle className="w-3.5 h-3.5 text-amber-700 dark:text-amber-400" />
             <span>Architecture & Pedagogy FAQ</span>
           </div>
-          <h2 className="text-3xl sm:text-4xl md:text-5xl font-semibold tracking-tight text-slate-900 leading-[1.16]">
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-semibold tracking-tight text-slate-900 dark:text-white leading-[1.16]">
             Frequently Asked Questions <br />
             On Our Examination Engine.
           </h2>
@@ -78,8 +78,8 @@ export function Faq() {
                 key={idx}
                 className={`border rounded-xl transition-all duration-300 overflow-hidden ${
                   isOpen
-                    ? 'bg-white border-[#181A1F] shadow-[0_12px_32px_rgba(0,0,0,0.06)]'
-                    : 'bg-white/80 border-[#E4E4E0] hover:border-slate-350 hover:bg-white'
+                    ? 'bg-white dark:bg-[#121419] border-[#181A1F] dark:border-amber-500/60 shadow-[0_12px_32px_rgba(0,0,0,0.06)] dark:shadow-[0_12px_32px_rgba(245,158,11,0.1)]'
+                    : 'bg-white/80 dark:bg-[#181A1F]/80 border-[#E4E4E0] dark:border-[#2D323E] hover:border-slate-350 dark:hover:border-[#3a4150] hover:bg-white dark:hover:bg-[#181A1F]'
                 }`}
               >
                 <button
@@ -88,17 +88,17 @@ export function Faq() {
                   aria-expanded={isOpen}
                 >
                   <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
-                    <span className="font-mono text-[11px] font-bold text-amber-700 uppercase tracking-wider bg-amber-50 px-2 py-0.5 rounded border border-amber-200 w-fit">
+                    <span className="font-mono text-[11px] font-bold text-amber-700 dark:text-amber-500 uppercase tracking-wider bg-amber-50 dark:bg-amber-950/30 px-2 py-0.5 rounded border border-amber-200 dark:border-amber-900/50 w-fit">
                       {item.category}
                     </span>
-                    <span className="text-base sm:text-lg font-medium text-slate-900 leading-snug">
+                    <span className="text-base sm:text-lg font-medium text-slate-900 dark:text-white leading-snug">
                       {item.question}
                     </span>
                   </div>
 
                   <div
                     className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-colors duration-300 ${
-                      isOpen ? 'bg-white dark:bg-[#181A1F] transition-colors duration-300 text-slate-900 dark:text-white' : 'bg-[#EFEFEA] text-slate-700'
+                      isOpen ? 'bg-[#181A1F] dark:bg-amber-500 text-white dark:text-[#181A1F]' : 'bg-slate-100 dark:bg-[#282C36] text-slate-500 dark:text-slate-400'
                     }`}
                   >
                     {isOpen ? (
