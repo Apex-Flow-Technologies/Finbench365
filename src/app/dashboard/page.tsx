@@ -16,6 +16,7 @@ export default function DashboardPage() {
   const router = useRouter();
   const [entitlements, setEntitlements] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [analytics, setAnalytics] = useState({ accuracy: 0, totalTimeMs: 0, attemptsCount: 0 });
 
   useEffect(() => {
@@ -35,8 +36,10 @@ export default function DashboardPage() {
         }));
         setEntitlements(previewEntitlements);
         setLoading(false);
+        setLoading(false);
       }).catch(err => {
         console.error(err);
+        setError("Failed to load admin preview courses. Please refresh.");
         setLoading(false);
       });
       
@@ -48,6 +51,7 @@ export default function DashboardPage() {
         setLoading(false);
       }).catch(err => {
         console.error(err);
+        setError("Failed to load your enrolled courses. Please refresh.");
         setLoading(false);
       });
       
@@ -130,9 +134,15 @@ export default function DashboardPage() {
               </div>
               
               {loading ? (
-                <div className="py-12 flex flex-col justify-center items-center gap-4">
-                  <Loader2 className="w-8 h-8 animate-spin text-amber-500" />
-                  <span className="text-sm font-mono text-slate-600 dark:text-slate-400 animate-pulse">Syncing entitlements...</span>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
+                  {[1, 2].map((i) => (
+                    <div key={i} className="h-72 rounded-2xl border border-slate-200 dark:border-white/5 bg-slate-100/40 dark:bg-white/5 animate-pulse"></div>
+                  ))}
+                </div>
+              ) : error ? (
+                <div className="rounded-2xl p-8 border border-red-200 bg-red-50 text-red-600 dark:bg-red-500/10 dark:border-red-500/20 dark:text-red-400 flex flex-col items-center justify-center text-center">
+                  <p className="font-bold mb-2">Error Loading Dashboard</p>
+                  <p className="text-sm">{error}</p>
                 </div>
               ) : entitlements.length === 0 ? (
                 <motion.div 
@@ -261,15 +271,19 @@ export default function DashboardPage() {
           </div>
 
           {/* Sidebar / Performance Diagnostic Analytics Area (1/3 width) */}
-          {entitlements.length > 0 && (
+          {(entitlements.length > 0 || loading) && (
           <motion.div 
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.2 }}
             className="space-y-6"
           >
-            {/* 1. Core Metrics */}
-            <div className="rounded-2xl p-6 border transition-all duration-300 bg-white border-slate-200 shadow-sm dark:bg-[#181A1F] dark:border-white/10 dark:shadow-lg space-y-6">
+            {loading ? (
+              <div className="rounded-2xl p-6 h-64 border border-slate-200 dark:border-white/5 bg-slate-100/40 dark:bg-white/5 animate-pulse"></div>
+            ) : (
+            <>
+              {/* 1. Core Metrics */}
+              <div className="rounded-2xl p-6 border transition-all duration-300 bg-white border-slate-200 shadow-sm dark:bg-[#181A1F] dark:border-white/10 dark:shadow-lg space-y-6">
               <div className="flex items-center justify-between border-b border-slate-100 dark:border-[#282C36] pb-3">
                 <h3 className="font-bold text-slate-900 dark:text-white text-base">Performance Overview</h3>
               </div>
@@ -312,9 +326,11 @@ export default function DashboardPage() {
                   <span className="text-xs font-mono font-bold text-slate-500 dark:text-slate-400">
                     {analytics.attemptsCount} Mocks
                   </span>
-                </div>
               </div>
             </div>
+            </div>
+            </>
+            )}
           </motion.div>
           )}
 

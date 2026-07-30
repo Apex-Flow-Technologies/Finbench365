@@ -50,7 +50,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           
           if (userDoc.exists()) {
             const userData = userDoc.data();
-            setUser(Object.assign(firebaseUser, { role: userData.role }));
+            setUser(Object.assign(firebaseUser, { role: userData.role || 'student' as const }));
             
             // If activeSessionId is not set yet in DB, set it in background
             if (!userData.activeSessionId) {

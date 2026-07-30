@@ -270,13 +270,22 @@ export async function getUserEntitlements(userId: string) {
       ? { id: courseSnap.id, ...courseSnap.data() }
       : { id: courseId, title: courseId.replace(/-/g, ' ').toUpperCase(), tier: 'Professional' };
 
+    const parseDate = (val: any) => {
+      if (!val) return new Date();
+      if (typeof val.toDate === 'function') return val.toDate();
+      if (val instanceof Date) return val;
+      return new Date(val); // parse string/number fallback
+    };
+
+    const expiresAtDate = parseDate(data.expiresAt);
+
     return {
       courseId,
       course: courseData,
-      enrolledAt: data.enrolledAt?.toDate() || new Date(),
-      expiresAt: data.expiresAt?.toDate() || new Date(),
+      enrolledAt: parseDate(data.enrolledAt),
+      expiresAt: expiresAtDate,
       durationDays: data.durationDays,
-      isActive: new Date() < (data.expiresAt?.toDate() || new Date(0))
+      isActive: new Date() < expiresAtDate
     };
   });
 }
