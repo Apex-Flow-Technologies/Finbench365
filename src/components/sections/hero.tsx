@@ -28,7 +28,7 @@ export function Hero() {
             className="text-4xl sm:text-5xl lg:text-6xl font-semibold tracking-tight text-slate-900 dark:text-white leading-[1.14] font-sans"
           >
             One platform. <br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-slate-100 to-slate-400">
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-500 via-orange-600 to-blue-700 dark:from-amber-400 dark:via-orange-500 dark:to-blue-500 font-bold drop-shadow-sm">
               Every certification.
             </span> <br />
             No exam left to chance.
