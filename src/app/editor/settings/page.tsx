@@ -219,7 +219,6 @@ export default function AdminEditorSettingsPage() {
                   <th className="pb-3 px-4">User</th>
                   <th className="pb-3 px-4">Role</th>
                   <th className="pb-3 px-4 text-center">Enrolled Exams</th>
-                  <th className="pb-3 px-4 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/10">
@@ -270,33 +269,6 @@ export default function AdminEditorSettingsPage() {
                           `${Object.keys(usr.enrolledCourses || {}).length} enrolled`
                         )}
                       </td>
-
-                      <td className="py-4 px-4 text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <button
-                            onClick={() => handleQuickAddDays(usr.id, 30)}
-                            className="px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-lg text-xs font-bold transition-all"
-                          >
-                            +30 Days
-                          </button>
-                          <button
-                            onClick={() => setSelectedUserForExtension(usr)}
-                            className="px-3 py-1.5 bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-300 border border-indigo-500/30 rounded-lg text-xs font-bold transition-all"
-                          >
-                            Custom Grant
-                          </button>
-
-                          {usr.role !== 'student' && (
-                            <button
-                              onClick={() => handleRoleRevoke(usr.id)}
-                              disabled={updatingUserId === usr.id}
-                              className="px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 rounded-lg text-xs font-bold transition-all disabled:opacity-50"
-                            >
-                              {updatingUserId === usr.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Revoke Role'}
-                            </button>
-                          )}
-                        </div>
-                      </td>
                     </tr>
                   ))
                 )}
@@ -307,64 +279,6 @@ export default function AdminEditorSettingsPage() {
 
         {/* Sections 2 and 3 have been temporarily removed */}
 
-        {/* Extend Access Modal */}
-        <AnimatePresence>
-          {selectedUserForExtension && (
-            <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-md flex items-center justify-center p-4">
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                className="bg-zinc-900 border border-white/10 rounded-2xl p-6 sm:p-8 max-w-md w-full shadow-2xl space-y-6"
-              >
-                <div className="flex justify-between items-center border-b border-white/10 pb-4">
-                  <h3 className="font-bold text-lg text-white flex items-center gap-2">
-                    <Clock className="w-5 h-5 text-amber-500" />
-                    Grant Candidate Trial Extension
-                  </h3>
-                  <button onClick={() => setSelectedUserForExtension(null)} className="text-slate-400 hover:text-white">✕</button>
-                </div>
-
-                <form onSubmit={handleGrantAccessExtension} className="space-y-4">
-                  <p className="text-xs text-slate-400">
-                    Grant additional trial access duration to candidate <span className="font-bold text-white">{selectedUserForExtension.displayName || selectedUserForExtension.email}</span>.
-                  </p>
-
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-400 uppercase">Days To Add</label>
-                    <select
-                      value={extensionDays}
-                      onChange={(e) => setExtensionDays(Number(e.target.value))}
-                      className="w-full bg-slate-800 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-amber-500 font-mono font-bold"
-                    >
-                      <option value={15}>+15 Days Trial Extension</option>
-                      <option value={30}>+30 Days Full Access Extension</option>
-                      <option value={60}>+60 Days Extended Access</option>
-                    </select>
-                  </div>
-
-                  <div className="pt-2 flex justify-end gap-3">
-                    <button
-                      type="button"
-                      onClick={() => setSelectedUserForExtension(null)}
-                      className="px-4 py-2.5 rounded-xl border border-white/10 text-xs font-bold text-slate-400"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="submit"
-                      disabled={isExtending}
-                      className="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs transition-all flex items-center gap-1.5"
-                    >
-                      {isExtending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
-                      {extensionSuccess ? 'Granted!' : 'Grant Days'}
-                    </button>
-                  </div>
-                </form>
-              </motion.div>
-            </div>
-          )}
-        </AnimatePresence>
 
         {/* Audit Logs Modal */}
         <AnimatePresence>
