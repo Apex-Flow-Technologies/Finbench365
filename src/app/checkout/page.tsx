@@ -288,16 +288,9 @@ function CheckoutContent() {
             </button>
             <h1 className="text-2xl sm:text-3xl font-bold tracking-tight font-sans text-white flex items-center gap-3">
               <span>Candidate Enrollment & Checkout</span>
-              <span className="text-xs font-mono px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 font-normal">
-                Razorpay SSL Ready
-              </span>
             </h1>
           </div>
 
-          <div className="flex items-center gap-2 text-xs font-mono px-4 py-2 rounded-xl bg-[#181A1F] border border-[#282C36] text-slate-400">
-            <Lock className="w-3.5 h-3.5 text-amber-500" />
-            <span>Razorpay Institutional Gateway</span>
-          </div>
         </div>
 
         {/* 2-Column Grid: Left (Candidate Details + Razorpay Gateway Provision), Right (Order Summary + 18% GST Breakdown) */}
