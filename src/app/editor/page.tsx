@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter } from 'next-nprogress-bar';
 import { motion } from 'framer-motion';
 import { getCourses, createCourse, deleteCourse } from '@/lib/firebase/db';
 import { Plus, ClipboardList, Loader2, BookOpen, Trash2 } from 'lucide-react';

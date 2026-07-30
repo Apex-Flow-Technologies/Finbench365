@@ -141,9 +141,9 @@ export default function SuperAdminDashboard() {
                   <th className="pb-3 px-4 font-medium text-right">Revenue</th>
                 </tr>
               </thead>
-              <tbody className="text-sm">
+              <tbody className="text-sm stagger-children">
                 {recentUsers.map((user) => (
-                  <tr key={user.id} className="border-b border-slate-50 dark:border-[#282C36] last:border-0 hover:bg-slate-50 dark:hover:bg-[#20232B] transition-colors rounded-lg group">
+                  <tr key={user.id} className="border-b border-slate-50 dark:border-[#282C36] last:border-0 hover:bg-slate-50 dark:hover:bg-[#20232B] transition-colors rounded-lg group animate-fade-up opacity-0" style={{ animationFillMode: 'forwards' }}>
                     <td className="py-4 px-4 text-slate-900 dark:text-white font-bold text-sm first:rounded-l-lg">{user.name}</td>
                     <td className="py-4 px-4 text-slate-600 dark:text-slate-300 text-xs">{user.email}</td>
                     <td className="py-4 px-4 text-center">

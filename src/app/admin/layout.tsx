@@ -7,9 +7,10 @@ import { LayoutDashboard, Users, PenTool, LogOut, ShieldCheck, Home, CreditCard 
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { auth } from '@/lib/firebase/config';
 import { signOut } from 'firebase/auth';
-import { useRouter } from 'next/navigation';
+import { useRouter } from 'next-nprogress-bar';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { motion } from 'framer-motion';
+import { PageTransition } from '@/components/ui/PageTransition';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -100,7 +101,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         {/* Main Content Area */}
         <main className="flex-1 ml-64 p-8">
           <div className="max-w-6xl mx-auto">
-            {children}
+            <PageTransition key={pathname}>
+              {children}
+            </PageTransition>
           </div>
         </main>
       </div>

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, use } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter } from 'next-nprogress-bar';
 import { getCourse, updateCourse, getCourseTests, createMockTest } from '@/lib/firebase/db';
 import { 
   ChevronLeft, Plus, Save, Settings, UploadCloud, FileText, 
