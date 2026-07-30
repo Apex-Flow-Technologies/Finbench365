@@ -8,7 +8,7 @@ import { signOut } from 'firebase/auth';
 import { LogOut, BookOpen, Clock, Award, Layers, Loader2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { getUserEntitlements, getCourses, getUserAnalytics } from '@/lib/firebase/db';
-import { useRouter } from 'next/navigation';
+import { useRouter } from 'next-nprogress-bar';
 import { AdminPreviewBanner } from '@/components/AdminPreviewBanner';
 
 export default function DashboardPage() {
