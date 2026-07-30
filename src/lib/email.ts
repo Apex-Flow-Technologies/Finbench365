@@ -1,7 +1,6 @@
 import { Resend } from 'resend';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
-
+// We instantiate Resend dynamically to prevent Next.js build errors when the env var is missing during static analysis
 export async function sendInvoiceEmail({
   email,
   name,
@@ -25,6 +24,7 @@ export async function sendInvoiceEmail({
     console.warn('RESEND_API_KEY is not set. Skipping email dispatch.');
     return;
   }
+  const resend = new Resend(process.env.RESEND_API_KEY);
 
   // Use a verified domain or a test sender. Resend default for testing is usually 'onboarding@resend.dev'
   // But actually, it's safer to use onboarding@resend.dev unless the client verified a domain.
