@@ -79,7 +79,22 @@ export async function POST(req: Request) {
         },
       }, { merge: true });
 
-      return NextResponse.json({ success: true, bypassed: true });
+      const mockOrderId = `BYPASS-${Math.floor(1000 + Math.random() * 9000)}`;
+
+      // Store a unique order record for auditing and reference
+      const orderRef = adminDb.collection('orders').doc(mockOrderId);
+      await orderRef.set({
+        userId: decodedToken.uid,
+        courseId: courseId,
+        planId: planId,
+        paymentId: `bypassed_coupon_${couponCode}`,
+        orderId: mockOrderId,
+        amount: 0, // Bypassed is 100% discount
+        status: 'bypassed',
+        createdAt: FieldValue.serverTimestamp(),
+      });
+
+      return NextResponse.json({ success: true, bypassed: true, orderId: mockOrderId });
     }
 
     const keyId = process.env.RAZORPAY_KEY_ID;

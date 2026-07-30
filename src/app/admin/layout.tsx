@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Users, PenTool, LogOut, ShieldCheck, Home } from 'lucide-react';
+import { LayoutDashboard, Users, PenTool, LogOut, ShieldCheck, Home, CreditCard } from 'lucide-react';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { auth } from '@/lib/firebase/config';
 import { signOut } from 'firebase/auth';
@@ -16,6 +16,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const router = useRouter();
 
   const handleSignOut = async () => {
+    localStorage.removeItem('myexams_session_id');
     await signOut(auth);
     router.push('/login');
   };
@@ -23,6 +24,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const navItems = [
     { name: 'Dashboard Overview', href: '/admin', icon: LayoutDashboard },
     { name: 'User Management', href: '/admin/users', icon: Users },
+    { name: 'Orders & Revenue', href: '/admin/orders', icon: CreditCard },
   ];
 
   return (

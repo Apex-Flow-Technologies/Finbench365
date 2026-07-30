@@ -146,7 +146,8 @@ function CheckoutContent() {
 
       if (data.bypassed) {
         // 100% Discount was applied and access was granted directly by the server
-        setCompletedOrderId(`BYPASS-${Math.floor(1000 + Math.random() * 9000)}`);
+        setIsProcessing(false);
+        setCompletedOrderId(data.orderId || `BYPASS-${Math.floor(1000 + Math.random() * 9000)}`);
         setOrderCompleted(true);
         setTimeout(() => {
           router.push(`/dashboard/courses/${courseId}`);
