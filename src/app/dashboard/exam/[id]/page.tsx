@@ -62,19 +62,23 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
   useEffect(() => {
     async function loadTest() {
       try {
-        const testData = await getMockTest(testId) as any;
-        setTest(testData);
-        
-        if (user) {
-          const count = await getTestAttemptsCount(user.uid, testId);
-          setAttemptsCount(count);
-        }
-        
-        // Always fetch questions without solutions via client (to avoid Firestore permissions)
-        const questionsData = await getTestQuestions(testId, false);
-        
+        const testPromise = getMockTest(testId);
+        const questionsPromise = getTestQuestions(testId, false);
+        const attemptsCountPromise = user ? getTestAttemptsCount(user.uid, testId) : Promise.resolve(0);
+        const activeAttemptPromise = user ? getActiveAttemptForUser(user.uid, testId) : Promise.resolve(null);
+
+        const [testData, questionsData, count, activeAttempt] = await Promise.all([
+          testPromise,
+          questionsPromise,
+          attemptsCountPromise,
+          activeAttemptPromise
+        ]);
+
+        setTest(testData as any);
+        if (user) setAttemptsCount(count as number);
+
         // If it's a practice test, fetch solutions securely via our backend API route
-        if (testData.type === 'practice' && user) {
+        if ((testData as any).type === 'practice' && user) {
           try {
             const token = await user.getIdToken();
             const res = await fetch(`/api/exams/${testId}/solutions`, {
@@ -82,7 +86,7 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
             });
             if (res.ok) {
               const { solutions } = await res.json();
-              questionsData.forEach((q: any) => {
+              (questionsData as any[]).forEach((q: any) => {
                 if (solutions[q.id]) {
                   q.correctOptionIndex = solutions[q.id].correctOptionIndex;
                   q.explanation = solutions[q.id].explanation;
@@ -94,26 +98,12 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
           }
         }
 
-        setQuestions(questionsData);
-        setTimeRemaining(testData.durationMinutes * 60);
+        setQuestions(questionsData as any);
+        setTimeRemaining((testData as any).durationMinutes * 60);
 
-        // 15-Minute Disconnection Grace Period Enforcement
-        const lastActiveStr = localStorage.getItem(`cbt_last_active_${testId}`);
         const isAdminOrEditor = user?.role === 'admin' || user?.role === 'editor';
 
-        if (lastActiveStr && !isAdminOrEditor) {
-          const lastActive = parseInt(lastActiveStr, 10);
-          const elapsedMinutes = (Date.now() - lastActive) / (1000 * 60);
-
-          if (elapsedMinutes > 15) {
-            setDisconnectExpired(true);
-            localStorage.removeItem(`cbt_backup_${testId}`);
-            localStorage.removeItem(`cbt_last_active_${testId}`);
-            return;
-          }
-        }
-
-        // Auto-restore backup from LocalStorage if stashed within 15 mins
+        // Auto-restore backup from LocalStorage
         const cached = localStorage.getItem(`cbt_backup_${testId}`);
         let restored = false;
         if (cached) {
@@ -129,15 +119,40 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
           }
         }
 
-        // Firestore Backup Recovery (if localStorage was cleared by student)
-        if (!restored && user) {
-          const activeAttempt = await getActiveAttemptForUser(user.uid, testId);
-          if (activeAttempt) {
-            setAttemptId(activeAttempt.id);
-            if (activeAttempt.answers) setAnswers(activeAttempt.answers);
-            setStatus('in_progress');
+        let hasActiveSession = false;
+        
+        if (activeAttempt) {
+          setAttemptId(activeAttempt.id);
+          if (!restored && activeAttempt.answers) {
+            setAnswers(activeAttempt.answers);
           }
+          setStatus('in_progress');
+          hasActiveSession = true;
+        } else if (restored) {
+          // If we restored from local storage but there's no active attempt in DB, it's a stale local state.
+          hasActiveSession = false; 
         }
+
+        // ONLY enforce 15-minute disconnect if they actually have an active session!
+        if (hasActiveSession && !isAdminOrEditor) {
+          const lastActiveStr = localStorage.getItem(`cbt_last_active_${testId}`);
+          if (lastActiveStr) {
+            const lastActive = parseInt(lastActiveStr, 10);
+            const elapsedMinutes = (Date.now() - lastActive) / (1000 * 60);
+
+            if (elapsedMinutes > 15) {
+              setDisconnectExpired(true);
+              localStorage.removeItem(`cbt_backup_${testId}`);
+              localStorage.removeItem(`cbt_last_active_${testId}`);
+              return;
+            }
+          }
+        } else if (!hasActiveSession) {
+          // No active session in Firestore. Wipe out any stale browser tracking so it doesn't ban them.
+          localStorage.removeItem(`cbt_backup_${testId}`);
+          localStorage.removeItem(`cbt_last_active_${testId}`);
+        }
+
       } catch (err) {
         console.error(err);
         setError("Could not load exam data. It may not exist or is not published.");

@@ -42,7 +42,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
         try {
           if (isNewSession) {
-            await updateUserActiveSession(firebaseUser.uid, localSessionId);
+            updateUserActiveSession(firebaseUser.uid, localSessionId).catch(console.error);
           }
 
           const userDocRef = doc(db, 'users', firebaseUser.uid);
@@ -52,9 +52,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             const userData = userDoc.data();
             setUser(Object.assign(firebaseUser, { role: userData.role }));
             
-            // If activeSessionId is not set yet in DB, set it
+            // If activeSessionId is not set yet in DB, set it in background
             if (!userData.activeSessionId) {
-              await updateUserActiveSession(firebaseUser.uid, localSessionId);
+              updateUserActiveSession(firebaseUser.uid, localSessionId).catch(console.error);
             }
           } else {
             setUser(Object.assign(firebaseUser, { role: 'student' as const }));

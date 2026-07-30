@@ -1,6 +1,6 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
+import { getFirestore, initializeFirestore, persistentLocalCache } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 
 const firebaseConfig = {
@@ -17,6 +17,11 @@ const firebaseConfig = {
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 
 export const auth = getAuth(app);
-export const db = getFirestore(app);
+
+// Use persistent local cache in browser, standard getFirestore on server
+export const db = typeof window !== 'undefined' 
+  ? initializeFirestore(app, { localCache: persistentLocalCache() })
+  : getFirestore(app);
+
 export const storage = getStorage(app);
 export default app;
