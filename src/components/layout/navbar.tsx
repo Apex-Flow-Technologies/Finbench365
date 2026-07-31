@@ -77,14 +77,14 @@ export function Navbar() {
           onClick={(e) => scrollToSection(e, 'hero')}
           className="flex items-center gap-2.5 group focus:outline-none"
         >
-          <div className="w-8 h-8 rounded-lg flex items-center justify-center font-mono font-bold text-sm tracking-tighter transition-colors bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-sm">
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center tabular-nums font-bold text-sm tracking-tighter transition-colors bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-sm">
             FB
           </div>
           <div className="flex flex-col">
             <span className="font-semibold tracking-tight text-base text-slate-900 dark:text-white transition-colors">
-              MyExams<span className="text-amber-500 font-mono text-xs ml-0.5">365</span>
+              MyExams<span className="text-amber-500 tabular-nums text-xs ml-0.5">365</span>
             </span>
-            <span className="text-[10px] tracking-widest uppercase font-mono text-slate-500 dark:text-slate-400 transition-colors">
+            <span className="text-[10px] tracking-widest uppercase tabular-nums text-slate-500 dark:text-slate-400 transition-colors">
               By MentraEdge
             </span>
           </div>

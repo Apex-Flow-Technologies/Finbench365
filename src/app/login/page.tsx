@@ -134,7 +134,7 @@ function LoginContent() {
       <div className="max-w-4xl mx-auto w-full flex items-center justify-between gap-4 pb-8">
         <button
           onClick={() => router.back()}
-          className="inline-flex items-center gap-2 text-xs font-mono text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white transition-colors"
+          className="inline-flex items-center gap-2 text-xs tabular-nums text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white transition-colors"
         >
           <ArrowLeft className="w-3.5 h-3.5" />
           <span>Return</span>
@@ -167,7 +167,7 @@ function LoginContent() {
                   animate={{ opacity: 1, y: 0, scaleY: 1 }}
                   exit={{ opacity: 0, y: -4, scaleY: 0.97 }}
                   transition={{ duration: 0.2, ease: 'easeOut' }}
-                  className="p-3 bg-red-50 border-red-200 text-red-600 dark:bg-red-500/10 dark:border-red-500/20 border dark:text-red-400 rounded-lg text-xs font-mono mb-4 text-center origin-top"
+                  className="p-3 bg-red-50 border-red-200 text-red-600 dark:bg-red-500/10 dark:border-red-500/20 border dark:text-red-400 rounded-lg text-xs tabular-nums mb-4 text-center origin-top"
                 >
                   {errorMsg}
                 </motion.div>
@@ -210,7 +210,7 @@ function LoginContent() {
                       exit={{ opacity: 0, height: 0 }}
                       className="space-y-1.5 overflow-hidden"
                     >
-                      <label className="text-xs font-mono font-medium text-slate-700 dark:text-slate-300">
+                      <label className="text-xs tabular-nums font-medium text-slate-700 dark:text-slate-300">
                         Full Candidate Name *
                       </label>
                       <div className="relative">
@@ -229,7 +229,7 @@ function LoginContent() {
                 </AnimatePresence>
 
                 <div className="space-y-1.5">
-                  <label className="text-xs font-mono font-medium text-slate-700 dark:text-slate-300">
+                  <label className="text-xs tabular-nums font-medium text-slate-700 dark:text-slate-300">
                     Email Address *
                   </label>
                   <div className="relative">
@@ -246,7 +246,7 @@ function LoginContent() {
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-xs font-mono font-medium text-slate-700 dark:text-slate-300 flex justify-between">
+                  <label className="text-xs tabular-nums font-medium text-slate-700 dark:text-slate-300 flex justify-between">
                     <span>Password *</span>
                     {activeTab === 'signin' && (
                       <span className="text-amber-600 dark:text-amber-500 hover:underline cursor-pointer text-[11px]">Forgot?</span>
@@ -268,7 +268,7 @@ function LoginContent() {
                 {activeTab === 'signup' && (
                   <>
                     <div className="space-y-1.5 pt-1">
-                      <label className="text-xs font-mono font-medium text-slate-700 dark:text-slate-300">
+                      <label className="text-xs tabular-nums font-medium text-slate-700 dark:text-slate-300">
                         Institution / University (Optional)
                       </label>
                       <div className="relative">
@@ -311,14 +311,14 @@ function LoginContent() {
                 </LoadingButton>
               </form>
 
-          <div className="mt-6 pt-5 border-t border-slate-200 dark:border-[#282C36]/50 flex items-center justify-center gap-2 text-[11px] font-mono text-slate-500 dark:text-slate-400">
+          <div className="mt-6 pt-5 border-t border-slate-200 dark:border-[#282C36]/50 flex items-center justify-center gap-2 text-[11px] tabular-nums text-slate-500 dark:text-slate-400">
             <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-500" />
             <span>256-Bit SSL Encrypted Institutional Session</span>
           </div>
         </motion.div>
       </div>
 
-      <div className="text-center text-xs font-mono text-slate-500 py-4">
+      <div className="text-center text-xs tabular-nums text-slate-500 py-4">
         © {new Date().getFullYear()} MyExams365 CBT Portal. All rights reserved.
       </div>
     </div>

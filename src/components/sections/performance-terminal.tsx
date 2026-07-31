@@ -24,7 +24,7 @@ export function PerformanceTerminal() {
       <div className="max-w-[1240px] mx-auto px-6 md:px-8 relative z-10">
         {/* Section Header */}
         <div className="max-w-3xl mx-auto text-center mb-16 space-y-4">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-800 border border-slate-700 text-amber-400 font-mono text-xs font-semibold uppercase tracking-wider">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-800 border border-slate-700 text-amber-400 tabular-nums text-xs font-semibold uppercase tracking-wider">
             <Terminal className="w-3.5 h-3.5" />
             <span>Bloomberg Terminal Inspired Architecture</span>
           </div>
@@ -46,7 +46,7 @@ export function PerformanceTerminal() {
           className="bg-slate-50 dark:bg-[#121419] transition-colors duration-300 border border-[#2D323E] rounded-2xl shadow-[0_24px_80px_-16px_rgba(0,0,0,0.8)] overflow-hidden"
         >
           {/* Terminal Header Bar */}
-          <div className="bg-[#1A1E26] border-b border-[#2D323E] px-6 py-4 flex items-center justify-between flex-wrap gap-4 font-mono text-xs select-none">
+          <div className="bg-[#1A1E26] border-b border-[#2D323E] px-6 py-4 flex items-center justify-between flex-wrap gap-4 tabular-nums text-xs select-none">
             <div className="flex items-center gap-3">
               <div className="flex gap-1.5">
                 <span className="w-3 h-3 rounded-full bg-rose-500/80" />
@@ -85,7 +85,7 @@ export function PerformanceTerminal() {
             {activeTab === 'architecture' ? (
               <table className="w-full text-left border-collapse min-w-[680px]">
                 <thead>
-                  <tr className="border-b border-[#2D323E] font-mono text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 dark:text-slate-400">
+                  <tr className="border-b border-[#2D323E] tabular-nums text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 dark:text-slate-400">
                     <th className="py-4 px-4 w-[28%]">Pedagogical Dimension</th>
                     <th className="py-4 px-4 w-[36%] text-slate-400 dark:text-slate-500">Typical Coaching Institutes (Static Prep)</th>
                     <th className="py-4 px-4 w-[36%] text-amber-400">MyExams365 Institutional Architecture</th>
@@ -120,7 +120,7 @@ export function PerformanceTerminal() {
                     }
                   ].map((row, rIdx) => (
                     <tr key={rIdx} className="hover:bg-[#1E222C]/60 transition-colors">
-                      <td className="py-5 px-4 font-mono font-semibold text-slate-200 align-top">
+                      <td className="py-5 px-4 tabular-nums font-semibold text-slate-200 align-top">
                         <div className="flex items-center gap-2">
                           <Cpu className="w-4 h-4 text-amber-500 flex-shrink-0" />
                           <span>{row.dimension}</span>
@@ -143,7 +143,7 @@ export function PerformanceTerminal() {
                 </tbody>
               </table>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 font-mono">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 tabular-nums">
                 <div className="p-6 rounded-xl bg-[#161A22] border border-[#2D323E] space-y-3">
                   <div className="flex items-center justify-between text-xs text-slate-400 dark:text-slate-500 dark:text-slate-400">
                     <span>AVERAGE TIME TO MASTERY</span>

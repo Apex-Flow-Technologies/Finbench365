@@ -108,7 +108,7 @@ export function Testimonials() {
       <div className="max-w-[1240px] mx-auto px-6 md:px-8 relative z-10">
         {/* Section Header */}
         <div className="max-w-3xl mx-auto text-center mb-16 space-y-4">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-800 border border-slate-700 text-amber-400 font-mono text-xs font-semibold uppercase tracking-wider">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-800 border border-slate-700 text-amber-400 tabular-nums text-xs font-semibold uppercase tracking-wider">
             <Award className="w-3.5 h-3.5 text-amber-400" />
             <span>Verifiable Candidate Outcomes</span>
           </div>
@@ -151,7 +151,7 @@ export function Testimonials() {
                   {/* Card Header: Avatar & Credentials */}
                   <div className="flex items-start justify-between gap-3 mb-5">
                     <div className="flex items-center gap-3">
-                      <div className={`w-11 h-11 rounded-xl flex items-center justify-center font-mono font-bold text-sm tracking-tight ${t.avatarColor} shadow-sm`}>
+                      <div className={`w-11 h-11 rounded-xl flex items-center justify-center tabular-nums font-bold text-sm tracking-tight ${t.avatarColor} shadow-sm`}>
                         {t.avatarInitials}
                       </div>
                       <div>
@@ -171,7 +171,7 @@ export function Testimonials() {
                   </div>
 
                   {/* Exam Passed Badge */}
-                  <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#1A1E26] border border-[#2D323E] text-slate-200 font-mono text-xs font-semibold mb-4">
+                  <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#1A1E26] border border-[#2D323E] text-slate-200 tabular-nums text-xs font-semibold mb-4">
                     <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
                     <span>{t.examPassed}</span>
                   </div>

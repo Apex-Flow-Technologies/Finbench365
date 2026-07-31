@@ -125,7 +125,7 @@ export function HeroExamSimulator() {
         <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-slate-500/30 to-transparent" />
 
         {/* Top Minimal Monochrome Header */}
-        <div className="bg-[#161821]/90 border-b border-[#232732] px-5 py-3.5 flex items-center justify-between gap-3 font-mono text-[11px]">
+        <div className="bg-[#161821]/90 border-b border-[#232732] px-5 py-3.5 flex items-center justify-between gap-3 tabular-nums text-[11px]">
           <div className="flex items-center gap-2.5">
             <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)] animate-pulse" />
             <span className="text-slate-400 dark:text-slate-500 dark:text-slate-400 font-semibold tracking-wider uppercase">CBT_TERMINAL_v4.8</span>
@@ -155,7 +155,7 @@ export function HeroExamSimulator() {
                   scale: isCurrent ? [1, 1.08, 1] : 1,
                 }}
                 transition={{ duration: 2, repeat: isCurrent ? Infinity : 0 }}
-                className={`w-6 h-6 rounded sm:rounded-md flex items-center justify-center font-mono text-[10px] font-bold transition-colors duration-300 flex-shrink-0 ${
+                className={`w-6 h-6 rounded sm:rounded-md flex items-center justify-center tabular-nums text-[10px] font-bold transition-colors duration-300 flex-shrink-0 ${
                   isDone && !isCurrent
                     ? 'bg-emerald-500/15 border border-emerald-500/35 text-emerald-400'
                     : isCurrent
@@ -171,7 +171,7 @@ export function HeroExamSimulator() {
               </motion.div>
             );
           })}
-          <span className="text-slate-600 text-[10px] font-mono ml-auto pl-2 hidden sm:inline">
+          <span className="text-slate-600 text-[10px] tabular-nums ml-auto pl-2 hidden sm:inline">
             SECTION II
           </span>
         </div>
@@ -179,7 +179,7 @@ export function HeroExamSimulator() {
         {/* Main Card Content (Visual Storytelling & Placeholders) */}
         <div className="p-6 sm:p-7 space-y-6">
           {/* Question Sequence Label Indicator */}
-          <div className="flex items-center justify-between font-mono text-xs text-slate-400 dark:text-slate-500">
+          <div className="flex items-center justify-between tabular-nums text-xs text-slate-400 dark:text-slate-500">
             <span className="flex items-center gap-2">
               <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-ping" />
               <span className="font-semibold text-slate-400 dark:text-slate-500 dark:text-slate-400 tracking-wide">
@@ -237,7 +237,7 @@ export function HeroExamSimulator() {
                   <div className="flex items-center gap-3.5 flex-1">
                     {/* Option Letter Circle */}
                     <div
-                      className={`w-6 h-6 rounded-md flex items-center justify-center font-mono text-[11px] font-bold transition-colors duration-300 ${
+                      className={`w-6 h-6 rounded-md flex items-center justify-center tabular-nums text-[11px] font-bold transition-colors duration-300 ${
                         isVerified
                           ? 'bg-emerald-500 text-[#12141A]'
                           : isSelecting
@@ -273,7 +273,7 @@ export function HeroExamSimulator() {
                           animate={{ scale: 1, opacity: 1 }}
                           exit={{ scale: 0, opacity: 0 }}
                           transition={{ duration: 0.25, type: 'spring' }}
-                          className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 font-mono text-[10px] font-semibold"
+                          className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 tabular-nums text-[10px] font-semibold"
                         >
                           <CheckCircle2 className="w-3 h-3 text-emerald-400" />
                           <span>RECORDED</span>
@@ -288,7 +288,7 @@ export function HeroExamSimulator() {
 
           {/* Minimal Bottom Progress Bar */}
           <div className="pt-3">
-            <div className="flex items-center justify-between font-mono text-[11px] text-slate-400 dark:text-slate-500 mb-2">
+            <div className="flex items-center justify-between tabular-nums text-[11px] text-slate-400 dark:text-slate-500 mb-2">
               <span>PROGRESSION TRACKER</span>
               <span className="text-slate-400 dark:text-slate-500 dark:text-slate-400 font-semibold">{progressPercent}% COMPLETED</span>
             </div>
@@ -303,7 +303,7 @@ export function HeroExamSimulator() {
         </div>
 
         {/* Bottom Minimal Decorative Status */}
-        <div className="bg-[#15171F] border-t border-[#222630] px-6 py-3 flex items-center justify-between text-[10px] font-mono text-slate-400 dark:text-slate-500">
+        <div className="bg-[#15171F] border-t border-[#222630] px-6 py-3 flex items-center justify-between text-[10px] tabular-nums text-slate-400 dark:text-slate-500">
           <div className="flex items-center gap-2">
             <span className="w-1.5 h-1.5 rounded-full bg-slate-500 animate-ping" />
             <span>IRT_CALIBRATION_ACTIVE</span>

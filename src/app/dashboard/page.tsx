@@ -127,7 +127,7 @@ export default function DashboardPage() {
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-bold text-slate-900 dark:text-white">Your Enrolled Tracks</h2>
                 {(user?.role === 'admin' || user?.role === 'editor') && (
-                  <span className="px-3 py-1 bg-amber-500/10 text-amber-600 dark:text-amber-500 border border-amber-500/20 rounded-full text-xs font-mono font-bold uppercase tracking-wider">
+                  <span className="px-3 py-1 bg-amber-500/10 text-amber-600 dark:text-amber-500 border border-amber-500/20 rounded-full text-xs tabular-nums font-bold uppercase tracking-wider">
                     ● Admin Universal Access
                   </span>
                 )}
@@ -192,7 +192,7 @@ export default function DashboardPage() {
                             <Layers className="w-6 h-6 text-amber-600 dark:text-amber-500" />
                           </div>
                           {entitlement.isAdminPreview && (
-                            <span className="px-2.5 py-1 rounded-md bg-amber-500 text-slate-950 font-black text-[10px] uppercase font-mono tracking-wider shadow-sm">
+                            <span className="px-2.5 py-1 rounded-md bg-amber-500 text-slate-950 font-black text-[10px] uppercase tabular-nums tracking-wider shadow-sm">
                               ADMIN PREVIEW
                             </span>
                           )}
@@ -218,7 +218,7 @@ export default function DashboardPage() {
                             />
                           </div>
 
-                          <div className="flex justify-between items-center text-xs font-mono text-slate-500 dark:text-slate-400">
+                          <div className="flex justify-between items-center text-xs tabular-nums text-slate-500 dark:text-slate-400">
                             {entitlement.isAdminPreview ? (
                               <>
                                 <span className="bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30 text-[10px] font-bold px-2 py-0.5 rounded tracking-wide">
@@ -300,12 +300,12 @@ export default function DashboardPage() {
                     </div>
                   </div>
                   {analytics.accuracy >= 70 && (
-                    <span className="text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded">
+                    <span className="text-xs tabular-nums font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded">
                       QUALIFIED
                     </span>
                   )}
                   {analytics.accuracy < 70 && analytics.accuracy > 0 && (
-                    <span className="text-xs font-mono font-bold text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded">
+                    <span className="text-xs tabular-nums font-bold text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded">
                       IMPROVING
                     </span>
                   )}
@@ -323,7 +323,7 @@ export default function DashboardPage() {
                       </div>
                     </div>
                   </div>
-                  <span className="text-xs font-mono font-bold text-slate-500 dark:text-slate-400">
+                  <span className="text-xs tabular-nums font-bold text-slate-500 dark:text-slate-400">
                     {analytics.attemptsCount} Mocks
                   </span>
               </div>

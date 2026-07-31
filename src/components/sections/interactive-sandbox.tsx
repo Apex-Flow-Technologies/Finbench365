@@ -54,7 +54,7 @@ export function InteractiveSandbox() {
       <div className="max-w-[1240px] mx-auto px-6 md:px-8 relative z-10">
         {/* Section Header */}
         <div className="text-center max-w-3xl mx-auto mb-12 space-y-4">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-200/80 dark:bg-slate-800/80 border border-slate-300/80 dark:border-slate-700 text-slate-800 dark:text-amber-400 font-mono text-xs font-semibold uppercase tracking-wider">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-200/80 dark:bg-slate-800/80 border border-slate-300/80 dark:border-slate-700 text-slate-800 dark:text-amber-400 tabular-nums text-xs font-semibold uppercase tracking-wider">
             <Target className="w-3.5 h-3.5 text-amber-700 dark:text-amber-400" />
             <span>3D Spiral Interactive Deck</span>
           </div>
@@ -77,7 +77,7 @@ export function InteractiveSandbox() {
             <span>Previous Card</span>
           </button>
 
-          <span className="font-mono text-xs font-bold tracking-wider text-slate-400 dark:text-slate-500">
+          <span className="tabular-nums text-xs font-bold tracking-wider text-slate-400 dark:text-slate-500">
             CARD {(activeIdx + 1).toString().padStart(2, '0')} OF {filteredQuestions.length.toString().padStart(2, '0')}
           </span>
 
@@ -191,15 +191,15 @@ export function InteractiveSandbox() {
                 {/* Card Header */}
                 <div className="bg-[#F4F4F0] border-b border-[#E2E2DE] px-5 py-3.5 flex items-center justify-between gap-4 flex-wrap">
                   <div className="flex items-center gap-2.5">
-                    <span className="px-2.5 py-0.5 rounded bg-white dark:bg-[#181A1F] transition-colors duration-300 text-slate-900 dark:text-white font-mono text-xs font-bold">
+                    <span className="px-2.5 py-0.5 rounded bg-white dark:bg-[#181A1F] transition-colors duration-300 text-slate-900 dark:text-white tabular-nums text-xs font-bold">
                       {q.track}
                     </span>
-                    <span className="text-slate-700 font-mono text-xs font-medium">
+                    <span className="text-slate-700 tabular-nums text-xs font-medium">
                       {q.topic}
                     </span>
                   </div>
 
-                  <div className="flex items-center gap-2.5 text-xs font-mono text-slate-400 dark:text-slate-500">
+                  <div className="flex items-center gap-2.5 text-xs tabular-nums text-slate-400 dark:text-slate-500">
                     <span className="px-2 py-0.5 rounded bg-slate-200 text-slate-800 font-semibold">
                       {q.difficulty}
                     </span>
@@ -209,7 +209,7 @@ export function InteractiveSandbox() {
 
                 {/* Card Body */}
                 <div className="p-5 md:p-6 space-y-5">
-                  <div className="text-xs font-mono text-amber-800 font-semibold uppercase tracking-wider flex items-center gap-1.5">
+                  <div className="text-xs tabular-nums text-amber-800 font-semibold uppercase tracking-wider flex items-center gap-1.5">
                     <BookOpen className="w-3.5 h-3.5" />
                     <span>{q.los}</span>
                   </div>
@@ -252,7 +252,7 @@ export function InteractiveSandbox() {
                             isCenter && !hasAnswered ? 'cursor-pointer hover:shadow-sm' : 'cursor-default'
                           }`}
                         >
-                          <div className={`w-6 h-6 rounded-md flex items-center justify-center font-mono text-xs font-bold flex-shrink-0 mt-0.5 transition-colors ${badgeClass}`}>
+                          <div className={`w-6 h-6 rounded-md flex items-center justify-center tabular-nums text-xs font-bold flex-shrink-0 mt-0.5 transition-colors ${badgeClass}`}>
                             {isAnswered && isCorrectOption ? (
                               <CheckCircle2 className="w-3.5 h-3.5" />
                             ) : isAnswered && isSelected && !isCorrectOption ? (
@@ -282,7 +282,7 @@ export function InteractiveSandbox() {
                                       ? 'bg-emerald-100/60 border-emerald-200 text-emerald-950 font-medium' 
                                       : 'bg-amber-100/60 border-amber-200 text-amber-950 font-normal'
                                   }`}>
-                                    <div className="font-bold font-mono tracking-wide uppercase mb-1 flex items-center gap-1.5">
+                                    <div className="font-bold tabular-nums tracking-wide uppercase mb-1 flex items-center gap-1.5">
                                       {isCorrectOption ? (
                                         <>
                                           <CheckCircle2 className="w-3.5 h-3.5 text-emerald-700" />
@@ -314,7 +314,7 @@ export function InteractiveSandbox() {
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: 10 }}
                         transition={{ duration: 0.35 }}
-                        className="p-4 rounded-xl bg-white dark:bg-[#181A1F] transition-colors duration-300 text-slate-200 font-mono text-xs md:text-sm shadow-md border border-[#313642]"
+                        className="p-4 rounded-xl bg-white dark:bg-[#181A1F] transition-colors duration-300 text-slate-200 tabular-nums text-xs md:text-sm shadow-md border border-[#313642]"
                       >
                         <div className="flex items-center justify-between text-amber-400 border-b border-slate-800 pb-2.5 mb-2.5 font-semibold uppercase tracking-wider">
                           <span className="flex items-center gap-2">
@@ -346,7 +346,7 @@ export function InteractiveSandbox() {
                         <span>Retry Question</span>
                       </button>
 
-                      <div className="flex items-center gap-2 font-mono text-xs text-slate-400 dark:text-slate-500">
+                      <div className="flex items-center gap-2 tabular-nums text-xs text-slate-400 dark:text-slate-500">
                         <span>Side cards: Click or swipe to spin carousel</span>
                       </div>
                     </div>

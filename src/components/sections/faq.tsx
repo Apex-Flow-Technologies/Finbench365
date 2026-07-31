@@ -55,7 +55,7 @@ export function Faq() {
       <div className="max-w-[1040px] mx-auto px-6 md:px-8">
         {/* Section Header */}
         <div className="text-center max-w-3xl mx-auto mb-16 space-y-4">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-200/80 dark:bg-slate-800/80 border border-slate-300/80 dark:border-slate-700 text-slate-800 dark:text-amber-400 font-mono text-xs font-semibold uppercase tracking-wider">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-200/80 dark:bg-slate-800/80 border border-slate-300/80 dark:border-slate-700 text-slate-800 dark:text-amber-400 tabular-nums text-xs font-semibold uppercase tracking-wider">
             <HelpCircle className="w-3.5 h-3.5 text-amber-700 dark:text-amber-400" />
             <span>Architecture & Pedagogy FAQ</span>
           </div>
@@ -88,7 +88,7 @@ export function Faq() {
                   aria-expanded={isOpen}
                 >
                   <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
-                    <span className="font-mono text-[11px] font-bold text-amber-700 dark:text-amber-500 uppercase tracking-wider bg-amber-50 dark:bg-amber-950/30 px-2 py-0.5 rounded border border-amber-200 dark:border-amber-900/50 w-fit">
+                    <span className="tabular-nums text-[11px] font-bold text-amber-700 dark:text-amber-500 uppercase tracking-wider bg-amber-50 dark:bg-amber-950/30 px-2 py-0.5 rounded border border-amber-200 dark:border-amber-900/50 w-fit">
                       {item.category}
                     </span>
                     <span className="text-base sm:text-lg font-medium text-slate-900 dark:text-white leading-snug">

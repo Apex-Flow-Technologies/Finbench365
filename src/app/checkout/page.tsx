@@ -223,7 +223,7 @@ function CheckoutContent() {
           </div>
 
           <div className="space-y-2">
-            <span className="px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 font-mono text-xs font-bold uppercase tracking-wider">
+            <span className="px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 tabular-nums text-xs font-bold uppercase tracking-wider">
               Razorpay Verified • Order #{completedOrderId || `FB-${Math.floor(100000 + Math.random() * 900000)}`}
             </span>
             <h2 className="text-2xl sm:text-3xl font-bold font-sans text-white">
@@ -234,7 +234,7 @@ function CheckoutContent() {
             </p>
           </div>
 
-          <div className="p-5 rounded-2xl bg-[#121419] border border-[#282C36] text-left space-y-3 font-mono text-xs text-slate-300">
+          <div className="p-5 rounded-2xl bg-[#121419] border border-[#282C36] text-left space-y-3 tabular-nums text-xs text-slate-300">
             <div className="flex justify-between border-b border-[#282C36] pb-2">
               <span className="text-slate-400">Candidate Email:</span>
               <span className="font-semibold">{email}</span>
@@ -282,7 +282,7 @@ function CheckoutContent() {
           <div className="space-y-1">
             <button
               onClick={() => router.back()}
-              className="inline-flex items-center gap-2 text-xs font-mono text-slate-400 hover:text-white transition-colors mb-2"
+              className="inline-flex items-center gap-2 text-xs tabular-nums text-slate-400 hover:text-white transition-colors mb-2"
             >
               <ArrowLeft className="w-3.5 h-3.5" />
               <span>Back to Plan Selection</span>
@@ -301,7 +301,7 @@ function CheckoutContent() {
             {/* Step 1: Candidate Enrollment Form */}
             <div className="bg-[#181A1F] border border-[#282C36] rounded-3xl p-6 sm:p-8 space-y-6">
               <div className="flex items-center gap-3 border-b border-[#282C36] pb-4">
-                <div className="w-8 h-8 rounded-lg bg-amber-500 text-[#121419] font-mono font-bold flex items-center justify-center text-sm">
+                <div className="w-8 h-8 rounded-lg bg-amber-500 text-[#121419] tabular-nums font-bold flex items-center justify-center text-sm">
                   1
                 </div>
                 <div>
@@ -314,7 +314,7 @@ function CheckoutContent() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div className="space-y-2">
-                  <label className="text-xs font-mono text-slate-300 flex items-center gap-1.5">
+                  <label className="text-xs tabular-nums text-slate-300 flex items-center gap-1.5">
                     <User className="w-3.5 h-3.5 text-amber-500" />
                     <span>Full Candidate Name *</span>
                   </label>
@@ -329,7 +329,7 @@ function CheckoutContent() {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-xs font-mono text-slate-300 flex items-center gap-1.5">
+                  <label className="text-xs tabular-nums text-slate-300 flex items-center gap-1.5">
                     <Mail className="w-3.5 h-3.5 text-amber-500" />
                     <span>Email Address *</span>
                   </label>
@@ -344,7 +344,7 @@ function CheckoutContent() {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-xs font-mono text-slate-300 flex items-center gap-1.5">
+                  <label className="text-xs tabular-nums text-slate-300 flex items-center gap-1.5">
                     <Phone className="w-3.5 h-3.5 text-amber-500" />
                     <span>Mobile Number *</span>
                   </label>
@@ -359,7 +359,7 @@ function CheckoutContent() {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-xs font-mono text-slate-300 flex items-center gap-1.5">
+                  <label className="text-xs tabular-nums text-slate-300 flex items-center gap-1.5">
                     <Building2 className="w-3.5 h-3.5 text-slate-400" />
                     <span>Institution / University (Optional)</span>
                   </label>
@@ -377,7 +377,7 @@ function CheckoutContent() {
             {/* Step 2: Razorpay Provisioning & Gateway Information */}
             <div className="bg-[#181A1F] border border-[#282C36] rounded-3xl p-6 sm:p-8 space-y-6">
               <div className="flex items-center gap-3 border-b border-[#282C36] pb-4">
-                <div className="w-8 h-8 rounded-lg bg-amber-500 text-[#121419] font-mono font-bold flex items-center justify-center text-sm">
+                <div className="w-8 h-8 rounded-lg bg-amber-500 text-[#121419] tabular-nums font-bold flex items-center justify-center text-sm">
                   2
                 </div>
                 <div>
@@ -401,7 +401,7 @@ function CheckoutContent() {
                 </div>
 
                 <div className="flex-shrink-0">
-                  <div className="px-4 py-2.5 rounded-xl bg-[#181A1F] border border-[#282C36] font-mono text-xs text-center space-y-1 text-emerald-400">
+                  <div className="px-4 py-2.5 rounded-xl bg-[#181A1F] border border-[#282C36] tabular-nums text-xs text-center space-y-1 text-emerald-400">
                     <div className="font-bold">Gateway Status</div>
                     <div className="flex items-center gap-1.5 justify-center text-[11px]">
                       <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
@@ -418,14 +418,14 @@ function CheckoutContent() {
             <div className="bg-[#181A1F] border border-[#282C36] rounded-3xl p-6 sm:p-8 space-y-6 shadow-xl">
               <h2 className="text-lg font-bold text-white border-b border-[#282C36] pb-4 flex items-center justify-between">
                 <span>Order Summary</span>
-                <span className="text-xs font-mono text-amber-500">#CBT-ORDER</span>
+                <span className="text-xs tabular-nums text-amber-500">#CBT-ORDER</span>
               </h2>
 
               {/* Selected Track & Plan Box */}
               <div className="p-4 rounded-2xl bg-[#121419] border border-[#282C36] space-y-3">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-amber-500 block mb-1">
+                    <span className="text-[10px] tabular-nums font-bold uppercase tracking-wider text-amber-500 block mb-1">
                       Target Curriculum
                     </span>
                     <h3 className="font-bold text-base leading-snug text-white">
@@ -434,7 +434,7 @@ function CheckoutContent() {
                   </div>
                 </div>
 
-                <div className="pt-2 border-t border-[#282C36] flex items-center justify-between text-xs font-mono">
+                <div className="pt-2 border-t border-[#282C36] flex items-center justify-between text-xs tabular-nums">
                   <span className="text-slate-400">Selected Plan:</span>
                   <span className="font-semibold px-2.5 py-1 rounded-md text-white bg-slate-800 border border-slate-700">
                     {planName} ({planDays})
@@ -467,7 +467,7 @@ function CheckoutContent() {
                     value={coupon}
                     onChange={(e) => setCoupon(e.target.value)}
                     placeholder="Voucher (e.g. FINBENCH10)"
-                    className="w-full pl-8 pr-3 py-2 rounded-xl bg-[#121419] border border-[#282C36] text-white placeholder-slate-500 text-xs uppercase focus:border-amber-500 focus:outline-none font-mono"
+                    className="w-full pl-8 pr-3 py-2 rounded-xl bg-[#121419] border border-[#282C36] text-white placeholder-slate-500 text-xs uppercase focus:border-amber-500 focus:outline-none tabular-nums"
                   />
                 </div>
                 <button
@@ -491,7 +491,7 @@ function CheckoutContent() {
               )}
 
               {/* Price Breakdown with exact 18% GST */}
-              <div className="space-y-3 pt-4 border-t border-[#282C36] font-mono text-sm">
+              <div className="space-y-3 pt-4 border-t border-[#282C36] tabular-nums text-sm">
                 <div className="flex items-center justify-between text-slate-300">
                   <span>Base Plan Price ({planName})</span>
                   <span>₹{basePrice.toFixed(2)}</span>
@@ -516,7 +516,7 @@ function CheckoutContent() {
 
                 <div className="flex items-center justify-between pt-1 text-base font-bold text-white">
                   <span className="font-sans">Total Amount Payable</span>
-                  <span className="text-emerald-500 text-xl font-mono">₹{finalTotal.toFixed(2)}</span>
+                  <span className="text-emerald-500 text-xl tabular-nums">₹{finalTotal.toFixed(2)}</span>
                 </div>
               </div>
 

@@ -274,7 +274,7 @@ export default function SettingsPage() {
                 >
                   <Sliders className="w-4 h-4" />
                   <span>Admin Controls</span>
-                  <span className="ml-1 px-2 py-0.5 bg-amber-500 text-slate-950 text-[10px] font-black uppercase font-mono rounded">
+                  <span className="ml-1 px-2 py-0.5 bg-amber-500 text-slate-950 text-[10px] font-black uppercase tabular-nums rounded">
                     SUPER
                   </span>
                 </button>
@@ -303,14 +303,14 @@ export default function SettingsPage() {
                       <User className="w-5 h-5 text-indigo-400" />
                       1. Profile & Contact Information
                     </div>
-                    <span className="text-xs font-mono text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-full font-bold">
+                    <span className="text-xs tabular-nums text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-full font-bold">
                       85% Complete
                     </span>
                   </div>
 
                   {/* Profile Completion Gauge */}
                   <div className="space-y-1.5">
-                    <div className="flex justify-between text-xs font-mono text-slate-400">
+                    <div className="flex justify-between text-xs tabular-nums text-slate-400">
                       <span>Profile Setup Meter</span>
                       <span>85%</span>
                     </div>
@@ -339,9 +339,9 @@ export default function SettingsPage() {
                             type="email"
                             value={profile.email}
                             disabled
-                            className="w-full bg-slate-800/50 border border-white/10 rounded-xl px-4 py-3 text-slate-400 text-sm cursor-not-allowed font-mono"
+                            className="w-full bg-slate-800/50 border border-white/10 rounded-xl px-4 py-3 text-slate-400 text-sm cursor-not-allowed tabular-nums"
                           />
-                          <span className="absolute right-3 top-3 text-[10px] font-mono font-bold bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded border border-emerald-500/20">
+                          <span className="absolute right-3 top-3 text-[10px] tabular-nums font-bold bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded border border-emerald-500/20">
                             VERIFIED
                           </span>
                         </div>
@@ -358,7 +358,7 @@ export default function SettingsPage() {
                           pattern="^[6-9]\d{9}$"
                           title="Enter a valid 10-digit Indian mobile number (starts with 6-9)"
                           placeholder="+91 98765 43210"
-                          className="w-full bg-slate-900/90 border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-indigo-500 font-mono transition-colors"
+                          className="w-full bg-slate-900/90 border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-indigo-500 tabular-nums transition-colors"
                         />
                       </div>
 
@@ -404,28 +404,28 @@ export default function SettingsPage() {
                       <CreditCard className="w-5 h-5 text-amber-500" />
                       Active Subscription
                     </div>
-                    <span className="px-2.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] font-bold font-mono">
+                    <span className="px-2.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] font-bold tabular-nums">
                       ● LIVE
                     </span>
                   </div>
 
                   <div className="space-y-4">
                     <div>
-                      <div className="text-xs text-slate-400 font-mono uppercase tracking-wider">Current Tier Package</div>
+                      <div className="text-xs text-slate-400 tabular-nums uppercase tracking-wider">Current Tier Package</div>
                       <div className="text-lg font-extrabold text-white mt-1">
                         Tier 2 — NISM V-A Pro Pack
                       </div>
                     </div>
 
                     <div className="space-y-2">
-                      <div className="flex justify-between text-xs font-mono text-slate-400">
+                      <div className="flex justify-between text-xs tabular-nums text-slate-400">
                         <span>Access Clock</span>
                         <span className="text-amber-400 font-bold">42 Days Left</span>
                       </div>
                       <div className="w-full h-2.5 bg-slate-800 rounded-full overflow-hidden p-0.5 border border-white/5">
                         <div className="h-full bg-gradient-to-r from-amber-500 to-indigo-500 rounded-full w-[70%]" />
                       </div>
-                      <div className="text-[11px] text-slate-400 font-mono text-right">Expires: 15 Oct 2026</div>
+                      <div className="text-[11px] text-slate-400 tabular-nums text-right">Expires: 15 Oct 2026</div>
                     </div>
 
                     <button
@@ -447,7 +447,7 @@ export default function SettingsPage() {
                     <CreditCard className="w-5 h-5 text-amber-500" />
                     Purchase History & GST Invoices
                   </div>
-                  <span className="text-xs font-mono text-slate-400">
+                  <span className="text-xs tabular-nums text-slate-400">
                     INR (₹) Billing Records
                   </span>
                 </div>
@@ -455,7 +455,7 @@ export default function SettingsPage() {
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-sm">
                     <thead>
-                      <tr className="border-b border-white/10 text-xs font-mono text-slate-400 uppercase">
+                      <tr className="border-b border-white/10 text-xs tabular-nums text-slate-400 uppercase">
                         <th className="pb-3 px-4">Invoice ID</th>
                         <th className="pb-3 px-4">Date</th>
                         <th className="pb-3 px-4">Plan Name</th>
@@ -468,13 +468,13 @@ export default function SettingsPage() {
                     <tbody className="divide-y divide-white/10">
                       {invoices.map((inv) => (
                         <tr key={inv.id} className="hover:bg-white/5 transition-colors">
-                          <td className="py-4 px-4 font-mono font-bold text-white text-xs">{inv.id}</td>
-                          <td className="py-4 px-4 text-slate-400 text-xs font-mono">{inv.date}</td>
+                          <td className="py-4 px-4 tabular-nums font-bold text-white text-xs">{inv.id}</td>
+                          <td className="py-4 px-4 text-slate-400 text-xs tabular-nums">{inv.date}</td>
                           <td className="py-4 px-4 font-semibold text-slate-200 text-sm">{inv.plan}</td>
-                          <td className="py-4 px-4 font-mono font-bold text-amber-400 text-sm">{inv.amount}</td>
-                          <td className="py-4 px-4 font-mono text-slate-400 text-xs">{inv.gst}</td>
+                          <td className="py-4 px-4 tabular-nums font-bold text-amber-400 text-sm">{inv.amount}</td>
+                          <td className="py-4 px-4 tabular-nums text-slate-400 text-xs">{inv.gst}</td>
                           <td className="py-4 px-4">
-                            <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] font-mono font-bold">
+                            <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] tabular-nums font-bold">
                               {inv.status}
                             </span>
                           </td>
@@ -504,7 +504,7 @@ export default function SettingsPage() {
               {/* 4. Legal Links Footer */}
               <footer className="backdrop-blur-md bg-zinc-900/60 border border-white/10 rounded-2xl p-6 space-y-4">
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-white/10 pb-4">
-                  <div className="text-xs font-mono text-slate-400">
+                  <div className="text-xs tabular-nums text-slate-400">
                     Protected under Digital Personal Data Protection (DPDP) Act 2023
                   </div>
                   <div className="flex flex-wrap gap-4 text-xs font-semibold text-slate-400">
@@ -543,7 +543,7 @@ export default function SettingsPage() {
                       <Sliders className="w-5 h-5 text-amber-500" />
                       1. Interactive Feature Flags
                     </div>
-                    <span className="text-xs font-mono text-indigo-400 bg-indigo-500/10 border border-indigo-500/20 px-2.5 py-0.5 rounded font-bold">
+                    <span className="text-xs tabular-nums text-indigo-400 bg-indigo-500/10 border border-indigo-500/20 px-2.5 py-0.5 rounded font-bold">
                       Platform Rules
                     </span>
                   </div>
@@ -586,7 +586,7 @@ export default function SettingsPage() {
                       <DollarSign className="w-5 h-5 text-amber-500" />
                       2. Tier Pricing Matrix (INR ₹)
                     </div>
-                    <span className="text-xs font-mono text-slate-400">18% GST Excl.</span>
+                    <span className="text-xs tabular-nums text-slate-400">18% GST Excl.</span>
                   </div>
 
                   <form onSubmit={handleSavePricing} className="space-y-4">
@@ -598,7 +598,7 @@ export default function SettingsPage() {
                           type="number"
                           value={pricing.tier1}
                           onChange={(e) => setPricing({ ...pricing, tier1: e.target.value })}
-                          className="w-full bg-slate-900/90 border border-white/10 rounded-xl pl-9 pr-4 py-2.5 text-sm font-mono font-bold text-white focus:outline-none focus:border-amber-500"
+                          className="w-full bg-slate-900/90 border border-white/10 rounded-xl pl-9 pr-4 py-2.5 text-sm tabular-nums font-bold text-white focus:outline-none focus:border-amber-500"
                         />
                       </div>
                     </div>
@@ -611,7 +611,7 @@ export default function SettingsPage() {
                           type="number"
                           value={pricing.tier2}
                           onChange={(e) => setPricing({ ...pricing, tier2: e.target.value })}
-                          className="w-full bg-slate-900/90 border border-white/10 rounded-xl pl-9 pr-4 py-2.5 text-sm font-mono font-bold text-white focus:outline-none focus:border-amber-500"
+                          className="w-full bg-slate-900/90 border border-white/10 rounded-xl pl-9 pr-4 py-2.5 text-sm tabular-nums font-bold text-white focus:outline-none focus:border-amber-500"
                         />
                       </div>
                     </div>
@@ -624,7 +624,7 @@ export default function SettingsPage() {
                           type="number"
                           value={pricing.tier3}
                           onChange={(e) => setPricing({ ...pricing, tier3: e.target.value })}
-                          className="w-full bg-slate-900/90 border border-white/10 rounded-xl pl-9 pr-4 py-2.5 text-sm font-mono font-bold text-white focus:outline-none focus:border-amber-500"
+                          className="w-full bg-slate-900/90 border border-white/10 rounded-xl pl-9 pr-4 py-2.5 text-sm tabular-nums font-bold text-white focus:outline-none focus:border-amber-500"
                         />
                       </div>
                     </div>
@@ -671,7 +671,7 @@ export default function SettingsPage() {
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-sm">
                     <thead>
-                      <tr className="border-b border-white/10 text-xs font-mono text-slate-400 uppercase">
+                      <tr className="border-b border-white/10 text-xs tabular-nums text-slate-400 uppercase">
                         <th className="pb-3 px-4">Candidate</th>
                         <th className="pb-3 px-4">Role</th>
                         <th className="pb-3 px-4">Days Left</th>
@@ -685,13 +685,13 @@ export default function SettingsPage() {
                           <td className="py-4 px-4">
                             <div>
                               <div className="font-bold text-white text-sm">{usr.name}</div>
-                              <div className="text-xs text-slate-400 font-mono">{usr.email}</div>
+                              <div className="text-xs text-slate-400 tabular-nums">{usr.email}</div>
                             </div>
                           </td>
-                          <td className="py-4 px-4 font-mono text-xs font-bold text-indigo-400">{usr.role}</td>
-                          <td className="py-4 px-4 font-mono text-xs text-amber-400 font-bold">{usr.daysLeft} days</td>
+                          <td className="py-4 px-4 tabular-nums text-xs font-bold text-indigo-400">{usr.role}</td>
+                          <td className="py-4 px-4 tabular-nums text-xs text-amber-400 font-bold">{usr.daysLeft} days</td>
                           <td className="py-4 px-4">
-                            <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold ${
+                            <span className={`px-2.5 py-0.5 rounded-full text-[10px] tabular-nums font-bold ${
                               usr.status === 'Active'
                                 ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
                                 : 'bg-red-500/10 text-red-400 border border-red-500/20'

@@ -30,7 +30,7 @@ export function ContactSection() {
             <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-bl from-amber-500/10 to-transparent rounded-full blur-2xl pointer-events-none" />
 
             <div>
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded bg-slate-800 text-amber-400 font-mono text-xs font-semibold uppercase tracking-wider mb-6">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded bg-slate-800 text-amber-400 tabular-nums text-xs font-semibold uppercase tracking-wider mb-6">
                 <Building2 className="w-3.5 h-3.5" />
                 <span>Academic & Institutional Consultation</span>
               </div>
@@ -42,7 +42,7 @@ export function ContactSection() {
                 Whether you are an individual candidate aiming for the 95th percentile or a university finance department looking to license our Institutional CBT simulator, our quantitative analysts are ready to assist.
               </p>
 
-              <div className="space-y-4 font-mono text-xs text-slate-400 dark:text-slate-500 dark:text-slate-400 pt-6 border-t border-slate-800">
+              <div className="space-y-4 tabular-nums text-xs text-slate-400 dark:text-slate-500 dark:text-slate-400 pt-6 border-t border-slate-800">
                 <div className="flex items-center gap-3">
                   <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
                   <span>Custom Institutional CBT lab deployments for universities</span>
@@ -58,7 +58,7 @@ export function ContactSection() {
               </div>
             </div>
 
-            <div className="pt-10 mt-10 border-t border-slate-200 dark:border-slate-800/80 flex items-center justify-between text-xs text-slate-400 dark:text-slate-500 font-mono">
+            <div className="pt-10 mt-10 border-t border-slate-200 dark:border-slate-800/80 flex items-center justify-between text-xs text-slate-400 dark:text-slate-500 tabular-nums">
               <span>Direct Inquiry: academic@myexams365.com</span>
               <span className="text-amber-600 dark:text-amber-400">Response &lt; 4 Hours</span>
             </div>
@@ -102,7 +102,7 @@ export function ContactSection() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-mono font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-1.5">
+                    <label className="block text-xs tabular-nums font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-1.5">
                       Full Name *
                     </label>
                     <input
@@ -115,7 +115,7 @@ export function ContactSection() {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-mono font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-1.5">
+                    <label className="block text-xs tabular-nums font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-1.5">
                       Professional / University Email *
                     </label>
                     <input
@@ -131,7 +131,7 @@ export function ContactSection() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-mono font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-1.5">
+                    <label className="block text-xs tabular-nums font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-1.5">
                       Target Examination Track
                     </label>
                     <select
@@ -149,7 +149,7 @@ export function ContactSection() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs font-mono font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-1.5">
+                    <label className="block text-xs tabular-nums font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-1.5">
                       Organization / University (Optional)
                     </label>
                     <input
@@ -163,7 +163,7 @@ export function ContactSection() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-mono font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-1.5">
+                  <label className="block text-xs tabular-nums font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-1.5">
                     Consultation Topic / Background
                   </label>
                   <textarea

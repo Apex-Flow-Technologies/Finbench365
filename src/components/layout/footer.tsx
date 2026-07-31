@@ -42,11 +42,11 @@ export function Footer() {
               onClick={(e) => scrollToSection(e, 'hero')}
               className="flex items-center gap-2.5 group focus:outline-none"
             >
-              <div className="w-8 h-8 rounded-lg bg-[#FBFBF9] text-[#181A1F] flex items-center justify-center font-mono font-bold text-sm tracking-tighter shadow-sm">
+              <div className="w-8 h-8 rounded-lg bg-[#FBFBF9] text-[#181A1F] flex items-center justify-center tabular-nums font-bold text-sm tracking-tighter shadow-sm">
                 FB
               </div>
               <span className="font-semibold tracking-tight text-lg text-white">
-                MyExams<span className="text-amber-400 font-mono text-xs ml-0.5">365</span>
+                MyExams<span className="text-amber-400 tabular-nums text-xs ml-0.5">365</span>
               </span>
             </a>
 
@@ -54,7 +54,7 @@ export function Footer() {
               Engineering calm confidence, mathematical precision, and Institutional CBT exact fidelity for high-stakes global financial certification examinations.
             </p>
 
-            <div className="flex items-center gap-2 text-xs font-mono text-slate-500 pt-2">
+            <div className="flex items-center gap-2 text-xs tabular-nums text-slate-500 pt-2">
               <ShieldCheck className="w-4 h-4 text-emerald-400" />
               <span>2026–2027 Examination Matrix Active</span>
             </div>
@@ -62,7 +62,7 @@ export function Footer() {
 
           {/* Column 1: Certifications (2 cols) */}
           <div className="lg:col-span-2 space-y-3">
-            <h5 className="font-mono text-xs font-bold uppercase tracking-wider text-white">
+            <h5 className="tabular-nums text-xs font-bold uppercase tracking-wider text-white">
               Certifications
             </h5>
             <ul className="space-y-2.5 text-sm">
@@ -78,7 +78,7 @@ export function Footer() {
 
           {/* Column 2: Platform & Navigation (2 cols) */}
           <div className="lg:col-span-2 space-y-3">
-            <h5 className="font-mono text-xs font-bold uppercase tracking-wider text-white">
+            <h5 className="tabular-nums text-xs font-bold uppercase tracking-wider text-white">
               Quick Links
             </h5>
             <ul className="space-y-2.5 text-sm">
@@ -105,7 +105,7 @@ export function Footer() {
 
           {/* Column 3: Institutional Research (2 cols) */}
           <div className="lg:col-span-2 space-y-3">
-            <h5 className="font-mono text-xs font-bold uppercase tracking-wider text-white">
+            <h5 className="tabular-nums text-xs font-bold uppercase tracking-wider text-white">
               Pedagogy
             </h5>
             <ul className="space-y-2.5 text-sm">
@@ -119,7 +119,7 @@ export function Footer() {
 
           {/* Column 4: Socials & Connect (2 cols) */}
           <div className="lg:col-span-2 space-y-3">
-            <h5 className="font-mono text-xs font-bold uppercase tracking-wider text-white">
+            <h5 className="tabular-nums text-xs font-bold uppercase tracking-wider text-white">
               Socials
             </h5>
             <ul className="space-y-2.5 text-sm">
@@ -143,7 +143,7 @@ export function Footer() {
         </div>
 
         {/* Bottom Legal & Copyright Section */}
-        <div className="pt-8 flex flex-col items-center gap-6 text-xs text-slate-500 font-mono text-center">
+        <div className="pt-8 flex flex-col items-center gap-6 text-xs text-slate-500 tabular-nums text-center">
           <div className="flex flex-wrap justify-center gap-x-6 gap-y-3 font-sans text-sm">
             <Link href="/disclaimer" className="hover:text-amber-400 transition-colors">Disclaimer</Link>
             <Link href="/terms" className="hover:text-amber-400 transition-colors">Terms of Service</Link>

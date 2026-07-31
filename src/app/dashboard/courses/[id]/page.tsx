@@ -193,11 +193,11 @@ export default function StudentExamPage({ params }: { params: Promise<{ id: stri
                 </div>
                 <div className="shrink-0 flex flex-col items-end gap-1">
                   {isAdminOrEditor ? (
-                    <span className="text-xs font-mono text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 px-3.5 py-1.5 rounded-full font-bold uppercase tracking-wider">
+                    <span className="text-xs tabular-nums text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 px-3.5 py-1.5 rounded-full font-bold uppercase tracking-wider">
                       ● ADMIN ACCESS
                     </span>
                   ) : (
-                    <span className="text-xs font-mono text-amber-600 dark:text-amber-500 bg-amber-50 dark:bg-amber-500/10 px-3.5 py-1.5 rounded-full font-bold">
+                    <span className="text-xs tabular-nums text-amber-600 dark:text-amber-500 bg-amber-50 dark:bg-amber-500/10 px-3.5 py-1.5 rounded-full font-bold">
                       {daysLeft} days remaining
                     </span>
                   )}
@@ -231,7 +231,7 @@ export default function StudentExamPage({ params }: { params: Promise<{ id: stri
               <BookMarked className="w-4 h-4" />
               <span>Materials</span>
               {materials.length > 0 && (
-                <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded-full ${activeTab === 'materials' ? 'bg-slate-950/20 text-slate-950 font-black' : 'bg-slate-100 dark:bg-[#272B33]'}`}>
+                <span className={`text-[10px] tabular-nums px-1.5 py-0.5 rounded-full ${activeTab === 'materials' ? 'bg-slate-950/20 text-slate-950 font-black' : 'bg-slate-100 dark:bg-[#272B33]'}`}>
                   {materials.length}
                 </span>
               )}
@@ -247,7 +247,7 @@ export default function StudentExamPage({ params }: { params: Promise<{ id: stri
               <ClipboardList className="w-4 h-4" />
               <span>Mock Tests</span>
               {tests.length > 0 && (
-                <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded-full ${activeTab === 'tests' ? 'bg-slate-950/20 text-slate-950 font-black' : 'bg-slate-100 dark:bg-[#272B33]'}`}>
+                <span className={`text-[10px] tabular-nums px-1.5 py-0.5 rounded-full ${activeTab === 'tests' ? 'bg-slate-950/20 text-slate-950 font-black' : 'bg-slate-100 dark:bg-[#272B33]'}`}>
                   {tests.length}
                 </span>
               )}
@@ -286,7 +286,7 @@ export default function StudentExamPage({ params }: { params: Promise<{ id: stri
                         </div>
                         <div>
                           <div className="font-bold text-slate-900 dark:text-white text-sm">{mat.name}</div>
-                          <div className="text-xs text-slate-500 dark:text-slate-400 font-mono mt-0.5 truncate max-w-xs">PDF Study Material</div>
+                          <div className="text-xs text-slate-500 dark:text-slate-400 tabular-nums mt-0.5 truncate max-w-xs">PDF Study Material</div>
                         </div>
                       </div>
                       <a
@@ -342,7 +342,7 @@ export default function StudentExamPage({ params }: { params: Promise<{ id: stri
                             </div>
                             <div>
                               <div className="font-bold text-slate-900 dark:text-white text-sm">{test.title}</div>
-                              <div className="flex items-center gap-3 mt-1 text-xs text-slate-500 dark:text-slate-400 font-mono">
+                              <div className="flex items-center gap-3 mt-1 text-xs text-slate-500 dark:text-slate-400 tabular-nums">
                                 <span className="flex items-center gap-1">
                                   <Clock className="w-3.5 h-3.5" /> {test.durationMinutes} min
                                 </span>

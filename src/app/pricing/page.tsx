@@ -101,7 +101,7 @@ function PricingContent() {
       <div className="max-w-[1240px] mx-auto px-6 md:px-8 pt-4 pb-2 flex items-center justify-between gap-4">
         <button
           onClick={() => router.push('/exams')}
-          className="inline-flex items-center gap-2 text-xs font-mono text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white transition-colors"
+          className="inline-flex items-center gap-2 text-xs tabular-nums text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white transition-colors"
         >
           <ArrowLeft className="w-3.5 h-3.5" />
           <span>Back to Exams Catalog</span>
@@ -122,7 +122,7 @@ function PricingContent() {
         />
 
         <div className="max-w-4xl mx-auto relative z-10 space-y-4 px-6 text-center">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-100 border-slate-200 text-amber-600 dark:bg-slate-800/80 border dark:border-slate-700 dark:text-amber-400 font-mono text-xs font-semibold tracking-wide transition-colors">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-100 border-slate-200 text-amber-600 dark:bg-slate-800/80 border dark:border-slate-700 dark:text-amber-400 tabular-nums text-xs font-semibold tracking-wide transition-colors">
             <Sparkles className="w-3.5 h-3.5 text-amber-500" />
             <span>{trackBadge}</span>
           </div>
@@ -172,7 +172,7 @@ function PricingContent() {
                 <div>
                   {/* Plan Header */}
                   <div className="flex items-center justify-between gap-3 mb-5">
-                    <span className={`px-3 py-1 rounded-full border font-mono text-xs transition-colors ${plan.badgeClass}`}>
+                    <span className={`px-3 py-1 rounded-full border tabular-nums text-xs transition-colors ${plan.badgeClass}`}>
                       {plan.badge}
                     </span>
                     <Clock className="w-4 h-4 text-slate-400" />
@@ -184,7 +184,7 @@ function PricingContent() {
 
                   {/* Price Display */}
                   <div className="flex items-baseline gap-2 my-5">
-                    <span className="text-4xl sm:text-5xl font-black tracking-tight font-mono text-slate-900 dark:text-white transition-colors">
+                    <span className="text-4xl sm:text-5xl font-black tracking-tight tabular-nums text-slate-900 dark:text-white transition-colors">
                       {plan.price}
                     </span>
                     <span className="text-sm font-medium font-sans text-slate-500 dark:text-slate-400 transition-colors">
@@ -194,7 +194,7 @@ function PricingContent() {
 
                   {/* Target Candidate Tagline */}
                   <div className="p-3.5 rounded-xl bg-amber-50/50 border-amber-100 dark:bg-[#121419] border dark:border-[#282C36] mb-6 transition-colors">
-                    <p className="text-xs font-mono leading-relaxed text-amber-700 dark:text-amber-300/90 flex items-start gap-2">
+                    <p className="text-xs tabular-nums leading-relaxed text-amber-700 dark:text-amber-300/90 flex items-start gap-2">
                       <Zap className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
                       <span>{plan.tagline}</span>
                     </p>
@@ -234,7 +234,7 @@ function PricingContent() {
             );
           })}
         </div>
-        <div className="mt-8 text-center text-sm text-slate-500 dark:text-slate-400 font-mono transition-colors">
+        <div className="mt-8 text-center text-sm text-slate-500 dark:text-slate-400 tabular-nums transition-colors">
           * All prices are in Indian Rupees (INR) and are inclusive of 18% GST.
         </div>
       </section>

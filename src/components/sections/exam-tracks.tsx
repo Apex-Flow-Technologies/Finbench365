@@ -62,7 +62,7 @@ export function ExamTracks() {
       <div className="max-w-[1240px] mx-auto px-6 md:px-8">
         {/* Section Header */}
         <div className="max-w-3xl mx-auto text-center mb-16 space-y-4">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-300/60 border border-slate-400/60 text-slate-800 font-mono text-xs font-semibold uppercase tracking-wider">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-300/60 border border-slate-400/60 text-slate-800 tabular-nums text-xs font-semibold uppercase tracking-wider">
             <Layers className="w-3.5 h-3.5 text-amber-700" />
             <span>Curriculum Engineering</span>
           </div>
@@ -88,7 +88,7 @@ export function ExamTracks() {
             >
               <div>
                 {/* Track Badge */}
-                <div className="flex items-center justify-between gap-2 mb-4 font-mono text-xs">
+                <div className="flex items-center justify-between gap-2 mb-4 tabular-nums text-xs">
                   <span className="px-2.5 py-1 rounded bg-white dark:bg-[#181A1F] transition-colors duration-300 text-slate-900 dark:text-white font-bold tracking-wider">
                     {track.badge}
                   </span>
@@ -101,7 +101,7 @@ export function ExamTracks() {
                 <h3 className="text-2xl font-semibold text-slate-900 tracking-tight mb-1">
                   {track.title}
                 </h3>
-                <p className="text-xs font-mono text-slate-400 dark:text-slate-500 font-medium mb-4">
+                <p className="text-xs tabular-nums text-slate-400 dark:text-slate-500 font-medium mb-4">
                   {track.subtitle}
                 </p>
 
@@ -111,7 +111,7 @@ export function ExamTracks() {
 
                 {/* Key Topics List */}
                 <div className="space-y-2 mb-6 pt-6 border-t border-slate-150">
-                  <span className="font-mono text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 dark:text-slate-400 block mb-3">
+                  <span className="tabular-nums text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 dark:text-slate-400 block mb-3">
                     Core Curriculum Modules
                   </span>
                   {track.keyTopics.map((topic, tIdx) => (
@@ -125,7 +125,7 @@ export function ExamTracks() {
 
               {/* Bottom Metrics & CTA */}
               <div className="pt-6 border-t border-slate-150 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="font-mono text-xs text-slate-600">
+                <div className="tabular-nums text-xs text-slate-600">
                   <span className="block font-bold text-slate-900">{track.questionCount}</span>
                   <span>Prometric CBT Formats</span>
                 </div>

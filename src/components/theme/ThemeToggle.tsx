@@ -40,12 +40,12 @@ export function ThemeToggle({ theme, toggleTheme }: { theme: 'dark' | 'light'; t
       {theme === 'dark' ? (
         <>
           <Sun className="w-4 h-4 text-amber-400" />
-          <span className="text-xs font-mono font-semibold text-slate-300 hidden sm:inline">Light Mode</span>
+          <span className="text-xs tabular-nums font-semibold text-slate-300 hidden sm:inline">Light Mode</span>
         </>
       ) : (
         <>
           <Moon className="w-4 h-4 text-slate-700" />
-          <span className="text-xs font-mono font-semibold text-slate-700 hidden sm:inline">Dark Mode</span>
+          <span className="text-xs tabular-nums font-semibold text-slate-700 hidden sm:inline">Dark Mode</span>
         </>
       )}
     </button>

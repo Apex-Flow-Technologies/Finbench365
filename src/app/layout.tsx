@@ -24,7 +24,7 @@ const jakarta = Plus_Jakarta_Sans({
 
 const jetbrainsMono = JetBrains_Mono({
   subsets: ['latin'],
-  variable: '--font-mono',
+  variable: '--tabular-nums',
   display: 'swap',
 });
 

@@ -530,13 +530,13 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
           
           <div className="bg-zinc-900 border border-white/10 rounded-2xl p-8 max-w-md w-full shadow-2xl text-center mb-8 space-y-6">
             <div>
-              <div className="text-xs font-mono text-slate-400 mb-1 uppercase tracking-wider">OVERALL ACCURACY</div>
+              <div className="text-xs tabular-nums text-slate-400 mb-1 uppercase tracking-wider">OVERALL ACCURACY</div>
               <div className="text-6xl font-extrabold text-amber-500">
                 {stats.scorePct}%
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4 text-xs font-mono pt-4 border-t border-white/10">
+            <div className="grid grid-cols-2 gap-4 text-xs tabular-nums pt-4 border-t border-white/10">
               <div className="p-3 bg-slate-800/80 rounded-xl">
                 <div className="text-slate-400">Correct Answers</div>
                 <div className="text-emerald-400 font-bold text-base">{stats.correct}</div>
@@ -572,7 +572,7 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
             <h1 className="text-2xl font-bold text-amber-500">{test.title} — CBT Simulator</h1>
             <p className="text-slate-300 text-sm">{test.description || "NISM Series V-A Official Standard Mock Exam."}</p>
             
-            <div className="grid grid-cols-2 gap-4 py-4 border-y border-white/10 text-xs font-mono">
+            <div className="grid grid-cols-2 gap-4 py-4 border-y border-white/10 text-xs tabular-nums">
               <div>
                 <div className="text-slate-400">Duration</div>
                 <div className="font-bold text-white text-sm">{test.durationMinutes} Minutes</div>
@@ -630,7 +630,7 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
             
             <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-6 mb-10 max-w-md w-full shadow-lg">
               <div className="text-sm text-amber-400 font-bold mb-2 uppercase tracking-widest">Time to Return</div>
-              <div className="text-5xl font-mono font-extrabold text-amber-500">{antiCheatWarning}s</div>
+              <div className="text-5xl tabular-nums font-extrabold text-amber-500">{antiCheatWarning}s</div>
             </div>
             
             <button 
@@ -653,7 +653,7 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
             )}
           </div>
           <div className="flex items-center gap-6">
-            <div className={`font-mono text-base font-bold flex items-center gap-2 ${test?.type === 'exam' ? (timeRemaining < 300 ? 'text-red-400 animate-pulse' : 'text-amber-400') : 'text-emerald-400'}`}>
+            <div className={`tabular-nums text-base font-bold flex items-center gap-2 ${test?.type === 'exam' ? (timeRemaining < 300 ? 'text-red-400 animate-pulse' : 'text-amber-400') : 'text-emerald-400'}`}>
               <Clock className="w-4 h-4" />
               {test?.type === 'exam' ? formatTime(timeRemaining) : 'Practice Mode'}
             </div>
@@ -674,7 +674,7 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
           <div className="flex-1 overflow-y-auto p-6 lg:p-10 space-y-6">
             <div className="max-w-3xl mx-auto space-y-6">
               
-              <div className="flex justify-between items-center text-xs font-mono text-slate-400 border-b border-white/10 pb-3">
+              <div className="flex justify-between items-center text-xs tabular-nums text-slate-400 border-b border-white/10 pb-3">
                 <span>QUESTION {currentQuestionIndex + 1} OF {questions.length}</span>
                 {markedForReview[currentQuestion.id] && (
                   <span className="px-2.5 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/40 font-bold">
@@ -726,7 +726,7 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
                       disabled={test?.type === 'practice' && isAnswered}
                       className={`w-full text-left p-4 rounded-xl border flex items-center gap-4 transition-all ${buttonStyle}`}
                     >
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold font-mono text-sm shrink-0 transition-colors ${iconStyle}`}>
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold tabular-nums text-sm shrink-0 transition-colors ${iconStyle}`}>
                         {letter}
                       </div>
                       <div className="text-sm">{option}</div>
@@ -810,7 +810,7 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
                     <button
                       key={q.id || idx}
                       onClick={() => setCurrentQuestionIndex(idx)}
-                      className={`h-10 rounded-lg text-xs font-mono transition-all ${badgeStyle} ${
+                      className={`h-10 rounded-lg text-xs tabular-nums transition-all ${badgeStyle} ${
                         isCurrent ? 'ring-2 ring-amber-500 ring-offset-2 ring-offset-slate-900' : ''
                       }`}
                     >
@@ -822,7 +822,7 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
             </div>
 
             {/* Legend */}
-            <div className="pt-4 border-t border-white/10 text-xs font-mono space-y-2">
+            <div className="pt-4 border-t border-white/10 text-xs tabular-nums space-y-2">
               <div className="flex items-center gap-2">
                 <span className="w-3 h-3 rounded bg-emerald-500" />
                 <span>Answered ({Object.keys(answers).length})</span>

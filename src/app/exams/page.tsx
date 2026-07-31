@@ -298,11 +298,11 @@ export default function ExamsPage() {
                       {/* Key Study Resources Grid */}
                       <div className="grid grid-cols-2 gap-2 py-3 px-3.5 rounded-xl bg-slate-50 border border-slate-200 dark:bg-[#121419] dark:border-[#282C36] text-center text-xs mb-6 transition-colors">
                         <div>
-                          <span className="block font-mono font-bold text-amber-600 dark:text-amber-500 text-sm">{course.mockCount.split(' ')[0]}</span>
+                          <span className="block tabular-nums font-bold text-amber-600 dark:text-amber-500 text-sm">{course.mockCount.split(' ')[0]}</span>
                           <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-tighter">Full Mocks</span>
                         </div>
                         <div className="border-l border-slate-200 dark:border-[#282C36]">
-                          <span className="block font-mono font-bold text-slate-700 dark:text-slate-200 text-sm">{course.notesCount.split(' ')[0]}</span>
+                          <span className="block tabular-nums font-bold text-slate-700 dark:text-slate-200 text-sm">{course.notesCount.split(' ')[0]}</span>
                           <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-tighter">PDF Notes</span>
                         </div>
                       </div>
@@ -344,7 +344,7 @@ export default function ExamsPage() {
                             className="w-full py-3.5 px-6 rounded-xl bg-slate-800 hover:bg-slate-700 text-white dark:bg-[#272B33] dark:hover:bg-[#2c303a] font-bold text-sm tracking-wide shadow-md transition-all duration-300 flex items-center justify-center gap-2 group/btn focus:outline-none"
                           >
                             <span>Resume Course</span>
-                            <span className="text-amber-400 dark:text-amber-500 font-mono text-[10px] uppercase ml-1">({courseStatus.daysLeft} days left)</span>
+                            <span className="text-amber-400 dark:text-amber-500 tabular-nums text-[10px] uppercase ml-1">({courseStatus.daysLeft} days left)</span>
                           </button>
                         );
                       }
@@ -400,7 +400,7 @@ export default function ExamsPage() {
                       <p className="text-slate-600 dark:text-slate-300 text-sm max-w-3xl leading-relaxed transition-colors">
                         {course.description}
                       </p>
-                      <div className="flex flex-wrap items-center gap-4 pt-1 text-xs text-slate-500 dark:text-slate-400 font-mono transition-colors">
+                      <div className="flex flex-wrap items-center gap-4 pt-1 text-xs text-slate-500 dark:text-slate-400 tabular-nums transition-colors">
                         <span className="flex items-center gap-1.5 text-amber-600 dark:text-amber-500 font-semibold">
                           <CheckCircle2 className="w-3.5 h-3.5" /> {course.mockCount}
                         </span>
@@ -438,7 +438,7 @@ export default function ExamsPage() {
                                 className="w-full lg:w-48 py-3.5 px-6 rounded-xl bg-slate-800 hover:bg-slate-700 text-white dark:bg-[#272B33] dark:hover:bg-[#2c303a] font-bold text-sm tracking-wide shadow-md transition-all duration-300 flex items-center justify-center gap-2 group/btn focus:outline-none"
                               >
                                 <span>Resume Course</span>
-                                <span className="text-amber-400 dark:text-amber-500 font-mono text-[10px] uppercase ml-1">({courseStatus.daysLeft}d)</span>
+                                <span className="text-amber-400 dark:text-amber-500 tabular-nums text-[10px] uppercase ml-1">({courseStatus.daysLeft}d)</span>
                               </button>
                             );
                           }
