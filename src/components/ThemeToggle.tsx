@@ -46,7 +46,7 @@ export function ThemeToggle() {
             className={`p-1.5 rounded-md transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-1 ${
               isActive
                 ? 'bg-white dark:bg-[#272B33] text-amber-600 dark:text-amber-400 shadow-sm'
-                : 'text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                : 'text-[#475569] dark:text-[#94A3B8] hover:text-slate-700 dark:hover:text-slate-300'
             }`}
           >
             {opt.icon}

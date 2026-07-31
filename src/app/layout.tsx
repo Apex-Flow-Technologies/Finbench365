@@ -47,7 +47,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className={`${inter.variable} ${jakarta.variable} ${jetbrainsMono.variable}`} suppressHydrationWarning>
-      <body className="min-h-screen flex flex-col font-sans bg-white dark:bg-[#0B0C10] text-slate-900 dark:text-[#FBFBF9] antialiased selection:bg-[#181A1F] selection:text-white dark:selection:bg-white dark:selection:text-[#181A1F] transition-colors duration-300">
+      <body className="min-h-screen flex flex-col font-sans bg-white dark:bg-[#0B0C10] text-[#111B35] dark:text-[#FBFBF9] antialiased selection:bg-[#181A1F] selection:text-white dark:selection:bg-white dark:selection:text-[#181A1F] transition-colors duration-300">
         {/* Razorpay Checkout JS — loaded globally for payment pages */}
         <Script
           src="https://checkout.razorpay.com/v1/checkout.js"
@@ -63,7 +63,7 @@ export default function RootLayout({
             <Toaster
               position="top-right"
               toastOptions={{
-                className: 'dark:!bg-[#181A1F] dark:!text-[#FBFBF9] dark:!border-[#282C36] !bg-white !text-slate-900 !border-slate-200',
+                className: 'dark:!bg-[#181A1F] dark:!text-[#FBFBF9] dark:!border-[#282C36] !bg-white !text-[#111B35] !border-slate-200',
                 style: {
                   borderRadius: '12px',
                   fontFamily: 'var(--font-sans)',

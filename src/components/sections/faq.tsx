@@ -51,19 +51,19 @@ export function Faq() {
   };
 
   return (
-    <section id="faq" className="py-24 md:py-32 bg-transparent transition-colors duration-300 text-slate-900 dark:text-[#FBFBF9] border-b border-[#E4E4E0] dark:border-[#282C36] relative">
+    <section id="faq" className="py-24 md:py-32 bg-transparent transition-colors duration-300 text-[#111B35] dark:text-[#FBFBF9] border-b border-[#E4E4E0] dark:border-[#282C36] relative">
       <div className="max-w-[1040px] mx-auto px-6 md:px-8">
         {/* Section Header */}
         <div className="text-center max-w-3xl mx-auto mb-16 space-y-4">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-200/80 dark:bg-slate-800/80 border border-slate-300/80 dark:border-slate-700 text-slate-800 dark:text-amber-400 tabular-nums text-xs font-semibold uppercase tracking-wider">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-200/80 dark:bg-slate-800/80 border border-slate-300/80 dark:border-slate-700 text-[#111B35] dark:text-amber-400 tabular-nums text-xs font-semibold uppercase tracking-wider">
             <HelpCircle className="w-3.5 h-3.5 text-amber-700 dark:text-amber-400" />
             <span>Architecture & Pedagogy FAQ</span>
           </div>
-          <h2 className="text-3xl sm:text-4xl md:text-5xl font-semibold tracking-tight text-slate-900 dark:text-white leading-[1.16]">
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-semibold tracking-tight text-[#111B35] dark:text-white leading-[1.16]">
             Frequently Asked Questions <br />
             On Our Examination Engine.
           </h2>
-          <p className="text-slate-600 text-lg leading-relaxed">
+          <p className="text-[#334155] text-lg leading-relaxed">
             Everything you need to know about our Institutional CBT simulator, Item-Response Theory grading, and curriculum alignment.
           </p>
         </div>
@@ -91,14 +91,14 @@ export function Faq() {
                     <span className="tabular-nums text-[11px] font-bold text-amber-700 dark:text-amber-500 uppercase tracking-wider bg-amber-50 dark:bg-amber-950/30 px-2 py-0.5 rounded border border-amber-200 dark:border-amber-900/50 w-fit">
                       {item.category}
                     </span>
-                    <span className="text-base sm:text-lg font-medium text-slate-900 dark:text-white leading-snug">
+                    <span className="text-base sm:text-lg font-medium text-[#111B35] dark:text-white leading-snug">
                       {item.question}
                     </span>
                   </div>
 
                   <div
                     className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-colors duration-300 ${
-                      isOpen ? 'bg-[#181A1F] dark:bg-amber-500 text-white dark:text-[#181A1F]' : 'bg-slate-100 dark:bg-[#282C36] text-slate-500 dark:text-slate-400'
+                      isOpen ? 'bg-[#181A1F] dark:bg-amber-500 text-white dark:text-[#181A1F]' : 'bg-slate-100 dark:bg-[#282C36] text-[#475569] dark:text-[#94A3B8]'
                     }`}
                   >
                     {isOpen ? (
@@ -117,7 +117,7 @@ export function Faq() {
                       exit={{ height: 0, opacity: 0 }}
                       transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
                     >
-                      <div className="px-6 sm:px-7 pb-6 pt-1 text-slate-600 text-base leading-relaxed border-t border-[#F2F2EC]">
+                      <div className="px-6 sm:px-7 pb-6 pt-1 text-[#334155] text-base leading-relaxed border-t border-[#F2F2EC]">
                         <p>{item.answer}</p>
                       </div>
                     </motion.div>
@@ -130,7 +130,7 @@ export function Faq() {
 
         {/* Support Callout */}
         <div className="mt-16 text-center">
-          <p className="text-sm text-slate-400 dark:text-slate-500">
+          <p className="text-sm text-[#475569] dark:text-[#94A3B8]">
             Have a specific quantitative institutional query or university curriculum partnership request?{' '}
             <a href="#contact" className="font-semibold text-[#181A1F] underline underline-offset-4 hover:text-amber-700 transition-colors">
               Contact our Academic Team →

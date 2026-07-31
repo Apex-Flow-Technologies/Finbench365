@@ -153,7 +153,7 @@ export default function ExamsPage() {
   );
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-[#121419] text-slate-900 dark:text-[#FBFBF9] pt-20 transition-colors duration-300">
+    <div className="min-h-screen bg-slate-50 dark:bg-[#121419] text-[#111B35] dark:text-[#FBFBF9] pt-20 transition-colors duration-300">
       {/* Dark Institutional Hero Banner - We keep this somewhat dark in light mode too, or make it light. Let's make it responsive. */}
       <section className="relative py-16 md:py-24 bg-white border-b border-slate-200 dark:bg-[#181A1F] dark:border-[#282C36] overflow-hidden px-6 md:px-8 transition-colors duration-300">
         <div
@@ -169,13 +169,13 @@ export default function ExamsPage() {
 
         <div className="max-w-[1240px] mx-auto relative z-10">
           <div className="max-w-3xl space-y-4">
-            <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight text-slate-900 dark:text-white leading-[1.12] font-sans">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight text-[#111B35] dark:text-white leading-[1.12] font-sans">
               Explore Examination Curricula & <br />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-600 via-slate-600 to-slate-900 dark:from-amber-200 dark:via-slate-100 dark:to-slate-400">
                 Algorithmic Study Tracks.
               </span>
             </h1>
-            <p className="text-slate-600 dark:text-slate-300 text-base sm:text-lg leading-relaxed max-w-2xl">
+            <p className="text-[#334155] dark:text-[#E2E8F0] text-base sm:text-lg leading-relaxed max-w-2xl">
               Select your targeted certification track below. Every package includes full-length CBT mock exams, comprehensive topic-wise notes, and dynamic algorithmic question banks engineered for high-stakes candidates.
             </p>
           </div>
@@ -188,18 +188,18 @@ export default function ExamsPage() {
           <div className="flex items-center justify-between sm:justify-end gap-3">
             {/* Small Search Bar */}
             <div className="relative flex-1 sm:w-64 md:w-72">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <Search className="w-4 h-4 text-[#475569] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search tracks, modules, notes..."
-                className="w-full pl-9 pr-4 py-2 bg-slate-50 text-slate-900 placeholder-slate-500 border border-slate-200 focus:border-amber-500 dark:bg-[#121419] dark:text-white dark:border-[#282C36] dark:focus:border-amber-400 text-xs sm:text-sm rounded-lg focus:outline-none transition-colors font-sans"
+                className="w-full pl-9 pr-4 py-2 bg-slate-50 text-[#111B35] placeholder-slate-500 border border-slate-200 focus:border-amber-500 dark:bg-[#121419] dark:text-white dark:border-[#282C36] dark:focus:border-amber-400 text-xs sm:text-sm rounded-lg focus:outline-none transition-colors font-sans"
               />
               {searchQuery && (
                 <button
                   onClick={() => setSearchQuery('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300 text-xs"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#475569] hover:text-slate-600 dark:text-[#94A3B8] dark:hover:text-slate-300 text-xs"
                 >
                   ✕
                 </button>
@@ -213,7 +213,7 @@ export default function ExamsPage() {
                 title="Switch to Card Form"
                 className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-all duration-200 ${viewMode === 'grid'
                     ? 'bg-white text-amber-600 shadow-sm dark:bg-[#272B33] dark:text-amber-400'
-                    : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
+                    : 'text-[#475569] hover:text-slate-900 dark:text-[#94A3B8] dark:hover:text-white'
                   }`}
               >
                 <LayoutGrid className="w-3.5 h-3.5" />
@@ -224,7 +224,7 @@ export default function ExamsPage() {
                 title="Switch to Horizontal Bar Form"
                 className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-all duration-200 ${viewMode === 'list'
                     ? 'bg-white text-amber-600 shadow-sm dark:bg-[#272B33] dark:text-amber-400'
-                    : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
+                    : 'text-[#475569] hover:text-slate-900 dark:text-[#94A3B8] dark:hover:text-white'
                   }`}
               >
                 <List className="w-3.5 h-3.5" />
@@ -245,14 +245,14 @@ export default function ExamsPage() {
             transition={{ duration: 0.25, ease: 'easeOut' }}
             className="text-center py-20 bg-white border border-slate-200 dark:bg-[#181A1F] dark:border-[#282C36] rounded-2xl p-8 max-w-xl mx-auto space-y-4 shadow-sm transition-colors duration-300"
           >
-            <Layers className="w-12 h-12 text-slate-400 dark:text-slate-500 mx-auto" />
-            <h3 className="text-xl font-semibold text-slate-900 dark:text-white">No Examination Tracks Found</h3>
-            <p className="text-slate-500 dark:text-slate-400 text-sm">
+            <Layers className="w-12 h-12 text-[#475569] dark:text-[#94A3B8] mx-auto" />
+            <h3 className="text-xl font-semibold text-[#111B35] dark:text-white">No Examination Tracks Found</h3>
+            <p className="text-[#475569] dark:text-[#94A3B8] text-sm">
               No curricula matched your search query &quot;{searchQuery}&quot;. Try clearing your filter or searching for &quot;Quantitative&quot;, &quot;Level&quot;, or &quot;Risk&quot;.
             </p>
             <button
               onClick={() => { setSearchQuery(''); setSelectedCategory('All'); }}
-              className="px-5 py-2.5 rounded-lg bg-amber-500 text-slate-900 dark:text-[#121419] font-bold text-xs uppercase tracking-wider hover:bg-amber-400 transition-colors"
+              className="px-5 py-2.5 rounded-lg bg-amber-500 text-[#111B35] dark:text-[#121419] font-bold text-xs uppercase tracking-wider hover:bg-amber-400 transition-colors"
             >
               Reset Filters
             </button>
@@ -282,16 +282,16 @@ export default function ExamsPage() {
                     <div>
                       {/* Top Icon */}
                       <div className="flex justify-end mb-4">
-                        <BookOpen className="w-4 h-4 text-slate-400 group-hover:text-amber-500 dark:text-slate-500 dark:group-hover:text-amber-400 transition-colors" />
+                        <BookOpen className="w-4 h-4 text-[#475569] group-hover:text-amber-500 dark:text-[#94A3B8] dark:group-hover:text-amber-400 transition-colors" />
                       </div>
 
                       {/* Course Title */}
-                      <h3 className="text-xl font-bold text-slate-900 dark:text-white leading-snug mb-3 transition-colors">
+                      <h3 className="text-xl font-bold text-[#111B35] dark:text-white leading-snug mb-3 transition-colors">
                         {course.title}
                       </h3>
 
                       {/* Course Description */}
-                      <p className="text-slate-600 dark:text-slate-300 text-sm leading-relaxed mb-6 transition-colors">
+                      <p className="text-[#334155] dark:text-[#E2E8F0] text-sm leading-relaxed mb-6 transition-colors">
                         {course.description}
                       </p>
 
@@ -299,18 +299,18 @@ export default function ExamsPage() {
                       <div className="grid grid-cols-2 gap-2 py-3 px-3.5 rounded-xl bg-slate-50 border border-slate-200 dark:bg-[#121419] dark:border-[#282C36] text-center text-xs mb-6 transition-colors">
                         <div>
                           <span className="block tabular-nums font-bold text-amber-600 dark:text-amber-500 text-sm">{course.mockCount.split(' ')[0]}</span>
-                          <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-tighter">Full Mocks</span>
+                          <span className="text-[10px] text-[#475569] dark:text-[#94A3B8] uppercase tracking-tighter">Full Mocks</span>
                         </div>
                         <div className="border-l border-slate-200 dark:border-[#282C36]">
-                          <span className="block tabular-nums font-bold text-slate-700 dark:text-slate-200 text-sm">{course.notesCount.split(' ')[0]}</span>
-                          <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-tighter">PDF Notes</span>
+                          <span className="block tabular-nums font-bold text-[#334155] dark:text-[#E2E8F0] text-sm">{course.notesCount.split(' ')[0]}</span>
+                          <span className="text-[10px] text-[#475569] dark:text-[#94A3B8] uppercase tracking-tighter">PDF Notes</span>
                         </div>
                       </div>
 
                       {/* Key Features Bullet Points */}
                       <div className="space-y-2.5 mb-8 border-t border-slate-100 dark:border-[#282C36] pt-5 transition-colors">
                         {course.features.map((feat, idx) => (
-                          <div key={idx} className="flex items-start gap-2.5 text-xs text-slate-600 dark:text-slate-300">
+                          <div key={idx} className="flex items-start gap-2.5 text-xs text-[#334155] dark:text-[#E2E8F0]">
                             <CheckCircle2 className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
                             <span>{feat}</span>
                           </div>
@@ -325,7 +325,7 @@ export default function ExamsPage() {
                         return (
                           <button
                             onClick={() => router.push('/editor')}
-                            className="w-full py-3.5 px-6 rounded-xl bg-slate-100 border border-slate-200 hover:bg-slate-200 dark:bg-[#272B33] dark:hover:bg-[#2c303a] dark:border-[#323842] text-slate-700 dark:text-slate-300 font-bold text-sm tracking-wide transition-all duration-300 flex items-center justify-center gap-2 group/btn focus:outline-none"
+                            className="w-full py-3.5 px-6 rounded-xl bg-slate-100 border border-slate-200 hover:bg-slate-200 dark:bg-[#272B33] dark:hover:bg-[#2c303a] dark:border-[#323842] text-[#334155] dark:text-[#E2E8F0] font-bold text-sm tracking-wide transition-all duration-300 flex items-center justify-center gap-2 group/btn focus:outline-none"
                           >
                             <span>Manage in Editor</span>
                             <ArrowRight className="w-4 h-4 transition-transform group-hover/btn:translate-x-1" />
@@ -354,7 +354,7 @@ export default function ExamsPage() {
                         <button
                           onClick={(e) => handleBuyNow(course.id, e)}
                           disabled={purchasingId === course.id}
-                          className="w-full py-3.5 px-6 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-900 dark:text-[#121419] font-bold text-sm tracking-wide shadow-[0_4px_14px_rgba(245,158,11,0.25)] transition-all duration-300 flex items-center justify-center gap-2 group/btn focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-[#181A1F]"
+                          className="w-full py-3.5 px-6 rounded-xl bg-amber-500 hover:bg-amber-400 text-[#111B35] dark:text-[#121419] font-bold text-sm tracking-wide shadow-[0_4px_14px_rgba(245,158,11,0.25)] transition-all duration-300 flex items-center justify-center gap-2 group/btn focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-[#181A1F]"
                         >
                           {purchasingId === course.id ? (
                             <span className="animate-pulse">Processing...</span>
@@ -393,20 +393,20 @@ export default function ExamsPage() {
                     {/* Left: Title, Badge, Description */}
                     <div className="flex-1 space-y-2.5">
                       <div className="flex flex-wrap items-center gap-3">
-                        <h3 className="text-xl font-bold text-slate-900 dark:text-white leading-tight transition-colors">
+                        <h3 className="text-xl font-bold text-[#111B35] dark:text-white leading-tight transition-colors">
                           {course.title}
                         </h3>
                       </div>
-                      <p className="text-slate-600 dark:text-slate-300 text-sm max-w-3xl leading-relaxed transition-colors">
+                      <p className="text-[#334155] dark:text-[#E2E8F0] text-sm max-w-3xl leading-relaxed transition-colors">
                         {course.description}
                       </p>
-                      <div className="flex flex-wrap items-center gap-4 pt-1 text-xs text-slate-500 dark:text-slate-400 tabular-nums transition-colors">
+                      <div className="flex flex-wrap items-center gap-4 pt-1 text-xs text-[#475569] dark:text-[#94A3B8] tabular-nums transition-colors">
                         <span className="flex items-center gap-1.5 text-amber-600 dark:text-amber-500 font-semibold">
                           <CheckCircle2 className="w-3.5 h-3.5" /> {course.mockCount}
                         </span>
                         <span>•</span>
-                        <span className="flex items-center gap-1.5 text-slate-600 dark:text-slate-200 font-semibold">
-                          <FileText className="w-3.5 h-3.5 text-slate-400" /> {course.notesCount}
+                        <span className="flex items-center gap-1.5 text-[#334155] dark:text-[#E2E8F0] font-semibold">
+                          <FileText className="w-3.5 h-3.5 text-[#475569]" /> {course.notesCount}
                         </span>
                       </div>
                     </div>
@@ -419,7 +419,7 @@ export default function ExamsPage() {
                             return (
                               <button
                                 onClick={() => router.push('/editor')}
-                                className="w-full lg:w-48 py-3.5 px-6 rounded-xl bg-slate-100 border border-slate-200 hover:bg-slate-200 dark:bg-[#272B33] dark:hover:bg-[#2c303a] dark:border-[#323842] text-slate-700 dark:text-slate-300 font-bold text-sm tracking-wide transition-all duration-300 flex items-center justify-center gap-2 group/btn focus:outline-none"
+                                className="w-full lg:w-48 py-3.5 px-6 rounded-xl bg-slate-100 border border-slate-200 hover:bg-slate-200 dark:bg-[#272B33] dark:hover:bg-[#2c303a] dark:border-[#323842] text-[#334155] dark:text-[#E2E8F0] font-bold text-sm tracking-wide transition-all duration-300 flex items-center justify-center gap-2 group/btn focus:outline-none"
                               >
                                 <span>Manage in Editor</span>
                                 <ArrowRight className="w-4 h-4 transition-transform group-hover/btn:translate-x-1" />
@@ -448,7 +448,7 @@ export default function ExamsPage() {
                             <button
                               onClick={(e) => handleBuyNow(course.id, e)}
                               disabled={purchasingId === course.id}
-                              className="w-full lg:w-48 py-3.5 px-6 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-900 dark:text-[#121419] font-bold text-sm tracking-wide shadow-[0_4px_14px_rgba(245,158,11,0.25)] transition-all duration-300 flex items-center justify-center gap-2 group/btn focus:outline-none"
+                              className="w-full lg:w-48 py-3.5 px-6 rounded-xl bg-amber-500 hover:bg-amber-400 text-[#111B35] dark:text-[#121419] font-bold text-sm tracking-wide shadow-[0_4px_14px_rgba(245,158,11,0.25)] transition-all duration-300 flex items-center justify-center gap-2 group/btn focus:outline-none"
                             >
                               {purchasingId === course.id ? (
                                 <span className="animate-pulse">Processing...</span>

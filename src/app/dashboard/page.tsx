@@ -100,17 +100,17 @@ export default function DashboardPage() {
           className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12"
         >
           <div>
-            <h1 className="text-3xl font-bold tracking-tight mb-2 text-slate-900 dark:text-white">
+            <h1 className="text-3xl font-bold tracking-tight mb-2 text-[#111B35] dark:text-white">
               Welcome back, {user?.displayName?.split(' ')[0] || 'Student'}
             </h1>
-            <p className="font-medium text-slate-500 dark:text-slate-400">
+            <p className="font-medium text-[#475569] dark:text-[#94A3B8]">
               Continue your preparation for global financial certifications.
             </p>
           </div>
           <div className="flex items-center gap-3 self-start md:self-auto">
             <button
               onClick={handleLogout}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-lg border transition-all duration-300 text-sm font-semibold border-slate-200 hover:bg-slate-100 text-slate-600 dark:border-white/10 dark:hover:bg-white/5 dark:text-slate-300 dark:hover:text-white active:scale-95"
+              className="flex items-center gap-2 px-5 py-2.5 rounded-lg border transition-all duration-300 text-sm font-semibold border-slate-200 hover:bg-slate-100 text-[#334155] dark:border-white/10 dark:hover:bg-white/5 dark:text-[#E2E8F0] dark:hover:text-white active:scale-95"
             >
               <LogOut className="w-4 h-4" />
               Sign Out
@@ -125,7 +125,7 @@ export default function DashboardPage() {
           <div className="lg:col-span-2 space-y-8">
             <section>
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-bold text-slate-900 dark:text-white">Your Enrolled Tracks</h2>
+                <h2 className="text-xl font-bold text-[#111B35] dark:text-white">Your Enrolled Tracks</h2>
                 {(user?.role === 'admin' || user?.role === 'editor') && (
                   <span className="px-3 py-1 bg-amber-500/10 text-amber-600 dark:text-amber-500 border border-amber-500/20 rounded-full text-xs tabular-nums font-bold uppercase tracking-wider">
                     ● Admin Universal Access
@@ -150,12 +150,12 @@ export default function DashboardPage() {
                   animate={{ opacity: 1, scale: 1 }}
                   className="rounded-2xl p-12 border text-center transition-all duration-300 bg-white border-slate-200 dark:bg-[#181A1F] dark:border-white/10 dark:backdrop-blur-xl shadow-sm"
                 >
-                  <Layers className="w-12 h-12 mx-auto mb-4 text-slate-500 dark:text-slate-400" />
-                  <h3 className="text-lg font-bold mb-2 text-slate-900 dark:text-white">No Active Enrollments</h3>
-                  <p className="text-sm mb-6 text-slate-500 dark:text-slate-400">You haven't enrolled in any tracks yet.</p>
+                  <Layers className="w-12 h-12 mx-auto mb-4 text-[#475569] dark:text-[#94A3B8]" />
+                  <h3 className="text-lg font-bold mb-2 text-[#111B35] dark:text-white">No Active Enrollments</h3>
+                  <p className="text-sm mb-6 text-[#475569] dark:text-[#94A3B8]">You haven't enrolled in any tracks yet.</p>
                   <button 
                     onClick={() => router.push('/exams')}
-                    className="px-6 py-3 rounded-lg font-bold bg-amber-500 text-slate-900 hover:bg-amber-400 transition-all duration-200 active:scale-95 shadow-[0_0_20px_rgba(245,158,11,0.2)]"
+                    className="px-6 py-3 rounded-lg font-bold bg-amber-500 text-[#111B35] hover:bg-amber-400 transition-all duration-200 active:scale-95 shadow-[0_0_20px_rgba(245,158,11,0.2)]"
                   >
                     Browse Curriculum
                   </button>
@@ -200,8 +200,8 @@ export default function DashboardPage() {
 
                         {/* Card Body */}
                         <div className="p-6 pt-10 flex-1 flex flex-col z-10">
-                          <h3 className="font-bold text-xl mb-1 text-slate-900 dark:text-white">{entitlement.course.title}</h3>
-                          <p className="text-sm mb-6 text-slate-500 dark:text-slate-400">
+                          <h3 className="font-bold text-xl mb-1 text-[#111B35] dark:text-white">{entitlement.course.title}</h3>
+                          <p className="text-sm mb-6 text-[#475569] dark:text-[#94A3B8]">
                             {entitlement.isAdminPreview ? (
                               `${entitlement.course.tier || 'Foundation'} Tier • Unlimited Admin Preview`
                             ) : (
@@ -218,7 +218,7 @@ export default function DashboardPage() {
                             />
                           </div>
 
-                          <div className="flex justify-between items-center text-xs tabular-nums text-slate-500 dark:text-slate-400">
+                          <div className="flex justify-between items-center text-xs tabular-nums text-[#475569] dark:text-[#94A3B8]">
                             {entitlement.isAdminPreview ? (
                               <>
                                 <span className="bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30 text-[10px] font-bold px-2 py-0.5 rounded tracking-wide">
@@ -248,7 +248,7 @@ export default function DashboardPage() {
                               <button 
                                 onClick={() => handleOpenCourse(entitlement.courseId)}
                                 disabled={isPending}
-                                className="w-full py-3 rounded-xl font-bold text-sm shadow-[0_4px_14px_rgba(245,158,11,0.3)] flex items-center justify-center gap-2 transition-all duration-200 active:scale-[0.98] bg-amber-500 text-slate-900 hover:bg-amber-400 hover:shadow-[0_6px_20px_rgba(245,158,11,0.4)] disabled:opacity-75 disabled:pointer-events-none"
+                                className="w-full py-3 rounded-xl font-bold text-sm shadow-[0_4px_14px_rgba(245,158,11,0.3)] flex items-center justify-center gap-2 transition-all duration-200 active:scale-[0.98] bg-amber-500 text-[#111B35] hover:bg-amber-400 hover:shadow-[0_6px_20px_rgba(245,158,11,0.4)] disabled:opacity-75 disabled:pointer-events-none"
                               >
                                 {isPending ? (
                                   <>
@@ -285,7 +285,7 @@ export default function DashboardPage() {
               {/* 1. Core Metrics */}
               <div className="rounded-2xl p-6 border transition-all duration-300 bg-white border-slate-200 shadow-sm dark:bg-[#181A1F] dark:border-white/10 dark:shadow-lg space-y-6">
               <div className="flex items-center justify-between border-b border-slate-100 dark:border-[#282C36] pb-3">
-                <h3 className="font-bold text-slate-900 dark:text-white text-base">Performance Overview</h3>
+                <h3 className="font-bold text-[#111B35] dark:text-white text-base">Performance Overview</h3>
               </div>
 
               <div className="space-y-4">
@@ -295,8 +295,8 @@ export default function DashboardPage() {
                       <Award className="w-5 h-5" />
                     </div>
                     <div>
-                      <div className="text-xs text-slate-500 dark:text-slate-400">Average Accuracy</div>
-                      <div className="font-extrabold text-xl text-slate-900 dark:text-white">{analytics.accuracy}%</div>
+                      <div className="text-xs text-[#475569] dark:text-[#94A3B8]">Average Accuracy</div>
+                      <div className="font-extrabold text-xl text-[#111B35] dark:text-white">{analytics.accuracy}%</div>
                     </div>
                   </div>
                   {analytics.accuracy >= 70 && (
@@ -317,13 +317,13 @@ export default function DashboardPage() {
                       <Clock className="w-5 h-5" />
                     </div>
                     <div>
-                      <div className="text-xs text-slate-500 dark:text-slate-400">Total CBT Time</div>
-                      <div className="font-extrabold text-xl text-slate-900 dark:text-white">
+                      <div className="text-xs text-[#475569] dark:text-[#94A3B8]">Total CBT Time</div>
+                      <div className="font-extrabold text-xl text-[#111B35] dark:text-white">
                         {Math.floor(analytics.totalTimeMs / (1000 * 60 * 60))}h {Math.floor((analytics.totalTimeMs / (1000 * 60)) % 60)}m
                       </div>
                     </div>
                   </div>
-                  <span className="text-xs tabular-nums font-bold text-slate-500 dark:text-slate-400">
+                  <span className="text-xs tabular-nums font-bold text-[#475569] dark:text-[#94A3B8]">
                     {analytics.attemptsCount} Mocks
                   </span>
               </div>

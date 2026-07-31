@@ -236,19 +236,19 @@ function CheckoutContent() {
 
           <div className="p-5 rounded-2xl bg-[#121419] border border-[#282C36] text-left space-y-3 tabular-nums text-xs text-slate-300">
             <div className="flex justify-between border-b border-[#282C36] pb-2">
-              <span className="text-slate-400">Candidate Email:</span>
+              <span className="text-[#475569]">Candidate Email:</span>
               <span className="font-semibold">{email}</span>
             </div>
             <div className="flex justify-between border-b border-[#282C36] pb-2">
-              <span className="text-slate-400">Plan Duration:</span>
+              <span className="text-[#475569]">Plan Duration:</span>
               <span className="text-amber-500 font-semibold">{planName} ({planDays})</span>
             </div>
             <div className="flex justify-between border-b border-[#282C36] pb-2">
-              <span className="text-slate-400">Total Paid (with 18% GST):</span>
+              <span className="text-[#475569]">Total Paid (with 18% GST):</span>
               <span className="text-emerald-500 font-bold">₹{finalTotal.toFixed(2)}</span>
             </div>
             <div className="flex justify-between pt-1">
-              <span className="text-slate-400">GST Invoice status:</span>
+              <span className="text-[#475569]">GST Invoice status:</span>
               <span className="text-emerald-500 font-semibold">Dispatched via Email</span>
             </div>
           </div>
@@ -282,7 +282,7 @@ function CheckoutContent() {
           <div className="space-y-1">
             <button
               onClick={() => router.back()}
-              className="inline-flex items-center gap-2 text-xs tabular-nums text-slate-400 hover:text-white transition-colors mb-2"
+              className="inline-flex items-center gap-2 text-xs tabular-nums text-[#475569] hover:text-white transition-colors mb-2"
             >
               <ArrowLeft className="w-3.5 h-3.5" />
               <span>Back to Plan Selection</span>
@@ -306,7 +306,7 @@ function CheckoutContent() {
                 </div>
                 <div>
                   <h2 className="text-lg font-bold text-white">Candidate Details</h2>
-                  <p className="text-xs text-slate-400">
+                  <p className="text-xs text-[#475569]">
                     Required for CBT terminal license linking and official tax invoicing
                   </p>
                 </div>
@@ -360,7 +360,7 @@ function CheckoutContent() {
 
                 <div className="space-y-2">
                   <label className="text-xs tabular-nums text-slate-300 flex items-center gap-1.5">
-                    <Building2 className="w-3.5 h-3.5 text-slate-400" />
+                    <Building2 className="w-3.5 h-3.5 text-[#475569]" />
                     <span>Institution / University (Optional)</span>
                   </label>
                   <input
@@ -382,7 +382,7 @@ function CheckoutContent() {
                 </div>
                 <div>
                   <h2 className="text-lg font-bold text-white">Payment Gateway (Razorpay)</h2>
-                  <p className="text-xs text-slate-400">
+                  <p className="text-xs text-[#475569]">
                     UPI, Cards, and Net Banking are automatically handled via Razorpay secure popup
                   </p>
                 </div>
@@ -435,7 +435,7 @@ function CheckoutContent() {
                 </div>
 
                 <div className="pt-2 border-t border-[#282C36] flex items-center justify-between text-xs tabular-nums">
-                  <span className="text-slate-400">Selected Plan:</span>
+                  <span className="text-[#475569]">Selected Plan:</span>
                   <span className="font-semibold px-2.5 py-1 rounded-md text-white bg-slate-800 border border-slate-700">
                     {planName} ({planDays})
                   </span>
@@ -461,7 +461,7 @@ function CheckoutContent() {
               {/* Coupon Form */}
               <form onSubmit={handleApplyCoupon} className="flex items-center gap-2 pt-2">
                 <div className="relative flex-1">
-                  <Tag className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  <Tag className="w-3.5 h-3.5 text-[#475569] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                   <input
                     type="text"
                     value={coupon}
@@ -508,7 +508,7 @@ function CheckoutContent() {
                   <span className="flex items-center gap-1.5">
                     <span>18% GST (Tax Invoice)</span>
                     <span title="Standard 18% Goods & Services Tax on Digital Educational Software" className="cursor-help inline-flex">
-                      <HelpCircle className="w-3.5 h-3.5 text-slate-400" />
+                      <HelpCircle className="w-3.5 h-3.5 text-[#475569]" />
                     </span>
                   </span>
                   <span className="text-amber-500 font-semibold">+₹{gstAmount.toFixed(2)}</span>
@@ -528,7 +528,7 @@ function CheckoutContent() {
                   onChange={(e) => setAgreeLegal(e.target.checked)}
                   className="mt-1 w-4 h-4 rounded border-[#282C36] bg-[#121419] checked:bg-amber-500 checked:border-amber-500 focus:ring-amber-500 focus:ring-offset-0 transition-colors shrink-0"
                 />
-                <label htmlFor="checkout-legal" className="text-xs text-slate-400 leading-relaxed">
+                <label htmlFor="checkout-legal" className="text-xs text-[#475569] leading-relaxed">
                   I agree to the <Link href="/terms" className="text-amber-500 hover:underline">Terms of Service</Link> and the <Link href="/refunds" className="text-amber-500 hover:underline">Refund & Cancellation Policy</Link>. I understand that sales are final and access activates immediately upon payment.
                 </label>
               </div>
@@ -561,13 +561,13 @@ function CheckoutContent() {
                 )}
               </button>
 
-              <div className="text-center text-[11px] text-slate-500 leading-normal font-sans">
+              <div className="text-center text-[11px] text-[#475569] leading-normal font-sans">
                 Razorpay gateway will securely handle UPI QR scan, card authentication, or Net Banking on the next popup screen.
               </div>
             </div>
 
             {/* Extra Security Trust Card */}
-            <div className="p-4 rounded-2xl bg-[#181A1F] border border-[#282C36] text-slate-400 flex items-center gap-3 text-xs">
+            <div className="p-4 rounded-2xl bg-[#181A1F] border border-[#282C36] text-[#475569] flex items-center gap-3 text-xs">
               <ShieldCheck className="w-6 h-6 text-emerald-500 flex-shrink-0" />
               <span>
                 All candidate transactions are protected with institutional SSL encryption and processed via RBI-compliant Razorpay gateway.
@@ -582,7 +582,7 @@ function CheckoutContent() {
 
 export default function CheckoutPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-[#121419] pt-32 text-center text-slate-400">Loading secure checkout gateway...</div>}>
+    <Suspense fallback={<div className="min-h-screen bg-[#121419] pt-32 text-center text-[#475569]">Loading secure checkout gateway...</div>}>
       <CheckoutContent />
     </Suspense>
   );

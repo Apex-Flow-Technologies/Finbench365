@@ -9,7 +9,7 @@ export function Hero() {
   return (
     <section
       id="hero"
-      className="relative min-h-[92vh] pt-32 pb-24 md:pt-40 md:pb-32 flex items-center justify-center overflow-hidden bg-transparent transition-colors duration-300 text-slate-900 dark:text-[#FBFBF9] border-b border-slate-200 dark:border-[#282C36]"
+      className="relative min-h-[92vh] pt-32 pb-24 md:pt-40 md:pb-32 flex items-center justify-center overflow-hidden bg-transparent transition-colors duration-300 text-[#111B35] dark:text-[#FBFBF9] border-b border-slate-200 dark:border-[#282C36]"
     >
 
       <div className="relative max-w-[1240px] w-full mx-auto px-6 md:px-8 grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center z-10">
@@ -25,7 +25,7 @@ export function Hero() {
             initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, delay: 0.2 }}
-            className="text-4xl sm:text-5xl lg:text-6xl font-semibold tracking-tight text-slate-900 dark:text-white leading-[1.14] font-sans"
+            className="text-4xl sm:text-5xl lg:text-6xl font-semibold tracking-tight text-[#111B35] dark:text-white leading-[1.14] font-sans"
           >
             One platform. <br />
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-500 via-orange-600 to-blue-700 dark:from-amber-400 dark:via-orange-500 dark:to-blue-500 font-bold drop-shadow-sm">
@@ -39,7 +39,7 @@ export function Hero() {
             initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, delay: 0.3 }}
-            className="text-slate-600 dark:text-slate-300/90 text-lg sm:text-xl font-normal leading-relaxed max-w-xl font-sans"
+            className="text-[#334155] dark:text-[#E2E8F0] text-lg sm:text-xl font-normal leading-relaxed max-w-xl font-sans"
           >
             Exam-pattern mock tests, comprehensive topic-wise notes, and in-depth explanations that build confidence with every attempt. Get wider coverage and richer study resources than most prep platforms without the premium price tag.
           </motion.p>
@@ -65,7 +65,7 @@ export function Hero() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.8, delay: 0.55 }}
-            className="pt-6 border-t border-slate-200 dark:border-slate-800/80 grid grid-cols-1 sm:grid-cols-3 gap-4 tabular-nums text-xs text-slate-400 dark:text-slate-500 dark:text-slate-400"
+            className="pt-6 border-t border-slate-200 dark:border-slate-800/80 grid grid-cols-1 sm:grid-cols-3 gap-4 tabular-nums text-xs text-[#475569] dark:text-[#94A3B8]"
           >
             <div className="flex items-center gap-2">
               <CheckCircle className="w-4 h-4 text-emerald-400 flex-shrink-0" />

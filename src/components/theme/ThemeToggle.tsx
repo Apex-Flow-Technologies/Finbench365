@@ -30,22 +30,22 @@ export function ThemeToggle({ theme, toggleTheme }: { theme: 'dark' | 'light'; t
   return (
     <button
       onClick={toggleTheme}
-      className={`p-2.5 rounded-xl border flex items-center gap-2 transition-all duration-200 ${
+      className={`p-2.5 rounded-xl border flex items-center gap-2 transition-all duration-200 focus-visible:ring-2 focus-visible:ring-amber-500 outline-none ${
         theme === 'dark'
           ? 'bg-[#181A1F] border-[#282C36] text-amber-400 hover:border-amber-500/50'
-          : 'bg-white border-slate-300 text-slate-800 hover:border-slate-500 shadow-sm'
+          : 'bg-white border-slate-300 text-[#111B35] hover:border-slate-500 shadow-sm'
       }`}
       title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
     >
       {theme === 'dark' ? (
         <>
           <Sun className="w-4 h-4 text-amber-400" />
-          <span className="text-xs tabular-nums font-semibold text-slate-300 hidden sm:inline">Light Mode</span>
+          <span className="text-xs tabular-nums font-semibold text-[#E2E8F0] hidden sm:inline">Light Mode</span>
         </>
       ) : (
         <>
-          <Moon className="w-4 h-4 text-slate-700" />
-          <span className="text-xs tabular-nums font-semibold text-slate-700 hidden sm:inline">Dark Mode</span>
+          <Moon className="w-4 h-4 text-[#111B35]" />
+          <span className="text-xs tabular-nums font-semibold text-[#111B35] hidden sm:inline">Dark Mode</span>
         </>
       )}
     </button>

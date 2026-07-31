@@ -49,7 +49,7 @@ function PricingContent() {
       tagline: 'Best if your exam is within the next 10 days',
       popular: false,
       badge: 'Sprint Revision Tier',
-      badgeClass: 'bg-slate-200 text-slate-700 border-slate-300 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700',
+      badgeClass: 'bg-slate-200 text-[#334155] border-slate-300 dark:bg-slate-800 dark:text-[#E2E8F0] dark:border-slate-700',
       features: [
         'Access the full question bank for 10 days',
         '400+ updated questions, each with a full explanation',
@@ -96,12 +96,12 @@ function PricingContent() {
   ];
 
   return (
-    <div className="min-h-screen pt-20 bg-slate-50 dark:bg-[#121419] text-slate-900 dark:text-[#FBFBF9] transition-colors duration-300">
+    <div className="min-h-screen pt-20 bg-slate-50 dark:bg-[#121419] text-[#111B35] dark:text-[#FBFBF9] transition-colors duration-300">
       {/* Top Navigation bar */}
       <div className="max-w-[1240px] mx-auto px-6 md:px-8 pt-4 pb-2 flex items-center justify-between gap-4">
         <button
           onClick={() => router.push('/exams')}
-          className="inline-flex items-center gap-2 text-xs tabular-nums text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white transition-colors"
+          className="inline-flex items-center gap-2 text-xs tabular-nums text-[#475569] hover:text-slate-900 dark:text-[#94A3B8] dark:hover:text-white transition-colors"
         >
           <ArrowLeft className="w-3.5 h-3.5" />
           <span>Back to Exams Catalog</span>
@@ -127,14 +127,14 @@ function PricingContent() {
             <span>{trackBadge}</span>
           </div>
 
-          <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight font-sans leading-tight text-slate-900 dark:text-white transition-colors">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight font-sans leading-tight text-[#111B35] dark:text-white transition-colors">
             Choose Your Access Duration <br />
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-600 via-slate-600 to-slate-900 dark:from-amber-200 dark:via-slate-100 dark:to-slate-400">
               for {trackTitle}
             </span>
           </h1>
 
-          <p className="text-slate-600 dark:text-slate-300 text-sm sm:text-base max-w-2xl mx-auto leading-relaxed transition-colors">
+          <p className="text-[#334155] dark:text-[#E2E8F0] text-sm sm:text-base max-w-2xl mx-auto leading-relaxed transition-colors">
             Select an institutional tier below. If unsigned in, you will be directed to quick candidate authentication before checkout.
           </p>
         </div>
@@ -151,7 +151,7 @@ function PricingContent() {
 
             let btnClass = 'bg-slate-800 hover:bg-slate-700 text-white dark:bg-[#272B33] dark:hover:bg-[#343942] dark:text-white';
             if (plan.popular) {
-              btnClass = 'bg-amber-500 hover:bg-amber-400 text-slate-900 dark:text-[#121419] font-extrabold shadow-lg shadow-amber-500/25 text-base';
+              btnClass = 'bg-amber-500 hover:bg-amber-400 text-[#111B35] dark:text-[#121419] font-extrabold shadow-lg shadow-amber-500/25 text-base';
             }
 
             return (
@@ -163,7 +163,7 @@ function PricingContent() {
                 className={`rounded-3xl p-7 sm:p-8 flex flex-col justify-between relative transition-all duration-300 border ${cardBg}`}
               >
                 {plan.popular && (
-                  <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-amber-500 text-slate-900 dark:text-[#121419] font-extrabold text-[11px] uppercase tracking-wider px-4 py-1.5 rounded-full shadow-md flex items-center gap-1.5 transition-colors">
+                  <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-amber-500 text-[#111B35] dark:text-[#121419] font-extrabold text-[11px] uppercase tracking-wider px-4 py-1.5 rounded-full shadow-md flex items-center gap-1.5 transition-colors">
                     <Sparkles className="w-3.5 h-3.5 fill-current" />
                     <span>Most Popular Choice</span>
                   </div>
@@ -175,19 +175,19 @@ function PricingContent() {
                     <span className={`px-3 py-1 rounded-full border tabular-nums text-xs transition-colors ${plan.badgeClass}`}>
                       {plan.badge}
                     </span>
-                    <Clock className="w-4 h-4 text-slate-400" />
+                    <Clock className="w-4 h-4 text-[#475569]" />
                   </div>
 
-                  <h3 className="text-2xl font-bold mb-2 text-slate-900 dark:text-white transition-colors">
+                  <h3 className="text-2xl font-bold mb-2 text-[#111B35] dark:text-white transition-colors">
                     {plan.name}
                   </h3>
 
                   {/* Price Display */}
                   <div className="flex items-baseline gap-2 my-5">
-                    <span className="text-4xl sm:text-5xl font-black tracking-tight tabular-nums text-slate-900 dark:text-white transition-colors">
+                    <span className="text-4xl sm:text-5xl font-black tracking-tight tabular-nums text-[#111B35] dark:text-white transition-colors">
                       {plan.price}
                     </span>
-                    <span className="text-sm font-medium font-sans text-slate-500 dark:text-slate-400 transition-colors">
+                    <span className="text-sm font-medium font-sans text-[#475569] dark:text-[#94A3B8] transition-colors">
                       {plan.period}
                     </span>
                   </div>
@@ -203,7 +203,7 @@ function PricingContent() {
                   {/* Features List */}
                   <div className="space-y-3.5 mb-8 border-t border-slate-200 dark:border-[#282C36] pt-6 transition-colors">
                     {plan.features.map((feat, idx) => (
-                      <div key={idx} className="flex items-start gap-3 text-sm leading-normal text-slate-600 dark:text-slate-300">
+                      <div key={idx} className="flex items-start gap-3 text-sm leading-normal text-[#334155] dark:text-[#E2E8F0]">
                         <div className="w-5 h-5 rounded-full bg-amber-100 border-amber-200 dark:bg-amber-500/10 border dark:border-amber-500/30 flex items-center justify-center flex-shrink-0 mt-0.5 transition-colors">
                           <Check className="w-3 h-3 text-amber-500" />
                         </div>
@@ -234,7 +234,7 @@ function PricingContent() {
             );
           })}
         </div>
-        <div className="mt-8 text-center text-sm text-slate-500 dark:text-slate-400 tabular-nums transition-colors">
+        <div className="mt-8 text-center text-sm text-[#475569] dark:text-[#94A3B8] tabular-nums transition-colors">
           * All prices are in Indian Rupees (INR) and are inclusive of 18% GST.
         </div>
       </section>
@@ -247,8 +247,8 @@ function PricingContent() {
               <Zap className="w-5 h-5" />
             </div>
             <div>
-              <h4 className="font-bold text-sm text-slate-900 dark:text-white mb-1 transition-colors">Instant Activation</h4>
-              <p className="text-slate-500 dark:text-slate-400 text-xs leading-relaxed transition-colors">
+              <h4 className="font-bold text-sm text-[#111B35] dark:text-white mb-1 transition-colors">Instant Activation</h4>
+              <p className="text-[#475569] dark:text-[#94A3B8] text-xs leading-relaxed transition-colors">
                 Your question bank, formula tracker, and topic notes activate instantly right after successful payment verification.
               </p>
             </div>
@@ -259,8 +259,8 @@ function PricingContent() {
               <ShieldCheck className="w-5 h-5" />
             </div>
             <div>
-              <h4 className="font-bold text-sm text-slate-900 dark:text-white mb-1 transition-colors">Secure GST Invoicing</h4>
-              <p className="text-slate-500 dark:text-slate-400 text-xs leading-relaxed transition-colors">
+              <h4 className="font-bold text-sm text-[#111B35] dark:text-white mb-1 transition-colors">Secure GST Invoicing</h4>
+              <p className="text-[#475569] dark:text-[#94A3B8] text-xs leading-relaxed transition-colors">
                 Receive instant institutional GST-compliant tax invoices via email for academic or employer reimbursement.
               </p>
             </div>
@@ -271,8 +271,8 @@ function PricingContent() {
               <BookOpen className="w-5 h-5" />
             </div>
             <div>
-              <h4 className="font-bold text-sm text-slate-900 dark:text-white mb-1 transition-colors">Multi-Device Access</h4>
-              <p className="text-slate-500 dark:text-slate-400 text-xs leading-relaxed transition-colors">
+              <h4 className="font-bold text-sm text-[#111B35] dark:text-white mb-1 transition-colors">Multi-Device Access</h4>
+              <p className="text-[#475569] dark:text-[#94A3B8] text-xs leading-relaxed transition-colors">
                 Practice seamlessly on desktop, laptop, tablet, or smartphone with synchronized progress and bookmarking.
               </p>
             </div>
@@ -285,7 +285,7 @@ function PricingContent() {
 
 export default function PricingPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-slate-50 dark:bg-[#121419] pt-32 text-center text-slate-500 transition-colors">Loading access tiers...</div>}>
+    <Suspense fallback={<div className="min-h-screen bg-slate-50 dark:bg-[#121419] pt-32 text-center text-[#475569] transition-colors">Loading access tiers...</div>}>
       <PricingContent />
     </Suspense>
   );

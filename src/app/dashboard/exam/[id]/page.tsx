@@ -481,7 +481,7 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
         <div className="min-h-screen bg-slate-900 text-white flex flex-col items-center justify-center p-6 text-center">
           <AlertTriangle className="w-16 h-16 text-amber-500 mb-4 animate-bounce" />
           <h2 className="text-2xl font-bold mb-2">15-Minute Disconnect Window Exceeded</h2>
-          <p className="text-slate-400 mb-6 max-w-md">
+          <p className="text-[#475569] mb-6 max-w-md">
             You were disconnected from the exam session for more than 15 minutes. 
             In accordance with testing regulations, this attempt has been finalized and recorded as 1 attempt.
           </p>
@@ -502,7 +502,7 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
         <div className="min-h-screen bg-slate-900 text-white flex flex-col items-center justify-center p-6 text-center">
           <AlertTriangle className="w-16 h-16 text-red-500 mb-4" />
           <h2 className="text-2xl font-bold mb-2">Error Loading Exam</h2>
-          <p className="text-slate-400 mb-6">{error || "Exam not found."}</p>
+          <p className="text-[#475569] mb-6">{error || "Exam not found."}</p>
           <button onClick={() => router.push('/dashboard')} className="px-6 py-2.5 bg-amber-500 text-slate-950 font-bold rounded-xl">
             Return to Dashboard
           </button>
@@ -524,13 +524,13 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
           <h2 className="text-3xl font-extrabold mb-2">
             {isDisqualified ? 'Exam Disqualified' : 'Exam Submitted Successfully'}
           </h2>
-          <p className="text-slate-400 mb-8 text-center max-w-md">
+          <p className="text-[#475569] mb-8 text-center max-w-md">
             Your performance breakdown has been computed.
           </p>
           
           <div className="bg-zinc-900 border border-white/10 rounded-2xl p-8 max-w-md w-full shadow-2xl text-center mb-8 space-y-6">
             <div>
-              <div className="text-xs tabular-nums text-slate-400 mb-1 uppercase tracking-wider">OVERALL ACCURACY</div>
+              <div className="text-xs tabular-nums text-[#475569] mb-1 uppercase tracking-wider">OVERALL ACCURACY</div>
               <div className="text-6xl font-extrabold text-amber-500">
                 {stats.scorePct}%
               </div>
@@ -538,11 +538,11 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
 
             <div className="grid grid-cols-2 gap-4 text-xs tabular-nums pt-4 border-t border-white/10">
               <div className="p-3 bg-slate-800/80 rounded-xl">
-                <div className="text-slate-400">Correct Answers</div>
+                <div className="text-[#475569]">Correct Answers</div>
                 <div className="text-emerald-400 font-bold text-base">{stats.correct}</div>
               </div>
               <div className="p-3 bg-slate-800/80 rounded-xl">
-                <div className="text-slate-400">Incorrect Answers</div>
+                <div className="text-[#475569]">Incorrect Answers</div>
                 <div className="text-red-400 font-bold text-base">{stats.incorrect}</div>
               </div>
             </div>
@@ -574,11 +574,11 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
             
             <div className="grid grid-cols-2 gap-4 py-4 border-y border-white/10 text-xs tabular-nums">
               <div>
-                <div className="text-slate-400">Duration</div>
+                <div className="text-[#475569]">Duration</div>
                 <div className="font-bold text-white text-sm">{test.durationMinutes} Minutes</div>
               </div>
               <div>
-                <div className="text-slate-400">Total Questions</div>
+                <div className="text-[#475569]">Total Questions</div>
                 <div className="font-bold text-white text-sm">{questions.length} Items</div>
               </div>
             </div>
@@ -647,7 +647,7 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
           <div className="font-bold text-white text-sm flex items-center gap-2">
             <span className="text-amber-500">NISM V-A</span> · {test?.title}
             {test?.type === 'exam' && (
-              <span className={`ml-4 px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wider ${strikes > 0 ? 'bg-red-500/20 text-red-400 border border-red-500/30 animate-pulse' : 'bg-white/5 text-slate-400 border border-white/10'}`}>
+              <span className={`ml-4 px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wider ${strikes > 0 ? 'bg-red-500/20 text-red-400 border border-red-500/30 animate-pulse' : 'bg-white/5 text-[#475569] border border-white/10'}`}>
                 WARNINGS: {strikes}/3
               </span>
             )}
@@ -674,7 +674,7 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
           <div className="flex-1 overflow-y-auto p-6 lg:p-10 space-y-6">
             <div className="max-w-3xl mx-auto space-y-6">
               
-              <div className="flex justify-between items-center text-xs tabular-nums text-slate-400 border-b border-white/10 pb-3">
+              <div className="flex justify-between items-center text-xs tabular-nums text-[#475569] border-b border-white/10 pb-3">
                 <span>QUESTION {currentQuestionIndex + 1} OF {questions.length}</span>
                 {markedForReview[currentQuestion.id] && (
                   <span className="px-2.5 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/40 font-bold">
@@ -695,7 +695,7 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
                   
                   // Styles for instant feedback (Only for Practice tests)
                   let buttonStyle = 'border-white/10 bg-zinc-900/80 text-slate-300 hover:border-white/20 hover:bg-white/5';
-                  let iconStyle = 'bg-slate-800 text-slate-400';
+                  let iconStyle = 'bg-slate-800 text-[#475569]';
                   
                   if (test?.type === 'practice') {
                     if (isAnswered) {
@@ -706,7 +706,7 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
                         buttonStyle = 'border-red-500 bg-red-500/10 shadow-[0_0_15px_rgba(239,68,68,0.15)] text-red-400 font-bold';
                         iconStyle = 'bg-red-500 text-slate-950';
                       } else {
-                        buttonStyle = 'border-white/5 bg-zinc-900/40 text-slate-500 opacity-50 cursor-not-allowed';
+                        buttonStyle = 'border-white/5 bg-zinc-900/40 text-[#475569] opacity-50 cursor-not-allowed';
                       }
                     }
                   } else {
@@ -748,7 +748,7 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
                       {answers[currentQuestion.id] === currentQuestion.correctOptionIndex ? 'Correct!' : 'Incorrect'}
                     </h3>
                   </div>
-                  <p className="text-sm text-slate-400 leading-relaxed">
+                  <p className="text-sm text-[#475569] leading-relaxed">
                     {currentQuestion.explanation}
                   </p>
                 </div>
@@ -797,7 +797,7 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
                   const isVisited = visitedQuestions[idx];
                   const isCurrent = idx === currentQuestionIndex;
 
-                  let badgeStyle = 'bg-slate-800 text-slate-400 border border-white/10'; // Not Visited
+                  let badgeStyle = 'bg-slate-800 text-[#475569] border border-white/10'; // Not Visited
                   if (isMarked) {
                     badgeStyle = 'bg-purple-600 text-white font-bold border border-purple-400';
                   } else if (isAnswered) {

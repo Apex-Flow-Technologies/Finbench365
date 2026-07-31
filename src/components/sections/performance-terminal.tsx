@@ -8,7 +8,7 @@ export function PerformanceTerminal() {
   const [activeTab, setActiveTab] = useState<'architecture' | 'metrics'>('architecture');
 
   return (
-    <section id="terminal" className="py-24 md:py-32 bg-white dark:bg-[#181A1F] transition-colors duration-300 text-slate-900 dark:text-[#FBFBF9] border-b border-slate-200 dark:border-[#282C36] relative overflow-hidden">
+    <section id="terminal" className="py-24 md:py-32 bg-white dark:bg-[#181A1F] transition-colors duration-300 text-[#111B35] dark:text-[#FBFBF9] border-b border-slate-200 dark:border-[#282C36] relative overflow-hidden">
       {/* Background Bloomberg Grid */}
       <div 
         className="absolute inset-0 opacity-[0.04] pointer-events-none"
@@ -28,11 +28,11 @@ export function PerformanceTerminal() {
             <Terminal className="w-3.5 h-3.5" />
             <span>Bloomberg Terminal Inspired Architecture</span>
           </div>
-          <h2 className="text-3xl sm:text-4xl md:text-5xl font-semibold tracking-tight text-slate-900 dark:text-white leading-[1.16]">
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-semibold tracking-tight text-[#111B35] dark:text-white leading-[1.16]">
             Why Institutional Precision Outperforms <br />
             Static Coaching Material.
           </h2>
-          <p className="text-slate-600 dark:text-slate-300 text-lg leading-relaxed">
+          <p className="text-[#334155] dark:text-[#E2E8F0] text-lg leading-relaxed">
             Conventional coaching institutes rely on static PDFs and memorized question dumps from past cycles. MyExams365 operates like a quantitative diagnostic engine.
           </p>
         </div>
@@ -53,7 +53,7 @@ export function PerformanceTerminal() {
                 <span className="w-3 h-3 rounded-full bg-amber-500/80" />
                 <span className="w-3 h-3 rounded-full bg-emerald-500/80" />
               </div>
-              <span className="text-slate-400 dark:text-slate-500 dark:text-slate-400 font-semibold tracking-wider">DIAGNOSTIC_COMPARISON_MATRIX.fb365</span>
+              <span className="text-[#475569] dark:text-[#94A3B8] dark:text-[#94A3B8] font-semibold tracking-wider">DIAGNOSTIC_COMPARISON_MATRIX.fb365</span>
             </div>
 
             <div className="flex items-center gap-2">
@@ -62,7 +62,7 @@ export function PerformanceTerminal() {
                 className={`px-3 py-1 rounded font-semibold transition-colors ${
                   activeTab === 'architecture'
                     ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
-                    : 'text-slate-400 dark:text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:text-white'
+                    : 'text-[#475569] dark:text-[#94A3B8] dark:text-[#94A3B8] hover:text-slate-900 dark:text-white'
                 }`}
               >
                 Architecture Matrix
@@ -72,7 +72,7 @@ export function PerformanceTerminal() {
                 className={`px-3 py-1 rounded font-semibold transition-colors ${
                   activeTab === 'metrics'
                     ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
-                    : 'text-slate-400 dark:text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:text-white'
+                    : 'text-[#475569] dark:text-[#94A3B8] dark:text-[#94A3B8] hover:text-slate-900 dark:text-white'
                 }`}
               >
                 Performance Telemetry
@@ -85,9 +85,9 @@ export function PerformanceTerminal() {
             {activeTab === 'architecture' ? (
               <table className="w-full text-left border-collapse min-w-[680px]">
                 <thead>
-                  <tr className="border-b border-[#2D323E] tabular-nums text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 dark:text-slate-400">
+                  <tr className="border-b border-[#2D323E] tabular-nums text-xs font-bold uppercase tracking-wider text-[#475569] dark:text-[#94A3B8] dark:text-[#94A3B8]">
                     <th className="py-4 px-4 w-[28%]">Pedagogical Dimension</th>
-                    <th className="py-4 px-4 w-[36%] text-slate-400 dark:text-slate-500">Typical Coaching Institutes (Static Prep)</th>
+                    <th className="py-4 px-4 w-[36%] text-[#475569] dark:text-[#94A3B8]">Typical Coaching Institutes (Static Prep)</th>
                     <th className="py-4 px-4 w-[36%] text-amber-400">MyExams365 Institutional Architecture</th>
                   </tr>
                 </thead>
@@ -126,7 +126,7 @@ export function PerformanceTerminal() {
                           <span>{row.dimension}</span>
                         </div>
                       </td>
-                      <td className="py-5 px-4 text-slate-400 dark:text-slate-500 dark:text-slate-400 align-top">
+                      <td className="py-5 px-4 text-[#475569] dark:text-[#94A3B8] dark:text-[#94A3B8] align-top">
                         <div className="flex items-start gap-2">
                           <XCircle className="w-4 h-4 text-rose-500/80 flex-shrink-0 mt-1" />
                           <span className="leading-relaxed">{row.conventional}</span>
@@ -145,34 +145,34 @@ export function PerformanceTerminal() {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 tabular-nums">
                 <div className="p-6 rounded-xl bg-[#161A22] border border-[#2D323E] space-y-3">
-                  <div className="flex items-center justify-between text-xs text-slate-400 dark:text-slate-500 dark:text-slate-400">
+                  <div className="flex items-center justify-between text-xs text-[#475569] dark:text-[#94A3B8] dark:text-[#94A3B8]">
                     <span>AVERAGE TIME TO MASTERY</span>
                     <Activity className="w-4 h-4 text-emerald-400" />
                   </div>
-                  <div className="text-3xl font-bold text-slate-900 dark:text-white">142 Hours</div>
-                  <p className="text-xs text-slate-400 dark:text-slate-500 dark:text-slate-400 font-sans leading-relaxed">
+                  <div className="text-3xl font-bold text-[#111B35] dark:text-white">142 Hours</div>
+                  <p className="text-xs text-[#475569] dark:text-[#94A3B8] dark:text-[#94A3B8] font-sans leading-relaxed">
                     Compared to 300+ hours with unstructured video lectures. Our IRT diagnostic engine focuses candidates purely on their weak quantitative quartiles.
                   </p>
                 </div>
 
                 <div className="p-6 rounded-xl bg-[#161A22] border border-[#2D323E] space-y-3">
-                  <div className="flex items-center justify-between text-xs text-slate-400 dark:text-slate-500 dark:text-slate-400">
+                  <div className="flex items-center justify-between text-xs text-[#475569] dark:text-[#94A3B8] dark:text-[#94A3B8]">
                     <span>FIRST-ATTEMPT PASS PERCENTILE</span>
                     <BarChart3 className="w-4 h-4 text-amber-400" />
                   </div>
                   <div className="text-3xl font-bold text-amber-400">95.4%</div>
-                  <p className="text-xs text-slate-400 dark:text-slate-500 dark:text-slate-400 font-sans leading-relaxed">
+                  <p className="text-xs text-[#475569] dark:text-[#94A3B8] dark:text-[#94A3B8] font-sans leading-relaxed">
                     Among candidates who complete at least 8 full Prometric CBT simulated mock examinations within our sandbox environment.
                   </p>
                 </div>
 
                 <div className="p-6 rounded-xl bg-[#161A22] border border-[#2D323E] space-y-3">
-                  <div className="flex items-center justify-between text-xs text-slate-400 dark:text-slate-500 dark:text-slate-400">
+                  <div className="flex items-center justify-between text-xs text-[#475569] dark:text-[#94A3B8] dark:text-[#94A3B8]">
                     <span>FORMULA DERIVATION LATENCY</span>
                     <Zap className="w-4 h-4 text-blue-400" />
                   </div>
                   <div className="text-3xl font-bold text-blue-400">&lt; 18 ms</div>
-                  <p className="text-xs text-slate-400 dark:text-slate-500 dark:text-slate-400 font-sans leading-relaxed">
+                  <p className="text-xs text-[#475569] dark:text-[#94A3B8] dark:text-[#94A3B8] font-sans leading-relaxed">
                     Instant algorithmic derivation of Black-Scholes Greeks, Macaulay duration, and multivariate regressions on every answer submission.
                   </p>
                 </div>

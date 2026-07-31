@@ -103,7 +103,7 @@ export function Testimonials() {
   const [hoveredId, setHoveredId] = useState<string | null>(null);
 
   return (
-    <section id="testimonials" className="py-24 md:py-32 bg-transparent transition-colors duration-300 text-slate-900 dark:text-[#FBFBF9] border-b border-slate-200 dark:border-[#282C36] relative overflow-hidden">
+    <section id="testimonials" className="py-24 md:py-32 bg-transparent transition-colors duration-300 text-[#111B35] dark:text-[#FBFBF9] border-b border-slate-200 dark:border-[#282C36] relative overflow-hidden">
 
       <div className="max-w-[1240px] mx-auto px-6 md:px-8 relative z-10">
         {/* Section Header */}
@@ -112,11 +112,11 @@ export function Testimonials() {
             <Award className="w-3.5 h-3.5 text-amber-400" />
             <span>Verifiable Candidate Outcomes</span>
           </div>
-          <h2 className="text-3xl sm:text-4xl md:text-5xl font-semibold tracking-tight text-slate-900 dark:text-white leading-[1.16]">
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-semibold tracking-tight text-[#111B35] dark:text-white leading-[1.16]">
             Tested by Charterholders. <br />
             Trusted by Top Percentile Candidates.
           </h2>
-          <p className="text-slate-600 dark:text-slate-300 text-lg leading-relaxed">
+          <p className="text-[#334155] dark:text-[#E2E8F0] text-lg leading-relaxed">
             We don’t use generic stock avatars or anonymous quotes. Explore exact score trajectories and official CBT exam room experiences from our charterholder network.
           </p>
         </div>
@@ -155,10 +155,10 @@ export function Testimonials() {
                         {t.avatarInitials}
                       </div>
                       <div>
-                        <h4 className="font-semibold text-slate-900 dark:text-white text-base leading-tight">
+                        <h4 className="font-semibold text-[#111B35] dark:text-white text-base leading-tight">
                           {t.name}
                         </h4>
-                        <p className="text-xs text-slate-400 dark:text-slate-500 dark:text-slate-400 font-medium">
+                        <p className="text-xs text-[#475569] dark:text-[#94A3B8] dark:text-[#94A3B8] font-medium">
                           {t.role}
                         </p>
                       </div>
@@ -177,7 +177,7 @@ export function Testimonials() {
                   </div>
 
                   {/* Review Quote */}
-                  <p className="text-slate-600 dark:text-slate-300 text-sm md:text-base leading-relaxed font-normal mb-2">
+                  <p className="text-[#334155] dark:text-[#E2E8F0] text-sm md:text-base leading-relaxed font-normal mb-2">
                     “{t.review}”
                   </p>
                 </div>

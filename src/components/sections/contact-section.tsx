@@ -3,11 +3,11 @@ import { Mail, Phone } from 'lucide-react';
 
 export function ContactSection() {
   return (
-    <section id="contact" className="py-24 md:py-32 bg-slate-50 dark:bg-[#121419] transition-colors duration-300 text-slate-900 dark:text-[#FBFBF9] border-t border-[#E0E0D8] dark:border-[#282C36]">
+    <section id="contact" className="py-24 md:py-32 bg-slate-50 dark:bg-[#121419] transition-colors duration-300 text-[#111B35] dark:text-[#FBFBF9] border-t border-[#E0E0D8] dark:border-[#282C36]">
       <div className="max-w-[1240px] mx-auto px-6 md:px-8">
         <div className="text-center mb-16 max-w-2xl mx-auto">
-          <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-4 text-slate-900 dark:text-white transition-colors">Get in Touch</h2>
-          <p className="text-slate-600 dark:text-slate-400 text-lg transition-colors">
+          <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-4 text-[#111B35] dark:text-white transition-colors">Get in Touch</h2>
+          <p className="text-[#334155] dark:text-[#94A3B8] text-lg transition-colors">
             Connect with our designated partner today.
           </p>
         </div>
@@ -20,8 +20,8 @@ export function ContactSection() {
             <div className="w-16 h-16 rounded-full bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-500 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
               <Phone className="w-8 h-8" />
             </div>
-            <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">Call Partner</h3>
-            <p className="text-slate-600 dark:text-slate-400 font-medium">+91 90088 67475</p>
+            <h3 className="text-lg font-bold text-[#111B35] dark:text-white mb-2">Call Partner</h3>
+            <p className="text-[#334155] dark:text-[#94A3B8] font-medium">+91 90088 67475</p>
           </a>
 
           <a 
@@ -31,8 +31,8 @@ export function ContactSection() {
             <div className="w-16 h-16 rounded-full bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-500 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
               <Mail className="w-8 h-8" />
             </div>
-            <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">Mail us</h3>
-            <p className="text-slate-600 dark:text-slate-400 font-medium">support@myexams365.com</p>
+            <h3 className="text-lg font-bold text-[#111B35] dark:text-white mb-2">Mail us</h3>
+            <p className="text-[#334155] dark:text-[#94A3B8] font-medium">support@myexams365.com</p>
           </a>
         </div>
       </div>

@@ -242,7 +242,7 @@ export default function SettingsPage() {
                 <User className="w-8 h-8 text-amber-500" />
                 {isAdminUser && activeTab === 'admin' ? 'Admin Platform Controls' : 'Account & User Settings'}
               </h1>
-              <p className="text-slate-400 text-sm mt-1">
+              <p className="text-[#475569] text-sm mt-1">
                 {isAdminUser && activeTab === 'admin'
                   ? 'Manage candidate entitlements, feature flags, tier pricing, and anti-tampering rules.'
                   : 'Manage your personal candidate profile, target exam series, and subscription entitlements.'}
@@ -257,7 +257,7 @@ export default function SettingsPage() {
                   className={`flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all duration-200 ${
                     activeTab === 'user'
                       ? 'bg-indigo-600 text-white shadow-[0_0_20px_rgba(99,102,241,0.4)]'
-                      : 'text-slate-400 hover:text-white'
+                      : 'text-[#475569] hover:text-white'
                   }`}
                 >
                   <User className="w-4 h-4" />
@@ -269,7 +269,7 @@ export default function SettingsPage() {
                   className={`flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all duration-200 ${
                     activeTab === 'admin'
                       ? 'bg-indigo-600 text-white shadow-[0_0_20px_rgba(99,102,241,0.4)]'
-                      : 'text-slate-400 hover:text-white'
+                      : 'text-[#475569] hover:text-white'
                   }`}
                 >
                   <Sliders className="w-4 h-4" />
@@ -310,7 +310,7 @@ export default function SettingsPage() {
 
                   {/* Profile Completion Gauge */}
                   <div className="space-y-1.5">
-                    <div className="flex justify-between text-xs tabular-nums text-slate-400">
+                    <div className="flex justify-between text-xs tabular-nums text-[#475569]">
                       <span>Profile Setup Meter</span>
                       <span>85%</span>
                     </div>
@@ -322,7 +322,7 @@ export default function SettingsPage() {
                   <form onSubmit={handleSaveProfile} className="space-y-5">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                       <div className="space-y-1.5">
-                        <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Full Name</label>
+                        <label className="text-xs font-bold text-[#475569] uppercase tracking-wider">Full Name</label>
                         <input
                           type="text"
                           value={profile.fullName}
@@ -333,13 +333,13 @@ export default function SettingsPage() {
                       </div>
 
                       <div className="space-y-1.5">
-                        <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Email Address</label>
+                        <label className="text-xs font-bold text-[#475569] uppercase tracking-wider">Email Address</label>
                         <div className="relative">
                           <input
                             type="email"
                             value={profile.email}
                             disabled
-                            className="w-full bg-slate-800/50 border border-white/10 rounded-xl px-4 py-3 text-slate-400 text-sm cursor-not-allowed tabular-nums"
+                            className="w-full bg-slate-800/50 border border-white/10 rounded-xl px-4 py-3 text-[#475569] text-sm cursor-not-allowed tabular-nums"
                           />
                           <span className="absolute right-3 top-3 text-[10px] tabular-nums font-bold bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded border border-emerald-500/20">
                             VERIFIED
@@ -350,7 +350,7 @@ export default function SettingsPage() {
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                       <div className="space-y-1.5">
-                        <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Phone Number (+91)</label>
+                        <label className="text-xs font-bold text-[#475569] uppercase tracking-wider">Phone Number (+91)</label>
                         <input
                           type="tel"
                           value={profile.phone}
@@ -363,7 +363,7 @@ export default function SettingsPage() {
                       </div>
 
                       <div className="space-y-1.5">
-                        <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Target Exam Select</label>
+                        <label className="text-xs font-bold text-[#475569] uppercase tracking-wider">Target Exam Select</label>
                         <select
                           value={profile.targetExam}
                           onChange={(e) => setProfile({ ...profile, targetExam: e.target.value })}
@@ -411,21 +411,21 @@ export default function SettingsPage() {
 
                   <div className="space-y-4">
                     <div>
-                      <div className="text-xs text-slate-400 tabular-nums uppercase tracking-wider">Current Tier Package</div>
+                      <div className="text-xs text-[#475569] tabular-nums uppercase tracking-wider">Current Tier Package</div>
                       <div className="text-lg font-extrabold text-white mt-1">
                         Tier 2 — NISM V-A Pro Pack
                       </div>
                     </div>
 
                     <div className="space-y-2">
-                      <div className="flex justify-between text-xs tabular-nums text-slate-400">
+                      <div className="flex justify-between text-xs tabular-nums text-[#475569]">
                         <span>Access Clock</span>
                         <span className="text-amber-400 font-bold">42 Days Left</span>
                       </div>
                       <div className="w-full h-2.5 bg-slate-800 rounded-full overflow-hidden p-0.5 border border-white/5">
                         <div className="h-full bg-gradient-to-r from-amber-500 to-indigo-500 rounded-full w-[70%]" />
                       </div>
-                      <div className="text-[11px] text-slate-400 tabular-nums text-right">Expires: 15 Oct 2026</div>
+                      <div className="text-[11px] text-[#475569] tabular-nums text-right">Expires: 15 Oct 2026</div>
                     </div>
 
                     <button
@@ -447,7 +447,7 @@ export default function SettingsPage() {
                     <CreditCard className="w-5 h-5 text-amber-500" />
                     Purchase History & GST Invoices
                   </div>
-                  <span className="text-xs tabular-nums text-slate-400">
+                  <span className="text-xs tabular-nums text-[#475569]">
                     INR (₹) Billing Records
                   </span>
                 </div>
@@ -455,7 +455,7 @@ export default function SettingsPage() {
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-sm">
                     <thead>
-                      <tr className="border-b border-white/10 text-xs tabular-nums text-slate-400 uppercase">
+                      <tr className="border-b border-white/10 text-xs tabular-nums text-[#475569] uppercase">
                         <th className="pb-3 px-4">Invoice ID</th>
                         <th className="pb-3 px-4">Date</th>
                         <th className="pb-3 px-4">Plan Name</th>
@@ -469,10 +469,10 @@ export default function SettingsPage() {
                       {invoices.map((inv) => (
                         <tr key={inv.id} className="hover:bg-white/5 transition-colors">
                           <td className="py-4 px-4 tabular-nums font-bold text-white text-xs">{inv.id}</td>
-                          <td className="py-4 px-4 text-slate-400 text-xs tabular-nums">{inv.date}</td>
+                          <td className="py-4 px-4 text-[#475569] text-xs tabular-nums">{inv.date}</td>
                           <td className="py-4 px-4 font-semibold text-slate-200 text-sm">{inv.plan}</td>
                           <td className="py-4 px-4 tabular-nums font-bold text-amber-400 text-sm">{inv.amount}</td>
-                          <td className="py-4 px-4 tabular-nums text-slate-400 text-xs">{inv.gst}</td>
+                          <td className="py-4 px-4 tabular-nums text-[#475569] text-xs">{inv.gst}</td>
                           <td className="py-4 px-4">
                             <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] tabular-nums font-bold">
                               {inv.status}
@@ -504,17 +504,17 @@ export default function SettingsPage() {
               {/* 4. Legal Links Footer */}
               <footer className="backdrop-blur-md bg-zinc-900/60 border border-white/10 rounded-2xl p-6 space-y-4">
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-white/10 pb-4">
-                  <div className="text-xs tabular-nums text-slate-400">
+                  <div className="text-xs tabular-nums text-[#475569]">
                     Protected under Digital Personal Data Protection (DPDP) Act 2023
                   </div>
-                  <div className="flex flex-wrap gap-4 text-xs font-semibold text-slate-400">
+                  <div className="flex flex-wrap gap-4 text-xs font-semibold text-[#475569]">
                     <a href="/terms" className="hover:text-amber-400 transition-colors">Terms of Service</a>
                     <a href="/privacy" className="hover:text-amber-400 transition-colors">Privacy Policy</a>
                     <a href="/refunds" className="hover:text-amber-400 transition-colors">Refund Policy</a>
                     <a href="/disclaimer" className="hover:text-amber-400 transition-colors">NISM Disclaimer</a>
                   </div>
                 </div>
-                <p className="text-[11px] text-slate-500 leading-relaxed">
+                <p className="text-[11px] text-[#475569] leading-relaxed">
                   MyExams365 is an independent financial examination simulator. NISM® is a registered trademark of the National Institute of Securities Markets. MyExams365 is not affiliated with or endorsed by NISM or SEBI.
                 </p>
               </footer>
@@ -561,7 +561,7 @@ export default function SettingsPage() {
                         <div key={flag.key} className="flex items-center justify-between p-4 bg-slate-900/90 border border-white/10 rounded-xl">
                           <div>
                             <div className="font-bold text-white text-sm">{flag.label}</div>
-                            <div className="text-xs text-slate-400 mt-0.5">{flag.desc}</div>
+                            <div className="text-xs text-[#475569] mt-0.5">{flag.desc}</div>
                           </div>
                           <button
                             onClick={() => handleToggleFlag(flag.key)}
@@ -586,14 +586,14 @@ export default function SettingsPage() {
                       <DollarSign className="w-5 h-5 text-amber-500" />
                       2. Tier Pricing Matrix (INR ₹)
                     </div>
-                    <span className="text-xs tabular-nums text-slate-400">18% GST Excl.</span>
+                    <span className="text-xs tabular-nums text-[#475569]">18% GST Excl.</span>
                   </div>
 
                   <form onSubmit={handleSavePricing} className="space-y-4">
                     <div className="space-y-1.5">
-                      <label className="text-xs font-bold text-slate-400 uppercase">Tier 1: Starter Pack (INR ₹)</label>
+                      <label className="text-xs font-bold text-[#475569] uppercase">Tier 1: Starter Pack (INR ₹)</label>
                       <div className="relative">
-                        <span className="absolute left-4 top-3 text-slate-400 font-bold text-sm">₹</span>
+                        <span className="absolute left-4 top-3 text-[#475569] font-bold text-sm">₹</span>
                         <input
                           type="number"
                           value={pricing.tier1}
@@ -604,9 +604,9 @@ export default function SettingsPage() {
                     </div>
 
                     <div className="space-y-1.5">
-                      <label className="text-xs font-bold text-slate-400 uppercase">Tier 2: NISM V-A Pro Pack (INR ₹)</label>
+                      <label className="text-xs font-bold text-[#475569] uppercase">Tier 2: NISM V-A Pro Pack (INR ₹)</label>
                       <div className="relative">
-                        <span className="absolute left-4 top-3 text-slate-400 font-bold text-sm">₹</span>
+                        <span className="absolute left-4 top-3 text-[#475569] font-bold text-sm">₹</span>
                         <input
                           type="number"
                           value={pricing.tier2}
@@ -617,9 +617,9 @@ export default function SettingsPage() {
                     </div>
 
                     <div className="space-y-1.5">
-                      <label className="text-xs font-bold text-slate-400 uppercase">Tier 3: Institutional Suite (INR ₹)</label>
+                      <label className="text-xs font-bold text-[#475569] uppercase">Tier 3: Institutional Suite (INR ₹)</label>
                       <div className="relative">
-                        <span className="absolute left-4 top-3 text-slate-400 font-bold text-sm">₹</span>
+                        <span className="absolute left-4 top-3 text-[#475569] font-bold text-sm">₹</span>
                         <input
                           type="number"
                           value={pricing.tier3}
@@ -657,7 +657,7 @@ export default function SettingsPage() {
                     3. Candidate Search & User Entitlement Actions
                   </div>
                   <div className="relative">
-                    <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+                    <Search className="w-4 h-4 text-[#475569] absolute left-3 top-3" />
                     <input
                       type="text"
                       placeholder="Search name or email..."
@@ -671,7 +671,7 @@ export default function SettingsPage() {
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-sm">
                     <thead>
-                      <tr className="border-b border-white/10 text-xs tabular-nums text-slate-400 uppercase">
+                      <tr className="border-b border-white/10 text-xs tabular-nums text-[#475569] uppercase">
                         <th className="pb-3 px-4">Candidate</th>
                         <th className="pb-3 px-4">Role</th>
                         <th className="pb-3 px-4">Days Left</th>
@@ -685,7 +685,7 @@ export default function SettingsPage() {
                           <td className="py-4 px-4">
                             <div>
                               <div className="font-bold text-white text-sm">{usr.name}</div>
-                              <div className="text-xs text-slate-400 tabular-nums">{usr.email}</div>
+                              <div className="text-xs text-[#475569] tabular-nums">{usr.email}</div>
                             </div>
                           </td>
                           <td className="py-4 px-4 tabular-nums text-xs font-bold text-indigo-400">{usr.role}</td>

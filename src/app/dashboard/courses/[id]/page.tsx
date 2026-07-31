@@ -145,13 +145,13 @@ export default function StudentExamPage({ params }: { params: Promise<{ id: stri
         <div className="w-16 h-16 rounded-2xl bg-red-50 dark:bg-red-500/10 flex items-center justify-center mb-6">
           <AlertCircle className="w-8 h-8 text-red-500" />
         </div>
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-3">Access Denied or Expired</h1>
-        <p className="text-slate-500 dark:text-slate-400 mb-8 max-w-md text-sm">
+        <h1 className="text-2xl font-bold text-[#111B35] dark:text-white mb-3">Access Denied or Expired</h1>
+        <p className="text-[#475569] dark:text-[#94A3B8] mb-8 max-w-md text-sm">
           You do not have active access to this exam. Please visit the storefront to purchase or renew your access.
         </p>
         <button
           onClick={() => router.push('/exams')}
-          className="bg-amber-500 text-slate-900 px-6 py-3 rounded-xl font-bold hover:bg-amber-400 transition-colors shadow-md shadow-amber-500/20"
+          className="bg-amber-500 text-[#111B35] px-6 py-3 rounded-xl font-bold hover:bg-amber-400 transition-colors shadow-md shadow-amber-500/20"
         >
           View Exam Catalog
         </button>
@@ -166,13 +166,13 @@ export default function StudentExamPage({ params }: { params: Promise<{ id: stri
 
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-slate-100 dark:bg-[#0B0C10] text-slate-900 dark:text-[#FBFBF9] pt-28 transition-colors duration-300">
+      <div className="min-h-screen bg-slate-100 dark:bg-[#0B0C10] text-[#111B35] dark:text-[#FBFBF9] pt-28 transition-colors duration-300">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
 
           {/* Breadcrumb */}
           <button
             onClick={() => router.push('/dashboard')}
-            className="inline-flex items-center gap-2 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white transition-colors mb-6 text-sm font-semibold group"
+            className="inline-flex items-center gap-2 text-[#475569] hover:text-slate-900 dark:text-[#94A3B8] dark:hover:text-white transition-colors mb-6 text-sm font-semibold group"
           >
             <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
             <span>Back to Dashboard</span>
@@ -188,8 +188,8 @@ export default function StudentExamPage({ params }: { params: Promise<{ id: stri
             <div className="relative z-10">
               <div className="flex items-start justify-between gap-4 flex-wrap">
                 <div>
-                  <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white mb-2">{exam?.title}</h1>
-                  <p className="text-slate-600 dark:text-slate-400 text-sm max-w-2xl leading-relaxed">{exam?.description}</p>
+                  <h1 className="text-2xl sm:text-3xl font-bold text-[#111B35] dark:text-white mb-2">{exam?.title}</h1>
+                  <p className="text-[#334155] dark:text-[#94A3B8] text-sm max-w-2xl leading-relaxed">{exam?.description}</p>
                 </div>
                 <div className="shrink-0 flex flex-col items-end gap-1">
                   {isAdminOrEditor ? (
@@ -206,13 +206,13 @@ export default function StudentExamPage({ params }: { params: Promise<{ id: stri
 
               {/* Stat Chips */}
               <div className="flex flex-wrap items-center gap-3 mt-6 pt-5 border-t border-slate-100 dark:border-[#282C36]/60">
-                <div className="flex items-center gap-2 text-xs font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-[#181A1F] px-3.5 py-1.5 rounded-xl border border-slate-200 dark:border-[#282C36]">
+                <div className="flex items-center gap-2 text-xs font-medium text-[#334155] dark:text-[#E2E8F0] bg-slate-100 dark:bg-[#181A1F] px-3.5 py-1.5 rounded-xl border border-slate-200 dark:border-[#282C36]">
                   <span>📚</span>
-                  <span className="font-bold text-slate-900 dark:text-white">{materials.length}</span> Study Material{materials.length !== 1 ? 's' : ''}
+                  <span className="font-bold text-[#111B35] dark:text-white">{materials.length}</span> Study Material{materials.length !== 1 ? 's' : ''}
                 </div>
-                <div className="flex items-center gap-2 text-xs font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-[#181A1F] px-3.5 py-1.5 rounded-xl border border-slate-200 dark:border-[#282C36]">
+                <div className="flex items-center gap-2 text-xs font-medium text-[#334155] dark:text-[#E2E8F0] bg-slate-100 dark:bg-[#181A1F] px-3.5 py-1.5 rounded-xl border border-slate-200 dark:border-[#282C36]">
                   <span>📝</span>
-                  <span className="font-bold text-slate-900 dark:text-white">{tests.length}</span> Mock Test{tests.length !== 1 ? 's' : ''}
+                  <span className="font-bold text-[#111B35] dark:text-white">{tests.length}</span> Mock Test{tests.length !== 1 ? 's' : ''}
                 </div>
               </div>
             </div>
@@ -225,7 +225,7 @@ export default function StudentExamPage({ params }: { params: Promise<{ id: stri
               className={`flex items-center gap-2 px-5 py-2.5 rounded-lg font-bold text-xs sm:text-sm transition-all ${
                 activeTab === 'materials'
                   ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                  : 'text-[#334155] dark:text-[#94A3B8] hover:text-slate-900 dark:hover:text-white'
               }`}
             >
               <BookMarked className="w-4 h-4" />
@@ -241,7 +241,7 @@ export default function StudentExamPage({ params }: { params: Promise<{ id: stri
               className={`flex items-center gap-2 px-5 py-2.5 rounded-lg font-bold text-xs sm:text-sm transition-all ${
                 activeTab === 'tests'
                   ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                  : 'text-[#334155] dark:text-[#94A3B8] hover:text-slate-900 dark:hover:text-white'
               }`}
             >
               <ClipboardList className="w-4 h-4" />
@@ -266,7 +266,7 @@ export default function StudentExamPage({ params }: { params: Promise<{ id: stri
                 className="space-y-3"
               >
                 {materials.length === 0 ? (
-                  <div className="text-center py-16 bg-white dark:bg-[#121419] border border-dashed border-slate-300 dark:border-[#282C36] rounded-2xl text-slate-400 dark:text-slate-500 transition-colors">
+                  <div className="text-center py-16 bg-white dark:bg-[#121419] border border-dashed border-slate-300 dark:border-[#282C36] rounded-2xl text-[#475569] dark:text-[#94A3B8] transition-colors">
                     <BookOpen className="w-8 h-8 mx-auto mb-3 opacity-50" />
                     <p className="text-sm">No study materials have been uploaded yet.</p>
                     <p className="text-xs mt-1">Check back soon!</p>
@@ -285,8 +285,8 @@ export default function StudentExamPage({ params }: { params: Promise<{ id: stri
                           <BookOpen className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                         </div>
                         <div>
-                          <div className="font-bold text-slate-900 dark:text-white text-sm">{mat.name}</div>
-                          <div className="text-xs text-slate-500 dark:text-slate-400 tabular-nums mt-0.5 truncate max-w-xs">PDF Study Material</div>
+                          <div className="font-bold text-[#111B35] dark:text-white text-sm">{mat.name}</div>
+                          <div className="text-xs text-[#475569] dark:text-[#94A3B8] tabular-nums mt-0.5 truncate max-w-xs">PDF Study Material</div>
                         </div>
                       </div>
                       <a
@@ -314,7 +314,7 @@ export default function StudentExamPage({ params }: { params: Promise<{ id: stri
                 className="space-y-3"
               >
                 {tests.length === 0 ? (
-                  <div className="text-center py-16 bg-white dark:bg-[#121419] border border-dashed border-slate-300 dark:border-[#282C36] rounded-2xl text-slate-400 dark:text-slate-500 transition-colors">
+                  <div className="text-center py-16 bg-white dark:bg-[#121419] border border-dashed border-slate-300 dark:border-[#282C36] rounded-2xl text-[#475569] dark:text-[#94A3B8] transition-colors">
                     <ClipboardList className="w-8 h-8 mx-auto mb-3 opacity-50" />
                     <p className="text-sm">No mock tests are published for this exam yet.</p>
                     <p className="text-xs mt-1">Check back soon!</p>
@@ -341,8 +341,8 @@ export default function StudentExamPage({ params }: { params: Promise<{ id: stri
                               <ClipboardList className="w-5 h-5 text-amber-500" />
                             </div>
                             <div>
-                              <div className="font-bold text-slate-900 dark:text-white text-sm">{test.title}</div>
-                              <div className="flex items-center gap-3 mt-1 text-xs text-slate-500 dark:text-slate-400 tabular-nums">
+                              <div className="font-bold text-[#111B35] dark:text-white text-sm">{test.title}</div>
+                              <div className="flex items-center gap-3 mt-1 text-xs text-[#475569] dark:text-[#94A3B8] tabular-nums">
                                 <span className="flex items-center gap-1">
                                   <Clock className="w-3.5 h-3.5" /> {test.durationMinutes} min
                                 </span>
@@ -359,7 +359,7 @@ export default function StudentExamPage({ params }: { params: Promise<{ id: stri
                           <button
                             onClick={() => handleStartTest(test.id)}
                             disabled={isExhausted || isStarting}
-                            className="shrink-0 flex items-center gap-2 px-5 py-2.5 bg-amber-500 hover:bg-amber-400 disabled:bg-slate-100 dark:disabled:bg-[#272B33] disabled:text-slate-400 dark:disabled:text-slate-500 text-slate-900 disabled:cursor-not-allowed rounded-xl font-bold text-xs shadow-md shadow-amber-500/20 disabled:shadow-none transition-all active:scale-95 disabled:pointer-events-none"
+                            className="shrink-0 flex items-center gap-2 px-5 py-2.5 bg-amber-500 hover:bg-amber-400 disabled:bg-slate-100 dark:disabled:bg-[#272B33] disabled:text-[#475569] dark:disabled:text-[#94A3B8] text-[#111B35] disabled:cursor-not-allowed rounded-xl font-bold text-xs shadow-md shadow-amber-500/20 disabled:shadow-none transition-all active:scale-95 disabled:pointer-events-none"
                           >
                             {isStarting ? (
                               <>
