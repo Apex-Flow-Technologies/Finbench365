@@ -1,197 +1,39 @@
-'use client';
-
-import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { CheckCircle2, Building2, ArrowUpRight } from 'lucide-react';
+import React from 'react';
+import { Mail, Phone } from 'lucide-react';
 
 export function ContactSection() {
-  const [submitted, setSubmitted] = useState(false);
-  const [formData, setFormData] = useState({
-    fullName: '',
-    email: '',
-    certification: 'CFA Level I',
-    institution: '',
-    message: ''
-  });
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formData.email || !formData.fullName) return;
-    setSubmitted(true);
-  };
-
   return (
-    <section id="contact" className="py-24 md:py-32 bg-transparent transition-colors duration-300 text-slate-900 dark:text-[#FBFBF9] border-b border-[#E0E0D8] dark:border-[#282C36] relative">
+    <section id="contact" className="py-24 md:py-32 bg-slate-50 dark:bg-[#121419] transition-colors duration-300 text-slate-900 dark:text-[#FBFBF9] border-t border-[#E0E0D8] dark:border-[#282C36]">
       <div className="max-w-[1240px] mx-auto px-6 md:px-8">
-        <div className="bg-white dark:bg-[#121419] border border-[#DDDDCF] dark:border-[#2D323E] rounded-2xl shadow-[0_16px_56px_-16px_rgba(0,0,0,0.06)] overflow-hidden grid grid-cols-1 lg:grid-cols-12">
+        <div className="text-center mb-16 max-w-2xl mx-auto">
+          <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-4 text-slate-900 dark:text-white transition-colors">Get in Touch</h2>
+          <p className="text-slate-600 dark:text-slate-400 text-lg transition-colors">
+            Connect with our designated partner today.
+          </p>
+        </div>
 
-          {/* Left Column: Institutional Pitch */}
-          <div className="lg:col-span-5 bg-white dark:bg-[#181A1F] transition-colors duration-300 text-slate-900 dark:text-[#FBFBF9] p-8 md:p-12 flex flex-col justify-between relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-bl from-amber-500/10 to-transparent rounded-full blur-2xl pointer-events-none" />
-
-            <div>
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded bg-slate-800 text-amber-400 tabular-nums text-xs font-semibold uppercase tracking-wider mb-6">
-                <Building2 className="w-3.5 h-3.5" />
-                <span>Academic & Institutional Consultation</span>
-              </div>
-
-              <h3 className="text-2xl sm:text-3xl font-semibold tracking-tight text-slate-900 dark:text-white leading-snug mb-4">
-                Schedule a Private Consultation or Institutional Demo.
-              </h3>
-              <p className="text-slate-600 dark:text-slate-300 text-sm md:text-base leading-relaxed mb-8">
-                Whether you are an individual candidate aiming for the 95th percentile or a university finance department looking to license our Institutional CBT simulator, our quantitative analysts are ready to assist.
-              </p>
-
-              <div className="space-y-4 tabular-nums text-xs text-slate-400 dark:text-slate-500 dark:text-slate-400 pt-6 border-t border-slate-800">
-                <div className="flex items-center gap-3">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
-                  <span>Custom Institutional CBT lab deployments for universities</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
-                  <span>Bulk institutional licensing with IRT cohort analytics</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
-                  <span>Direct 1-on-1 curriculum orientation with CFA charterholders</span>
-                </div>
-              </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 md:gap-8 max-w-3xl mx-auto">
+          <a 
+            href="tel:+919008867475" 
+            className="group flex flex-col items-center p-10 bg-white border border-slate-200 dark:bg-[#181A1F] dark:border-[#282C36] rounded-3xl shadow-sm hover:shadow-xl dark:hover:border-amber-500/30 transition-all duration-300 text-center outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-[#121419]"
+          >
+            <div className="w-16 h-16 rounded-full bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-500 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
+              <Phone className="w-8 h-8" />
             </div>
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">Call Partner</h3>
+            <p className="text-slate-600 dark:text-slate-400 font-medium">+91 90088 67475</p>
+          </a>
 
-            <div className="pt-10 mt-10 border-t border-slate-200 dark:border-slate-800/80 flex items-center justify-between text-xs text-slate-400 dark:text-slate-500 tabular-nums">
-              <span>Direct Inquiry: academic@myexams365.com</span>
-              <span className="text-amber-600 dark:text-amber-400">Response &lt; 4 Hours</span>
+          <a 
+            href="mailto:wealth@fintelyxinvestments.com" 
+            className="group flex flex-col items-center p-10 bg-white border border-slate-200 dark:bg-[#181A1F] dark:border-[#282C36] rounded-3xl shadow-sm hover:shadow-xl dark:hover:border-amber-500/30 transition-all duration-300 text-center outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-[#121419]"
+          >
+            <div className="w-16 h-16 rounded-full bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-500 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
+              <Mail className="w-8 h-8" />
             </div>
-          </div>
-
-          {/* Right Column: Contact Form */}
-          <div className="lg:col-span-7 bg-[#FAFAF8] dark:bg-[#181A1F] p-8 md:p-12 relative">
-            <AnimatePresence mode="wait">
-            {submitted ? (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="text-center py-12 px-6 bg-white dark:bg-[#121419] border border-[#E0E0D8] dark:border-[#282C36] rounded-xl shadow-sm space-y-4"
-              >
-                <div className="w-16 h-16 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 flex items-center justify-center mx-auto shadow-sm">
-                  <CheckCircle2 className="w-8 h-8 stroke-[2.5]" />
-                </div>
-                <h4 className="text-2xl font-semibold text-slate-900 dark:text-white">
-                  Academic Consultation Logged
-                </h4>
-                <p className="text-slate-600 dark:text-slate-300 text-base max-w-md mx-auto leading-relaxed">
-                  Thank you, <strong className="text-slate-900 dark:text-white">{formData.fullName}</strong>. Our quantitative curriculum director will review your targets for <strong className="text-slate-900 dark:text-white">{formData.certification}</strong> and respond within 4 business hours.
-                </p>
-                <button
-                  onClick={() => setSubmitted(false)}
-                  className="mt-4 px-6 py-2.5 rounded-lg border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 text-sm font-medium hover:bg-slate-100 dark:hover:bg-[#282C36] transition-colors"
-                >
-                  Submit Another Inquiry
-                </button>
-              </motion.div>
-            ) : (
-              <form onSubmit={handleSubmit} className="space-y-5">
-                <div>
-                  <h4 className="text-xl font-semibold text-slate-900 dark:text-white mb-1">
-                    Request Candidate or Institutional Access
-                  </h4>
-                  <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
-                    Fill out the form below for immediate sandbox credentials or curriculum orientation.
-                  </p>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs tabular-nums font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-1.5">
-                      Full Name *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="e.g. Name"
-                      value={formData.fullName}
-                      onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-                      className="w-full px-4 py-2.5 rounded-lg border border-[#D4D4CE] dark:border-[#2D323E] bg-white dark:bg-[#121419] text-slate-900 dark:text-white text-sm focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs tabular-nums font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-1.5">
-                      Professional / University Email *
-                    </label>
-                    <input
-                      type="email"
-                      required
-                      placeholder="e.g. a.@Email.com"
-                      value={formData.email}
-                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      className="w-full px-4 py-2.5 rounded-lg border border-[#D4D4CE] dark:border-[#2D323E] bg-white dark:bg-[#121419] text-slate-900 dark:text-white text-sm focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs tabular-nums font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-1.5">
-                      Target Examination Track
-                    </label>
-                    <select
-                      value={formData.certification}
-                      onChange={(e) => setFormData({ ...formData, certification: e.target.value })}
-                      className="w-full px-4 py-2.5 rounded-lg border border-[#D4D4CE] dark:border-[#2D323E] bg-white dark:bg-[#121419] text-slate-900 dark:text-white text-sm focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all"
-                    >
-                      <option value="CFA Level I">CFA® Level I (Nov 2026 / Feb 2027)</option>
-                      <option value="CFA Level II">CFA® Level II (Aug 2026 / Nov 2026)</option>
-                      <option value="CFA Level III">CFA® Level III (Aug 2026)</option>
-                      <option value="FRM Part I">FRM® Part I (Nov 2026)</option>
-                      <option value="FRM Part II">FRM® Part II (Nov 2026)</option>
-                      <option value="Quantitative IT / CA Final">Quantitative Finance & CA Final Track</option>
-                      <option value="Institutional University Lab License">Institutional / University Lab License</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs tabular-nums font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-1.5">
-                      Organization / University (Optional)
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Nomura / Columbia Business School"
-                      value={formData.institution}
-                      onChange={(e) => setFormData({ ...formData, institution: e.target.value })}
-                      className="w-full px-4 py-2.5 rounded-lg border border-[#D4D4CE] dark:border-[#2D323E] bg-white dark:bg-[#121419] text-slate-900 dark:text-white text-sm focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs tabular-nums font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-1.5">
-                    Consultation Topic / Background
-                  </label>
-                  <textarea
-                    rows={3}
-                    placeholder="Tell us about your preparation window or institutional requirements..."
-                    value={formData.message}
-                    onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-                    className="w-full px-4 py-2.5 rounded-lg border border-[#D4D4CE] dark:border-[#2D323E] bg-white dark:bg-[#121419] text-slate-900 dark:text-white text-sm focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all resize-none"
-                  />
-                </div>
-
-                <div className="pt-2">
-                    <button
-                      type="submit"
-                      className="w-full py-3.5 px-6 rounded-xl bg-slate-900 text-white dark:bg-amber-500 dark:text-slate-950 font-bold text-sm tracking-wide shadow-md transition-all duration-300 flex items-center justify-center gap-2 hover:bg-slate-800 dark:hover:bg-amber-400 group/btn"
-                    >
-                      <span>Submit Secure Inquiry</span>
-                      <ArrowUpRight className="w-4 h-4 transition-transform group-hover/btn:translate-x-0.5 group-hover/btn:-translate-y-0.5" />
-                    </button>
-                    <p className="text-xs text-center text-slate-500 dark:text-slate-400 mt-4 px-4 leading-relaxed">
-                      All data submitted is encrypted in transit and securely transmitted to our curriculum architecture team. Read our <a href="/privacy" className="underline hover:text-slate-800 dark:hover:text-slate-300">Privacy Policy</a>.
-                    </p>
-                </div>
-              </form>
-            )}
-            </AnimatePresence>
-          </div>
-
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">Mail us</h3>
+            <p className="text-slate-600 dark:text-slate-400 font-medium">support@myexams365.com</p>
+          </a>
         </div>
       </div>
     </section>
