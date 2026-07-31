@@ -10,6 +10,8 @@ import { LayoutWrapper } from '@/components/layout/LayoutWrapper';
 import { AuthProvider } from '@/context/AuthContext';
 import { ThemeProvider } from '@/components/ThemeProvider';
 import { Toaster } from 'react-hot-toast';
+import { Analytics } from '@vercel/analytics/react';
+
 const inter = Inter({
   subsets: ['latin'],
   variable: '--font-sans',
@@ -78,6 +80,7 @@ export default function RootLayout({
           </AuthProvider>
         </ThemeProvider>
         </ProgressBarProvider>
+        <Analytics />
       </body>
     </html>
   );
