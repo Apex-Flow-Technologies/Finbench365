@@ -14,7 +14,7 @@ const csp = [
   "img-src 'self' data: blob: https:",
   "font-src 'self' data:",
   "connect-src 'self' https://*.razorpay.com https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://vitals.vercel-insights.com",
-  "frame-src 'self' https://*.razorpay.com https://apis.google.com https://pay.google.com",
+  "frame-src 'self' https://*.razorpay.com https://apis.google.com https://pay.google.com https://*.firebaseapp.com",
   "object-src 'none'",
   "base-uri 'self'",
   "form-action 'self'",

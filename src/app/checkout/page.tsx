@@ -113,7 +113,7 @@ function CheckoutContent() {
         currentOrderIdRef.current = saved.orderId;
         setIsProcessing(true);
         reconcileOrderStatus(saved.orderId).then((result) => {
-          if (result !== 'paid') {
+          if (result !== 'paid' && result !== 'not-found') {
             setPendingConfirmation(true);
             setIsProcessing(false);
           }
@@ -165,7 +165,7 @@ function CheckoutContent() {
   // Razorpay. If paid, the server grants entitlement itself (idempotently) —
   // the client never fabricates a signature. Returns the resolved state so
   // callers can decide what to show instead of this function guessing.
-  const reconcileOrderStatus = useCallback(async (orderId: string): Promise<'paid' | 'not-paid' | 'error'> => {
+  const reconcileOrderStatus = useCallback(async (orderId: string): Promise<'paid' | 'not-paid' | 'not-found' | 'error'> => {
     if (!user) return 'error';
     if (isReconciling.current) return 'error';
     isReconciling.current = true;
@@ -191,6 +191,15 @@ function CheckoutContent() {
           setIsProcessing(false);
           setPendingConfirmation(false);
           return 'paid';
+        }
+        if (data.status === 'not-found') {
+          // Gateway has no record of this order under the current key/mode
+          // (e.g. it was created under live keys, gateway since switched to
+          // test, or vice versa) — nothing to reconcile, safe to drop quietly.
+          forgetPendingOrder();
+          setIsProcessing(false);
+          setPendingConfirmation(false);
+          return 'not-found';
         }
         return 'not-paid';
       }
@@ -325,7 +334,7 @@ function CheckoutContent() {
             // before assuming it was abandoned cleanly.
             if (currentOrderIdRef.current) {
               const result = await reconcileOrderStatus(currentOrderIdRef.current);
-              if (result !== 'paid') {
+              if (result !== 'paid' && result !== 'not-found') {
                 setPendingConfirmation(true);
                 setIsProcessing(false);
               }
@@ -344,7 +353,7 @@ function CheckoutContent() {
           // Wait a brief moment for Razorpay to process the payment on their end
           await new Promise(resolve => setTimeout(resolve, 2000));
           const result = await reconcileOrderStatus(currentOrderIdRef.current);
-          if (result !== 'paid') {
+          if (result !== 'paid' && result !== 'not-found') {
             setPendingConfirmation(true);
             setIsProcessing(false);
           }

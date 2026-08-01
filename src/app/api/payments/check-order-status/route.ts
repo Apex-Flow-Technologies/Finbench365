@@ -39,6 +39,16 @@ export async function POST(req: Request) {
 
     if (!orderRes.ok) {
       console.error('Razorpay order fetch failed:', orderRes.status);
+      // A 4xx here means Razorpay doesn't recognize this order id at all under
+      // the currently configured key — e.g. the order was created under a
+      // different key/mode (live vs test) before switching. That's a clean
+      // signal nothing is pending under the current gateway, unlike a
+      // 5xx/network failure where a payment could genuinely be in flight — so
+      // it's safe to tell the client to drop it instead of the client being
+      // stuck showing "do not pay again" forever.
+      if (orderRes.status >= 400 && orderRes.status < 500) {
+        return NextResponse.json({ status: 'not-found', orderId });
+      }
       return NextResponse.json({ status: 'unknown', error: 'Could not fetch order status' }, { status: 502 });
     }
 
