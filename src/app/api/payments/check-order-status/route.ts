@@ -61,23 +61,22 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    // order.status can be: created | attempted | paid
-    if (orderData.status === 'paid') {
-      // 2. Fetch the payments for this order to get payment_id
-      const paymentsRes = await fetch(`https://api.razorpay.com/v1/orders/${orderId}/payments`, {
-        headers: { 'Authorization': `Basic ${credentials}` },
-      });
+    // 2. Look at the actual payment records, not just order.status. Razorpay
+    // flips an order to 'attempted' as soon as a UPI QR/intent is generated —
+    // before any money moves — so order.status alone cannot tell "opened the
+    // UPI tab and changed their mind" apart from "money is genuinely in
+    // flight". The payment records can.
+    const paymentsRes = await fetch(`https://api.razorpay.com/v1/orders/${orderId}/payments`, {
+      headers: { 'Authorization': `Basic ${credentials}` },
+    });
+    const paymentItems: any[] = paymentsRes.ok ? (await paymentsRes.json()).items || [] : [];
+    const capturedPayment = paymentItems.find((p) => p.status === 'captured');
+    // Authorized = funds are held but not yet captured. This is the only
+    // genuinely ambiguous state worth warning a candidate about.
+    const authorizedPayment = paymentItems.find((p) => p.status === 'authorized');
 
-      let paymentId = null;
-      if (paymentsRes.ok) {
-        const paymentsData = await paymentsRes.json();
-        const successfulPayment = paymentsData.items?.find(
-          (p: any) => p.status === 'captured'
-        );
-        if (successfulPayment) {
-          paymentId = successfulPayment.id;
-        }
-      }
+    if (orderData.status === 'paid' || capturedPayment) {
+      const paymentId = capturedPayment?.id ?? null;
 
       // We asked Razorpay directly, with our secret key, whether this order is
       // paid — that is a stronger signal than a client-supplied signature.
@@ -111,7 +110,16 @@ export async function POST(req: Request) {
       });
     }
 
-    // Not paid yet
+    // Funds authorized but not yet captured — money has genuinely left the
+    // candidate's side and will settle shortly. Worth telling them not to pay
+    // again; the webhook grants access the moment capture lands.
+    if (authorizedPayment) {
+      return NextResponse.json({ status: 'authorized', orderId });
+    }
+
+    // Nothing captured, nothing authorized: either the checkout was merely
+    // opened, or every attempt failed outright. Nothing is in flight, so the
+    // candidate can simply try again with no warning.
     return NextResponse.json({
       status: orderData.status || 'unknown', // 'created' or 'attempted'
       orderId,

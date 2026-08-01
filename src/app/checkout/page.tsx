@@ -124,7 +124,7 @@ function CheckoutContent() {
           if (result === 'paid') return;
           // Only if a payment was actually started against this order do we
           // surface a gentle, non-blocking reminder not to pay twice.
-          if (result === 'attempted') setRecentAttemptNotice(true);
+          if (result === 'authorized') setRecentAttemptNotice(true);
           forgetPendingOrder();
         });
       } else {
@@ -174,7 +174,7 @@ function CheckoutContent() {
   // Razorpay. If paid, the server grants entitlement itself (idempotently) —
   // the client never fabricates a signature. Returns the resolved state so
   // callers can decide what to show instead of this function guessing.
-  const reconcileOrderStatus = useCallback(async (orderId: string): Promise<'paid' | 'attempted' | 'not-paid' | 'not-found' | 'error'> => {
+  const reconcileOrderStatus = useCallback(async (orderId: string): Promise<'paid' | 'authorized' | 'not-paid' | 'not-found' | 'error'> => {
     if (!user) return 'error';
     if (isReconciling.current) return 'error';
     isReconciling.current = true;
@@ -210,10 +210,10 @@ function CheckoutContent() {
           setPendingConfirmation(false);
           return 'not-found';
         }
-        // 'attempted' means the gateway saw a real payment attempt against this
-        // order (a UPI collect request was raised, a card was submitted, …).
-        // 'created' means the checkout was opened but nothing was ever tried.
-        if (data.status === 'attempted') return 'attempted';
+        // 'authorized' means funds are actually held and will settle — the one
+        // state worth warning about. A merely 'attempted' order (UPI QR shown,
+        // nothing paid) is treated as an ordinary abandoned checkout.
+        if (data.status === 'authorized') return 'authorized';
         return 'not-paid';
       }
       return 'error';
@@ -356,7 +356,7 @@ function CheckoutContent() {
             if (currentOrderIdRef.current) {
               const result = await reconcileOrderStatus(currentOrderIdRef.current);
               if (result === 'paid') return;
-              if (result === 'attempted') setRecentAttemptNotice(true);
+              if (result === 'authorized') setRecentAttemptNotice(true);
               forgetPendingOrder();
               setIsProcessing(false);
             } else {
@@ -790,8 +790,8 @@ function CheckoutContent() {
                     <div className="flex items-start gap-2 p-3 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-300 text-xs">
                       <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
                       <span className="flex-1">
-                        You started a payment a moment ago. If it went through, your access is granted
-                        automatically within a few minutes — no need to pay again.
+                        A payment for this course is still being confirmed by your bank. If it
+                        completes, your access is granted automatically — please don&apos;t pay again.
                       </span>
                       <button
                         type="button"
