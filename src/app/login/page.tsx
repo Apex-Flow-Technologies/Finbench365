@@ -18,10 +18,18 @@ import {
   ChevronDown
 } from 'lucide-react';
 import { auth, db } from '@/lib/firebase/config';
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, updateProfile } from 'firebase/auth';
+import {
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  signOut,
+  updateProfile,
+  sendEmailVerification,
+  sendPasswordResetEmail,
+} from 'firebase/auth';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { useAuth } from '@/context/AuthContext';
 import { LoadingButton } from '@/components/ui/LoadingButton';
+import { friendlyAuthError } from '@/lib/auth/authErrors';
 import toast from 'react-hot-toast';
 
 function LoginContent() {
@@ -41,6 +49,12 @@ function LoginContent() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [agreeLegal, setAgreeLegal] = useState(false);
+
+  // Password reset flow
+  const [showReset, setShowReset] = useState(false);
+  const [resetEmail, setResetEmail] = useState('');
+  const [isSendingReset, setIsSendingReset] = useState(false);
+  const [resetSent, setResetSent] = useState(false);
   
   const { user, loading } = useAuth();
 
@@ -96,16 +110,58 @@ function LoginContent() {
           createdAt: serverTimestamp()
         });
 
-        
+        // Confirm the address is real and reachable — the GST invoice and all
+        // enrolment mail go here, so a typo means a paying candidate silently
+        // never hears from us. Failure to send must not block the signup that
+        // has already succeeded, so this is best-effort.
+        try {
+          await sendEmailVerification(newUser);
+          toast.success(`Verification email sent to ${newUser.email}`, { duration: 6000 });
+        } catch (verifyErr) {
+          console.error('Could not send verification email:', verifyErr);
+        }
+
         // On success, the useEffect above will redirect them based on role
       }
       toast.success('Login successful. Redirecting...');
       // We intentionally do not set isSubmitting(false) here so the button stays in the loading state until the redirect happens.
     } catch (error: any) {
       console.error("Auth error:", error);
-      setErrorMsg(error.message || 'Authentication failed. Please try again.');
+      setErrorMsg(friendlyAuthError(error));
       setIsSubmitting(false);
     }
+  };
+
+  const handleSendReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const target = resetEmail.trim();
+    if (!target) return;
+
+    setIsSendingReset(true);
+    try {
+      await sendPasswordResetEmail(auth, target);
+      setResetSent(true);
+    } catch (error: any) {
+      // Deliberately show the same confirmation whether or not an account
+      // exists — reporting "no such user" would let anyone test which email
+      // addresses are registered. Genuine faults (bad format, rate limit,
+      // offline) are still surfaced, since those are the user's to fix.
+      const code = error?.code;
+      if (code === 'auth/user-not-found') {
+        setResetSent(true);
+      } else {
+        toast.error(friendlyAuthError(error));
+      }
+      console.error('Password reset error:', error);
+    } finally {
+      setIsSendingReset(false);
+    }
+  };
+
+  const openReset = () => {
+    setResetEmail(email);
+    setResetSent(false);
+    setShowReset(true);
   };
 
   const handleLogout = async () => {
@@ -249,7 +305,13 @@ function LoginContent() {
                   <label className="text-xs tabular-nums font-medium text-[#334155] dark:text-[#E2E8F0] flex justify-between">
                     <span>Password *</span>
                     {activeTab === 'signin' && (
-                      <span className="text-amber-600 dark:text-amber-500 hover:underline cursor-pointer text-[11px]">Forgot?</span>
+                      <button
+                        type="button"
+                        onClick={openReset}
+                        className="text-amber-600 dark:text-amber-500 hover:underline text-[11px] font-medium"
+                      >
+                        Forgot?
+                      </button>
                     )}
                   </label>
                   <div className="relative">
@@ -321,6 +383,97 @@ function LoginContent() {
       <div className="text-center text-xs tabular-nums text-[#475569] py-4">
         © {new Date().getFullYear()} MyExams365 CBT Portal. All rights reserved.
       </div>
+
+      {/* Password reset */}
+      <AnimatePresence>
+        {showReset && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/60 backdrop-blur-sm"
+            onClick={() => setShowReset(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 12 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.97, y: 8 }}
+              transition={{ type: 'spring', stiffness: 320, damping: 26 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-md rounded-2xl border bg-white border-slate-200 dark:bg-[#181A1F] dark:border-white/10 p-6 sm:p-7 shadow-2xl"
+            >
+              {resetSent ? (
+                <div className="text-center space-y-4">
+                  <div className="w-14 h-14 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mx-auto text-emerald-500">
+                    <CheckCircle2 className="w-7 h-7" />
+                  </div>
+                  <h3 className="text-lg font-bold text-[#111B35] dark:text-white">Check your inbox</h3>
+                  <p className="text-sm leading-relaxed text-[#475569] dark:text-[#94A3B8]">
+                    If an account exists for <span className="font-semibold text-[#111B35] dark:text-white">{resetEmail}</span>,
+                    a password reset link is on its way. The link expires in about an hour.
+                  </p>
+                  <p className="text-[11px] text-[#475569] dark:text-[#64748B]">
+                    Not seeing it after a few minutes? Check your spam folder.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setShowReset(false)}
+                    className="w-full py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-[#111B35] font-bold text-sm transition-colors active:scale-[0.98]"
+                  >
+                    Back to Sign In
+                  </button>
+                </div>
+              ) : (
+                <form onSubmit={handleSendReset} className="space-y-5">
+                  <div className="space-y-1.5">
+                    <h3 className="text-lg font-bold text-[#111B35] dark:text-white">Reset your password</h3>
+                    <p className="text-sm text-[#475569] dark:text-[#94A3B8]">
+                      Enter the email you registered with and we&apos;ll send you a link to set a new password.
+                    </p>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label htmlFor="reset-email" className="text-xs font-medium text-[#334155] dark:text-[#E2E8F0]">
+                      Email Address
+                    </label>
+                    <div className="relative">
+                      <Mail className="w-4 h-4 text-[#475569] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                      <input
+                        id="reset-email"
+                        type="email"
+                        required
+                        autoFocus
+                        value={resetEmail}
+                        onChange={(e) => setResetEmail(e.target.value)}
+                        placeholder="candidate@university.edu"
+                        className="w-full pl-10 pr-4 py-3 rounded-xl border text-sm bg-slate-50 border-slate-200 text-[#111B35] dark:bg-[#121419] dark:border-[#282C36] dark:text-white placeholder-slate-400 focus:border-amber-500 focus:outline-none transition-colors"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <LoadingButton
+                      type="submit"
+                      isLoading={isSendingReset}
+                      loadingText="Sending..."
+                      className="flex-1 py-3 rounded-xl bg-amber-500 hover:bg-amber-400 disabled:opacity-75 disabled:pointer-events-none text-[#111B35] font-bold text-sm transition-all active:scale-[0.98]"
+                    >
+                      Send Reset Link
+                    </LoadingButton>
+                    <button
+                      type="button"
+                      onClick={() => setShowReset(false)}
+                      className="flex-1 py-3 rounded-xl font-semibold text-sm transition-colors bg-slate-100 hover:bg-slate-200 text-[#334155] dark:bg-[#272B33] dark:hover:bg-[#343942] dark:text-white"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

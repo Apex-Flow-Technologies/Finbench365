@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
+import { EmailVerificationBanner } from '@/components/auth/EmailVerificationBanner';
 import { useAuth } from '@/context/AuthContext';
 import { auth } from '@/lib/firebase/config';
 import { signOut } from 'firebase/auth';
@@ -92,7 +93,9 @@ export default function DashboardPage() {
   return (
     <ProtectedRoute requiredRole="student">
       <div className="min-h-[calc(100vh)] relative w-full z-10 pt-28 pb-20 px-6 max-w-7xl mx-auto">
-        
+
+        <EmailVerificationBanner />
+
         {/* Header Section */}
         <motion.div 
           initial={{ opacity: 0, y: -10 }}
