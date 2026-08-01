@@ -37,6 +37,12 @@ export async function POST(req: Request) {
     const body = JSON.parse(rawBody);
     const event = body.event;
 
+    if (event === 'payment.failed') {
+      const paymentData = body.payload?.payment?.entity;
+      console.error('Razorpay payment.failed webhook received:', paymentData?.id, paymentData?.error_description);
+      return NextResponse.json({ success: true, note: 'logged failed payment' });
+    }
+
     if (event === 'payment.captured' || event === 'order.paid' || event === 'payment.authorized') {
       const paymentData = body.payload?.payment?.entity;
       if (!paymentData) {

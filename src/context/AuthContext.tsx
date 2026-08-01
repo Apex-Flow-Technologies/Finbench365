@@ -73,6 +73,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 setUser(null);
               }
             }
+          }, (error) => {
+            // Silently handle permission errors for the real-time listener if document doesn't exist yet
+            console.warn('User snapshot listener error (non-critical):', error.code);
           });
 
         } catch (error) {

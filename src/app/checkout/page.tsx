@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { useState, useEffect, useRef, useCallback, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -63,6 +63,10 @@ function CheckoutContent() {
   const [completedOrderId, setCompletedOrderId] = useState('');
   const [agreeLegal, setAgreeLegal] = useState(false);
   
+  // Track the current Razorpay order to prevent double charges and enable recovery
+  const currentOrderIdRef = useRef<string | null>(null);
+  const isReconciling = useRef(false);
+  
   const [course, setCourse] = useState<any>(null);
 
   useEffect(() => {
@@ -107,6 +111,61 @@ function CheckoutContent() {
     }
   };
 
+  // Reconcile: check real order status from Razorpay when SDK reports failure or user closes popup
+  const reconcileOrderStatus = useCallback(async (orderId: string) => {
+    if (!user || isReconciling.current) return;
+    isReconciling.current = true;
+    try {
+      const token = await user.getIdToken(true);
+      const res = await fetch('/api/payments/check-order-status', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ orderId }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.status === 'paid' && data.paymentId) {
+          // Payment actually succeeded — grant access via verify endpoint
+          try {
+            const freshToken = await user.getIdToken(true);
+            await fetch('/api/payments/verify', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${freshToken}`,
+              },
+              body: JSON.stringify({
+                razorpay_payment_id: data.paymentId,
+                razorpay_order_id: orderId,
+                razorpay_signature: 'webhook_reconciled',
+                planId,
+                courseId,
+              }),
+            });
+          } catch (verifyErr) {
+            console.error('Reconcile verify call failed:', verifyErr);
+          }
+          // Show success — payment went through
+          currentOrderIdRef.current = null;
+          setCompletedOrderId(orderId);
+          setOrderCompleted(true);
+          setIsProcessing(false);
+          return;
+        }
+      }
+      // Order not paid — safe to allow retry
+      setIsProcessing(false);
+    } catch {
+      setIsProcessing(false);
+    } finally {
+      isReconciling.current = false;
+    }
+  }, [user, planId, courseId]);
+
   const handleOpenRazorpay = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError('');
@@ -130,6 +189,27 @@ function CheckoutContent() {
 
     setIsProcessing(true);
     try {
+      // Double-charge prevention: if we already created an order, check if it was paid
+      if (currentOrderIdRef.current) {
+        const token = await user.getIdToken(true);
+        const checkRes = await fetch('/api/payments/check-order-status', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify({ orderId: currentOrderIdRef.current }),
+        });
+        if (checkRes.ok) {
+          const checkData = await checkRes.json();
+          if (checkData.status === 'paid') {
+            // Already paid! Reconcile and grant access instead of creating a new order
+            await reconcileOrderStatus(currentOrderIdRef.current);
+            return;
+          }
+        }
+      }
+
       const token = await user.getIdToken(true);
 
       const res = await fetch('/api/payments/create-order', {
@@ -156,6 +236,7 @@ function CheckoutContent() {
       }
 
       const { order } = data;
+      currentOrderIdRef.current = order.id;
 
       const rzp = new (window as any).Razorpay({
         key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
@@ -165,8 +246,7 @@ function CheckoutContent() {
         name: 'MyExams365',
         description: planName,
         handler: async (response: any) => {
-          // Payment succeeded on Razorpay
-          // 2. Call backend verify for logging and server-side validation
+          // Payment succeeded on Razorpay — verify and grant access
           try {
             const freshToken = await user.getIdToken(true);
             const verifyRes = await fetch('/api/payments/verify', {
@@ -187,21 +267,43 @@ function CheckoutContent() {
             if (!verifyRes.ok) {
               const errData = await verifyRes.json();
               console.error('Verify failed:', errData);
-              throw new Error('Payment verification failed securely');
             }
           } catch (verifyErr) {
             console.error('Verify call failed:', verifyErr);
           }
-          // Show success regardless
+          // Show success
+          currentOrderIdRef.current = null;
           setCompletedOrderId(response.razorpay_order_id);
           setOrderCompleted(true);
+          setIsProcessing(false);
         },
         prefill: { name, email, contact: phone.replace(/\s+/g, '') },
         theme: { color: '#F59E0B' },
         modal: {
-          ondismiss: () => setIsProcessing(false)
+          ondismiss: async () => {
+            // User closed the popup — check if payment actually went through
+            if (currentOrderIdRef.current) {
+              await reconcileOrderStatus(currentOrderIdRef.current);
+            } else {
+              setIsProcessing(false);
+            }
+          },
+        },
+      });
+
+      // Handle SDK-reported failures — check real status before showing error
+      rzp.on('payment.failed', async (failedResponse: any) => {
+        console.warn('Razorpay SDK reported payment.failed:', failedResponse?.error?.description);
+        // Don't trust the SDK — the payment may have actually succeeded (e.g. 429 rate limit)
+        if (currentOrderIdRef.current) {
+          // Wait a brief moment for Razorpay to process the payment on their end
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          await reconcileOrderStatus(currentOrderIdRef.current);
+        } else {
+          setIsProcessing(false);
         }
       });
+
       rzp.open();
     } catch (err: any) {
       setFormError(err.message || 'Payment initialization failed. Please try again.');
