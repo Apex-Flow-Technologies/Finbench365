@@ -818,8 +818,16 @@ function CheckoutContent() {
               <button
                 type="button"
                 onClick={handleOpenRazorpay}
-                disabled={isProcessing}
-                className="w-full py-4 px-6 rounded-2xl bg-amber-500 hover:bg-amber-400 disabled:bg-amber-500/50 disabled:cursor-not-allowed text-[#121419] font-extrabold text-base tracking-wide shadow-lg shadow-amber-500/25 active:scale-[0.98] transition-all duration-200 flex items-center justify-center gap-2 focus:outline-none"
+                // The handler still re-checks agreeLegal — this only stops the
+                // action being reachable, it isn't the validation itself.
+                disabled={isProcessing || !agreeLegal}
+                aria-disabled={isProcessing || !agreeLegal}
+                title={!agreeLegal ? 'Please accept the Terms and Refund Policy to continue' : undefined}
+                className={`w-full py-4 px-6 rounded-2xl text-[#121419] font-extrabold text-base tracking-wide flex items-center justify-center gap-2 focus:outline-none transition-all duration-300 ${
+                  agreeLegal && !isProcessing
+                    ? 'bg-amber-500 hover:bg-amber-400 shadow-lg shadow-amber-500/25 active:scale-[0.98] cursor-pointer'
+                    : 'bg-amber-500/30 text-[#121419]/50 shadow-none cursor-not-allowed'
+                }`}
               >
                 {isProcessing ? (
                   <>
@@ -834,8 +842,32 @@ function CheckoutContent() {
                 )}
               </button>
 
-              <div className="text-center text-[11px] text-[#475569] leading-normal font-sans">
-                Razorpay gateway will securely handle UPI QR scan, card authentication, or Net Banking on the next popup screen.
+              <div className="text-center text-[11px] leading-normal font-sans min-h-[2.4em] flex items-center justify-center">
+                <AnimatePresence mode="wait" initial={false}>
+                  {agreeLegal ? (
+                    <motion.span
+                      key="gateway-hint"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.18 }}
+                      className="text-[#475569]"
+                    >
+                      Razorpay gateway will securely handle UPI QR scan, card authentication, or Net Banking on the next popup screen.
+                    </motion.span>
+                  ) : (
+                    <motion.span
+                      key="agree-hint"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.18 }}
+                      className="text-amber-500/80 font-medium"
+                    >
+                      Accept the Terms and Refund Policy above to enable payment.
+                    </motion.span>
+                  )}
+                </AnimatePresence>
               </div>
             </div>
 
