@@ -20,16 +20,16 @@ export default function ProtectedRoute({ children, requiredRole }: { children: R
     }
   }, [user, loading, router, requiredRole]);
 
-  if (loading) {
+  const unauthorized = !user || (requiredRole && user.role?.toLowerCase() !== requiredRole.toLowerCase() && user.role?.toLowerCase() !== 'admin');
+
+  // Keep showing the spinner through the redirect window instead of
+  // rendering null — avoids a blank/white flash while router.push resolves.
+  if (loading || unauthorized) {
     return (
       <div className="min-h-screen bg-white dark:bg-[#0B0C10] flex items-center justify-center transition-colors">
         <div className="w-8 h-8 border-4 border-amber-500 border-t-transparent rounded-full animate-spin"></div>
       </div>
     );
-  }
-
-  if (!user || (requiredRole && user.role?.toLowerCase() !== requiredRole.toLowerCase() && user.role?.toLowerCase() !== 'admin')) {
-    return null;
   }
 
   return <>{children}</>;

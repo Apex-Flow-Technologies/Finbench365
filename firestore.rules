@@ -16,9 +16,10 @@ service cloud.firestore {
       // Users can read their own data
       allow read: if request.auth != null && (request.auth.uid == userId || isAdmin());
       
-      // Users can update their own data BUT CANNOT change their role or enrolledCourses
+      // Users can update their own data BUT CANNOT change their role, enrolledCourses,
+      // totalSpent, suspended status, or pending-order tracking (all admin/server-only fields)
       allow update: if request.auth != null && request.auth.uid == userId
-                    && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'enrolledCourses', 'totalSpent'])
+                    && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'enrolledCourses', 'totalSpent', 'suspended', 'pendingOrder'])
                     || isAdmin();
       
       allow delete: if isAdmin();
@@ -60,10 +61,12 @@ service cloud.firestore {
       
       // Users can create an attempt for themselves
       allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
-      
-      // Users can update their attempt
-      allow update: if request.auth != null && (resource.data.userId == request.auth.uid || isAdmin());
-      
+
+      // Users can update their own in-progress attempt, but once it's marked
+      // completed it's locked — prevents post-submission score tampering.
+      allow update: if request.auth != null &&
+                    ((resource.data.userId == request.auth.uid && resource.data.status != 'completed') || isAdmin());
+
       allow delete: if isAdmin();
     }
 
@@ -71,6 +74,14 @@ service cloud.firestore {
     match /orders/{orderId} {
       allow read: if isAdmin();
       allow write: if false; // Only server (Admin SDK) should write orders
+    }
+
+    // App Configuration (feature flags, display pricing, etc.) — admin only.
+    // Client SDK reads are allowed so authenticated users can react to feature
+    // flags; actual checkout pricing is never read from here (see constants/pricing.ts).
+    match /config/{document} {
+      allow read: if request.auth != null;
+      allow write: if isAdmin();
     }
   }
 }

@@ -47,11 +47,21 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
           const userDocRef = doc(db, 'users', firebaseUser.uid);
           const userDoc = await getDoc(userDocRef);
-          
+
           if (userDoc.exists()) {
             const userData = userDoc.data();
+
+            if (userData.suspended) {
+              alert("Your account has been suspended. Please contact support if you believe this is a mistake.");
+              await auth.signOut();
+              localStorage.removeItem('myexams_session_id');
+              setUser(null);
+              setLoading(false);
+              return;
+            }
+
             setUser(Object.assign(firebaseUser, { role: userData.role || 'student' as const }));
-            
+
             // If activeSessionId is not set yet in DB, set it in background
             if (!userData.activeSessionId) {
               updateUserActiveSession(firebaseUser.uid, localSessionId).catch(console.error);
@@ -60,11 +70,20 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             setUser(Object.assign(firebaseUser, { role: 'student' as const }));
           }
 
-          // Real-time listener for Single Active Session revocation
+          // Real-time listener for Single Active Session revocation + suspension
           const { onSnapshot } = await import('firebase/firestore');
           snapshotUnsubscribe = onSnapshot(userDocRef, (snap) => {
             if (snap.exists()) {
               const data = snap.data();
+
+              if (data.suspended) {
+                alert("Your account has been suspended. You have been signed out.");
+                auth.signOut();
+                localStorage.removeItem('myexams_session_id');
+                setUser(null);
+                return;
+              }
+
               const currentLocalSess = localStorage.getItem('myexams_session_id');
               if (data.activeSessionId && currentLocalSess && data.activeSessionId !== currentLocalSess) {
                 alert("Security Alert: Your account was logged in on another device. You have been signed out of this session.");

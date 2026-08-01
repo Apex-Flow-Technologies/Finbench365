@@ -172,29 +172,46 @@ export default function SettingsPage() {
     if (!isAdminUser) return;
     const q = query(collection(db, 'users'), orderBy('createdAt', 'desc'));
     const unsub = onSnapshot(q, (snap) => {
-      setManagedUsers(snap.docs.map(d => ({
-        id: d.id,
-        name: d.data().name || 'Unknown',
-        email: d.data().email || '',
-        role: d.data().role || 'student',
-        status: d.data().suspended ? 'Suspended' : 'Active',
-        enrolledCourses: d.data().enrolledCourses || {}
-      })));
+      setManagedUsers(snap.docs.map(d => {
+        const enrolled = d.data().enrolledCourses || {};
+        const now = Date.now();
+        const daysLeftValues = Object.values(enrolled).map((c: any) => {
+          const exp = c?.expiresAt?.toDate ? c.expiresAt.toDate() : new Date(c?.expiresAt);
+          return Math.max(0, Math.ceil((exp.getTime() - now) / (1000 * 60 * 60 * 24)));
+        });
+        const daysLeft = daysLeftValues.length ? Math.max(...daysLeftValues) : 0;
+
+        return {
+          id: d.id,
+          name: d.data().name || 'Unknown',
+          email: d.data().email || '',
+          role: d.data().role || 'student',
+          status: d.data().suspended ? 'Suspended' : 'Active',
+          enrolledCourses: enrolled,
+          daysLeft,
+        };
+      }));
     });
     return () => unsub();
   }, [isAdminUser]);
 
-  const handleToggleUserStatus = async (id: string, currentStatus: string) => {
+  // Suspend/activate go through the server-side admin API (not a direct
+  // client Firestore write) — `suspended` is a rules-protected field now,
+  // and this keeps the audit trail (who suspended whom) server-authoritative.
+  const handleToggleUserStatus = async (id: string, currentlySuspended: boolean) => {
+    if (!auth.currentUser) return;
     setTogglingUserId(id);
     try {
-      const isSuspended = currentStatus === 'Suspended';
-      await updateDoc(doc(db, 'users', id), {
-        suspended: !isSuspended,
-        updatedAt: serverTimestamp()
+      const token = await auth.currentUser.getIdToken();
+      const res = await fetch('/api/admin/user-actions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ action: currentlySuspended ? 'activate' : 'suspend', targetUserId: id }),
       });
-      toast.success(`User ${isSuspended ? 'reactivated' : 'suspended'} successfully.`);
+      if (!res.ok) throw new Error((await res.json().catch(() => ({})))?.error || 'Request failed');
+      toast.success(`User ${currentlySuspended ? 'reactivated' : 'suspended'} successfully.`);
     } catch (err: any) {
-      toast.error('Failed to update user status.');
+      toast.error(err.message || 'Failed to update user status.');
     } finally {
       setTogglingUserId(null);
     }
@@ -589,6 +606,10 @@ export default function SettingsPage() {
                     <span className="text-xs tabular-nums text-[#475569]">18% GST Excl.</span>
                   </div>
 
+                  <div className="text-xs text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-xl px-3 py-2 leading-relaxed">
+                    Reference only — actual checkout pricing is governed by server-side plan constants and does not read from these values.
+                  </div>
+
                   <form onSubmit={handleSavePricing} className="space-y-4">
                     <div className="space-y-1.5">
                       <label className="text-xs font-bold text-[#475569] uppercase">Tier 1: Starter Pack (INR ₹)</label>
@@ -702,19 +723,20 @@ export default function SettingsPage() {
                           <td className="py-4 px-4 text-right">
                             <div className="flex items-center justify-end gap-2">
                               <button
-                                onClick={() => handleGrantAccessExtension(usr.id, 15)}
+                                onClick={() => handleGrantDays(usr.id, 15)}
                                 className="px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-lg text-xs font-bold transition-all"
                               >
                                 +15 Days
                               </button>
                               <button
-                                onClick={() => handleGrantAccessExtension(usr.id, 30)}
+                                onClick={() => handleGrantDays(usr.id, 30)}
                                 className="px-3 py-1.5 bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-300 border border-indigo-500/30 rounded-lg text-xs font-bold transition-all"
                               >
                                 +30 Days
                               </button>
                               <button
-                                onClick={() => handleToggleUserStatus(usr.id)}
+                                disabled={togglingUserId === usr.id}
+                                onClick={() => handleToggleUserStatus(usr.id, usr.status === 'Suspended')}
                                 className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
                                   usr.status === 'Active'
                                     ? 'bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30'

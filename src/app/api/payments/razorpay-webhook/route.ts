@@ -1,10 +1,6 @@
 import { NextResponse } from 'next/server';
-import { adminDb, adminAuth } from '@/lib/firebase/admin';
-import { PLAN_PRICING } from '@/constants/pricing';
-import { Timestamp, FieldValue } from 'firebase-admin/firestore';
 import crypto from 'crypto';
-import { sendInvoiceEmail } from '@/lib/email';
-import { GST_RATE } from '@/constants/pricing';
+import { grantEntitlementIdempotent } from '@/lib/payments/grantEntitlement';
 
 export async function POST(req: Request) {
   try {
@@ -29,8 +25,13 @@ export async function POST(req: Request) {
       .update(rawBody)
       .digest('hex');
 
-    if (signature !== expectedSignature) {
-      console.error('Webhook signature mismatch — expected:', expectedSignature, 'got:', signature);
+    const expectedBuf = Buffer.from(expectedSignature, 'utf8');
+    const providedBuf = Buffer.from(signature, 'utf8');
+    const signatureValid = expectedBuf.length === providedBuf.length &&
+      crypto.timingSafeEqual(expectedBuf, providedBuf);
+
+    if (!signatureValid) {
+      console.error('Webhook signature mismatch — rejecting payload');
       return NextResponse.json({ error: 'Invalid Signature' }, { status: 400 });
     }
 
@@ -43,70 +44,38 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: true, note: 'logged failed payment' });
     }
 
-    if (event === 'payment.captured' || event === 'order.paid' || event === 'payment.authorized') {
+    // Only payment.captured / order.paid guarantee funds are actually
+    // captured. payment.authorized does NOT — for methods where auto-capture
+    // is off, an authorized payment can still fail to capture, and there is
+    // no revocation path, so it must not grant access.
+    if (event === 'payment.captured' || event === 'order.paid') {
       const paymentData = body.payload?.payment?.entity;
       if (!paymentData) {
         return NextResponse.json({ error: 'Invalid payload structure' }, { status: 400 });
       }
 
       const { userId, planId, courseId } = paymentData.notes || {};
-      const amountPaid = paymentData.amount ? paymentData.amount / 100 : 0; // Convert from paise
+      const amountPaid = paymentData.amount ? paymentData.amount / 100 : 0; // paise -> rupees
 
-      if (userId && planId && courseId && PLAN_PRICING[planId]) {
-        const planData = PLAN_PRICING[planId];
-        const days = planData.durationDays;
-        const effectiveCourseId = courseId;
-
-        const expiresAt = new Date();
-        expiresAt.setDate(expiresAt.getDate() + days);
-
-        const userRef = adminDb.collection('users').doc(userId);
-
-        // Grant entitlement and track revenue atomically (use set with merge to avoid not-found errors)
-        await userRef.set({
-          enrolledCourses: {
-            [effectiveCourseId]: {
-              expiresAt: Timestamp.fromDate(expiresAt),
-              enrolledAt: FieldValue.serverTimestamp(),
-              durationDays: days,
-              planId: planId,
-              paymentId: paymentData.id,
-            }
-          },
-          totalSpent: FieldValue.increment(amountPaid),
-          lastPaymentAt: FieldValue.serverTimestamp(),
-        }, { merge: true });
-
-        console.log(`Webhook entitlement granted: userId=${userId}, courseId=${effectiveCourseId}, durationDays=${days}`);
-        
-        // Dispatch Invoice Email
+      if (userId && planId && courseId) {
         try {
-          const userRecord = await adminAuth.getUser(userId);
-          if (userRecord.email) {
-            const courseDoc = await adminDb.collection('courses').doc(effectiveCourseId).get();
-            const courseTitle = courseDoc.exists ? courseDoc.data()?.title : 'Certification Track';
-            
-            const basePrice = planData.price;
-            const gstAmount = basePrice * GST_RATE;
-            
-            await sendInvoiceEmail({
-              email: userRecord.email,
-              name: userRecord.displayName || 'Candidate',
-              courseTitle: courseTitle,
-              planName: planData.name,
-              orderId: paymentData.order_id || paymentData.id,
-              amount: basePrice,
-              gstAmount: gstAmount,
-              total: amountPaid,
-            });
-          }
-        } catch (emailErr) {
-          console.error('Failed to send invoice email from webhook:', emailErr);
-          // Do not throw, webhook should still return 200 OK
+          const result = await grantEntitlementIdempotent({
+            userId,
+            planId,
+            courseId,
+            paymentId: paymentData.id,
+            orderId: paymentData.order_id,
+            amountPaid,
+            source: 'webhook',
+          });
+          console.log(`Webhook entitlement ${result.granted ? 'granted' : 'already granted (idempotent skip)'}: userId=${userId}, courseId=${courseId}, orderId=${paymentData.order_id}`);
+        } catch (grantErr) {
+          console.error('Webhook entitlement grant failed:', grantErr);
+          // Return 500 so Razorpay retries delivery — the grant is idempotent, so a retry is safe.
+          return NextResponse.json({ error: 'Entitlement grant failed' }, { status: 500 });
         }
-
       } else {
-        console.warn('Webhook received but missing userId or courseId in notes:', paymentData.notes);
+        console.warn('Webhook received but missing userId/planId/courseId in notes:', paymentData.notes);
       }
     }
 
@@ -117,4 +86,3 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
-

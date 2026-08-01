@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { adminAuth } from '@/lib/firebase/admin';
-import { PLAN_PRICING } from '@/constants/pricing';
+import { PLAN_PRICING, GST_RATE } from '@/constants/pricing';
+import { grantEntitlementIdempotent } from '@/lib/payments/grantEntitlement';
 
 export async function POST(req: Request) {
   try {
@@ -11,8 +12,9 @@ export async function POST(req: Request) {
     }
 
     const idToken = authHeader.split('Bearer ')[1];
+    let decodedToken;
     try {
-      await adminAuth.verifyIdToken(idToken);
+      decodedToken = await adminAuth.verifyIdToken(idToken);
     } catch {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -30,7 +32,7 @@ export async function POST(req: Request) {
 
     const credentials = Buffer.from(`${keyId}:${keySecret}`).toString('base64');
 
-    // 1. Fetch the order from Razorpay
+    // 1. Fetch the order from Razorpay directly (source of truth — not client-supplied data)
     const orderRes = await fetch(`https://api.razorpay.com/v1/orders/${orderId}`, {
       headers: { 'Authorization': `Basic ${credentials}` },
     });
@@ -41,6 +43,13 @@ export async function POST(req: Request) {
     }
 
     const orderData = await orderRes.json();
+    const notes = orderData.notes || {};
+
+    // Ownership check — this order must belong to the authenticated caller.
+    // Without this, any logged-in user could probe another user's order/payment status.
+    if (notes.userId && notes.userId !== decodedToken.uid) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
 
     // order.status can be: created | attempted | paid
     if (orderData.status === 'paid') {
@@ -52,20 +61,43 @@ export async function POST(req: Request) {
       let paymentId = null;
       if (paymentsRes.ok) {
         const paymentsData = await paymentsRes.json();
-        // Find the captured/authorized payment
         const successfulPayment = paymentsData.items?.find(
-          (p: any) => p.status === 'captured' || p.status === 'authorized'
+          (p: any) => p.status === 'captured'
         );
         if (successfulPayment) {
           paymentId = successfulPayment.id;
         }
       }
 
+      // We asked Razorpay directly, with our secret key, whether this order is
+      // paid — that is a stronger signal than a client-supplied signature.
+      // Grant entitlement right here server-side instead of round-tripping
+      // through /verify (which requires a real Razorpay-issued signature the
+      // client doesn't have in a reconciliation scenario).
+      let granted = false;
+      if (paymentId && notes.userId && notes.planId && notes.courseId && PLAN_PRICING[notes.planId]) {
+        const planData = PLAN_PRICING[notes.planId];
+        const gstAmount = Math.round((planData.price * GST_RATE) * 100) / 100;
+        const amountPaid = Math.round((planData.price + gstAmount) * 100) / 100;
+
+        const result = await grantEntitlementIdempotent({
+          userId: notes.userId,
+          planId: notes.planId,
+          courseId: notes.courseId,
+          paymentId,
+          orderId,
+          amountPaid,
+          source: 'reconcile',
+        });
+        granted = result.granted || result.alreadyProcessed;
+      }
+
       return NextResponse.json({
         status: 'paid',
         paymentId,
         orderId,
-        notes: orderData.notes || {},
+        granted,
+        notes,
       });
     }
 

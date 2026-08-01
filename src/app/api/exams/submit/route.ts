@@ -25,6 +25,11 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
+    const callerDoc = await adminDb.collection('users').doc(uid).get();
+    if (callerDoc.exists && callerDoc.data()?.suspended) {
+      return NextResponse.json({ error: 'Account suspended' }, { status: 403 });
+    }
+
     // 1. Verify Attempt limits (Server-side enforcement)
     const attemptsSnapshot = await adminDb.collection('test_attempts')
       .where('userId', '==', uid)

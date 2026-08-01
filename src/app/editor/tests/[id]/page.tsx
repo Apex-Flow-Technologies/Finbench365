@@ -4,7 +4,6 @@ import React, { useState, useEffect, useRef, use, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { getMockTest, getTestQuestions, saveQuestionsBatch, createMockTest, updateChapter, updateCourse, updateMockTest } from '@/lib/firebase/db';
 import { ParsedQuestion, parseDocxText } from '@/lib/parser';
-import * as mammoth from 'mammoth';
 import { UploadCloud, CheckCircle2, AlertCircle, Save, Plus, ChevronDown, ChevronUp, Trash2, ArrowLeft, Loader2 } from 'lucide-react';
 
 export default function TestBuilderPage({ params }: { params: Promise<{ id: string }> }) {
@@ -78,8 +77,10 @@ function TestBuilderContent({ params }: { params: Promise<{ id: string }> }) {
       const reader = new FileReader();
       reader.onload = async (event) => {
         const arrayBuffer = event.target?.result as ArrayBuffer;
-        
-        // Use mammoth to extract raw text
+
+        // Lazy-load mammoth (docx parser) only when a file is actually uploaded,
+        // instead of shipping it in the initial bundle for every visitor of this page.
+        const mammoth = await import('mammoth');
         const result = await mammoth.extractRawText({ arrayBuffer });
         const text = result.value;
         

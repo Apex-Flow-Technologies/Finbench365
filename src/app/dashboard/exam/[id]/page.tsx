@@ -594,7 +594,7 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
 
             <LoadingButton
               onClick={handleStartExam}
-              loading={isSubmitting}
+              isLoading={isSubmitting}
               disabled={isExhausted || questions.length === 0}
               className="w-full py-4 bg-amber-500 hover:bg-amber-400 disabled:opacity-50 text-slate-950 font-bold rounded-xl text-base transition-all h-14"
             >
@@ -657,9 +657,9 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
               <Clock className="w-4 h-4" />
               {test?.type === 'exam' ? formatTime(timeRemaining) : 'Practice Mode'}
             </div>
-            <LoadingButton 
+            <LoadingButton
               onClick={handleManualSubmit}
-              loading={isSubmitting}
+              isLoading={isSubmitting}
               className="px-4 py-2 h-9 rounded-xl bg-emerald-500 text-slate-950 font-bold text-xs hover:bg-emerald-400 transition-all"
             >
               Submit Exam

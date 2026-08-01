@@ -62,11 +62,35 @@ function CheckoutContent() {
   const [orderCompleted, setOrderCompleted] = useState(false);
   const [completedOrderId, setCompletedOrderId] = useState('');
   const [agreeLegal, setAgreeLegal] = useState(false);
-  
-  // Track the current Razorpay order to prevent double charges and enable recovery
+  // True when money may have moved but we haven't confirmed entitlement yet —
+  // shown instead of a false "success" or false "failure" message.
+  const [pendingConfirmation, setPendingConfirmation] = useState(false);
+
+  // Track the current Razorpay order to prevent double charges and enable recovery.
+  // Also mirrored to sessionStorage so a page reload/close doesn't lose the
+  // ability to reconcile a payment that succeeded but never confirmed in-browser.
   const currentOrderIdRef = useRef<string | null>(null);
   const isReconciling = useRef(false);
-  
+  const clickLock = useRef(false);
+
+  const PENDING_ORDER_STORAGE_KEY = 'finbench_pending_order';
+
+  const rememberPendingOrder = (orderId: string) => {
+    currentOrderIdRef.current = orderId;
+    try {
+      sessionStorage.setItem(PENDING_ORDER_STORAGE_KEY, JSON.stringify({ orderId, planId, courseId, ts: Date.now() }));
+    } catch {
+      // sessionStorage unavailable (private mode etc.) — in-memory tracking still works for this tab session
+    }
+  };
+
+  const forgetPendingOrder = () => {
+    currentOrderIdRef.current = null;
+    try {
+      sessionStorage.removeItem(PENDING_ORDER_STORAGE_KEY);
+    } catch {}
+  };
+
   const [course, setCourse] = useState<any>(null);
 
   useEffect(() => {
@@ -74,6 +98,32 @@ function CheckoutContent() {
       getCourse(courseId).then(setCourse).catch(console.error);
     }
   }, [courseId]);
+
+  // On mount, recover a pending order from a previous tab session (e.g. the
+  // user closed the tab right after seeing "Too many requests") and silently
+  // re-check its real status, instead of leaving them with no path back.
+  useEffect(() => {
+    if (!user) return;
+    try {
+      const raw = sessionStorage.getItem(PENDING_ORDER_STORAGE_KEY);
+      if (!raw) return;
+      const saved = JSON.parse(raw);
+      const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+      if (saved?.orderId && saved.courseId === courseId && Date.now() - saved.ts < ONE_DAY_MS) {
+        currentOrderIdRef.current = saved.orderId;
+        setIsProcessing(true);
+        reconcileOrderStatus(saved.orderId).then((result) => {
+          if (result !== 'paid') {
+            setPendingConfirmation(true);
+            setIsProcessing(false);
+          }
+        });
+      } else {
+        sessionStorage.removeItem(PENDING_ORDER_STORAGE_KEY);
+      }
+    } catch {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, courseId]);
 
   // Auto-populate from Firebase Auth (not stale localStorage)
   useEffect(() => {
@@ -111,9 +161,13 @@ function CheckoutContent() {
     }
   };
 
-  // Reconcile: check real order status from Razorpay when SDK reports failure or user closes popup
-  const reconcileOrderStatus = useCallback(async (orderId: string) => {
-    if (!user || isReconciling.current) return;
+  // Reconcile: ask the server to check the real order status directly with
+  // Razorpay. If paid, the server grants entitlement itself (idempotently) —
+  // the client never fabricates a signature. Returns the resolved state so
+  // callers can decide what to show instead of this function guessing.
+  const reconcileOrderStatus = useCallback(async (orderId: string): Promise<'paid' | 'not-paid' | 'error'> => {
+    if (!user) return 'error';
+    if (isReconciling.current) return 'error';
     isReconciling.current = true;
     try {
       const token = await user.getIdToken(true);
@@ -128,86 +182,63 @@ function CheckoutContent() {
 
       if (res.ok) {
         const data = await res.json();
-        if (data.status === 'paid' && data.paymentId) {
-          // Payment actually succeeded — grant access via verify endpoint
-          try {
-            const freshToken = await user.getIdToken(true);
-            await fetch('/api/payments/verify', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${freshToken}`,
-              },
-              body: JSON.stringify({
-                razorpay_payment_id: data.paymentId,
-                razorpay_order_id: orderId,
-                razorpay_signature: 'webhook_reconciled',
-                planId,
-                courseId,
-              }),
-            });
-          } catch (verifyErr) {
-            console.error('Reconcile verify call failed:', verifyErr);
-          }
-          // Show success — payment went through
-          currentOrderIdRef.current = null;
+        if (data.status === 'paid') {
+          // Server already confirmed with Razorpay directly and granted
+          // entitlement (or found it already granted) — safe to show success.
+          forgetPendingOrder();
           setCompletedOrderId(orderId);
           setOrderCompleted(true);
           setIsProcessing(false);
-          return;
+          setPendingConfirmation(false);
+          return 'paid';
         }
+        return 'not-paid';
       }
-      // Order not paid — safe to allow retry
-      setIsProcessing(false);
+      return 'error';
     } catch {
-      setIsProcessing(false);
+      return 'error';
     } finally {
       isReconciling.current = false;
     }
-  }, [user, planId, courseId]);
+  }, [user]);
 
   const handleOpenRazorpay = async (e: React.FormEvent) => {
     e.preventDefault();
+    // Synchronous re-entrancy guard: closes the double-click race where a
+    // second click can land before React commits the disabled button state.
+    if (clickLock.current) return;
+    clickLock.current = true;
+
     setFormError('');
+    setPendingConfirmation(false);
 
-    if (!name.trim() || !email.trim() || !phone.trim()) {
-      setFormError('Please fill in your Name, Email, and Phone to proceed.');
-      return;
-    }
-    if (!validatePhone(phone)) {
-      setFormError('Please enter a valid 10-digit Indian mobile number.');
-      return;
-    }
-    if (!agreeLegal) {
-      setFormError('You must agree to the Terms and the Refund & Cancellation Policy to proceed.');
-      return;
-    }
-    if (!user) {
-      setFormError('Please sign in to complete your purchase.');
-      return;
-    }
-
-    setIsProcessing(true);
     try {
-      // Double-charge prevention: if we already created an order, check if it was paid
+      if (!name.trim() || !email.trim() || !phone.trim()) {
+        setFormError('Please fill in your Name, Email, and Phone to proceed.');
+        return;
+      }
+      if (!validatePhone(phone)) {
+        setFormError('Please enter a valid 10-digit Indian mobile number.');
+        return;
+      }
+      if (!agreeLegal) {
+        setFormError('You must agree to the Terms and the Refund & Cancellation Policy to proceed.');
+        return;
+      }
+      if (!user) {
+        setFormError('Please sign in to complete your purchase.');
+        return;
+      }
+
+      setIsProcessing(true);
+
+      // Double-charge prevention: if we already have a tracked order, check
+      // its real status before doing anything else.
       if (currentOrderIdRef.current) {
-        const token = await user.getIdToken(true);
-        const checkRes = await fetch('/api/payments/check-order-status', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
-          },
-          body: JSON.stringify({ orderId: currentOrderIdRef.current }),
-        });
-        if (checkRes.ok) {
-          const checkData = await checkRes.json();
-          if (checkData.status === 'paid') {
-            // Already paid! Reconcile and grant access instead of creating a new order
-            await reconcileOrderStatus(currentOrderIdRef.current);
-            return;
-          }
-        }
+        const result = await reconcileOrderStatus(currentOrderIdRef.current);
+        if (result === 'paid') return; // success screen already shown
+        // 'not-paid' or 'error' — safe to proceed; create-order will
+        // transparently reuse the same pending order if still fresh.
       }
 
       const token = await user.getIdToken(true);
@@ -226,6 +257,7 @@ function CheckoutContent() {
 
       if (data.bypassed) {
         // 100% Discount was applied and access was granted directly by the server
+        forgetPendingOrder();
         setIsProcessing(false);
         setCompletedOrderId(data.orderId || `BYPASS-${Math.floor(1000 + Math.random() * 9000)}`);
         setOrderCompleted(true);
@@ -236,7 +268,7 @@ function CheckoutContent() {
       }
 
       const { order } = data;
-      currentOrderIdRef.current = order.id;
+      rememberPendingOrder(order.id);
 
       const rzp = new (window as any).Razorpay({
         key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
@@ -246,7 +278,8 @@ function CheckoutContent() {
         name: 'MyExams365',
         description: planName,
         handler: async (response: any) => {
-          // Payment succeeded on Razorpay — verify and grant access
+          // Razorpay's own SDK reports success here — verify with the real,
+          // signed response and grant access.
           try {
             const freshToken = await user.getIdToken(true);
             const verifyRes = await fetch('/api/payments/verify', {
@@ -264,17 +297,24 @@ function CheckoutContent() {
               })
             });
 
-            if (!verifyRes.ok) {
-              const errData = await verifyRes.json();
-              console.error('Verify failed:', errData);
+            if (verifyRes.ok) {
+              forgetPendingOrder();
+              setCompletedOrderId(response.razorpay_order_id);
+              setOrderCompleted(true);
+              setPendingConfirmation(false);
+              setIsProcessing(false);
+              return;
             }
+            const errData = await verifyRes.json().catch(() => ({}));
+            console.error('Verify failed:', errData);
           } catch (verifyErr) {
             console.error('Verify call failed:', verifyErr);
           }
-          // Show success
-          currentOrderIdRef.current = null;
-          setCompletedOrderId(response.razorpay_order_id);
-          setOrderCompleted(true);
+          // Razorpay's SDK said success but our verify call didn't confirm —
+          // this is likely transient. Don't claim success or failure; the
+          // order id stays tracked so reconciliation (or a page reload) can
+          // resolve it, and the webhook is still in flight as a backstop.
+          setPendingConfirmation(true);
           setIsProcessing(false);
         },
         prefill: { name, email, contact: phone.replace(/\s+/g, '') },
@@ -282,8 +322,13 @@ function CheckoutContent() {
         modal: {
           ondismiss: async () => {
             // User closed the popup — check if payment actually went through
+            // before assuming it was abandoned cleanly.
             if (currentOrderIdRef.current) {
-              await reconcileOrderStatus(currentOrderIdRef.current);
+              const result = await reconcileOrderStatus(currentOrderIdRef.current);
+              if (result !== 'paid') {
+                setPendingConfirmation(true);
+                setIsProcessing(false);
+              }
             } else {
               setIsProcessing(false);
             }
@@ -298,7 +343,11 @@ function CheckoutContent() {
         if (currentOrderIdRef.current) {
           // Wait a brief moment for Razorpay to process the payment on their end
           await new Promise(resolve => setTimeout(resolve, 2000));
-          await reconcileOrderStatus(currentOrderIdRef.current);
+          const result = await reconcileOrderStatus(currentOrderIdRef.current);
+          if (result !== 'paid') {
+            setPendingConfirmation(true);
+            setIsProcessing(false);
+          }
         } else {
           setIsProcessing(false);
         }
@@ -308,6 +357,8 @@ function CheckoutContent() {
     } catch (err: any) {
       setFormError(err.message || 'Payment initialization failed. Please try again.');
       setIsProcessing(false);
+    } finally {
+      clickLock.current = false;
     }
   };
 
@@ -374,6 +425,60 @@ function CheckoutContent() {
     );
   }
 
+  if (pendingConfirmation) {
+    return (
+      <div className="min-h-screen pt-28 pb-20 px-6 flex items-center justify-center bg-[#121419] text-[#FBFBF9]">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="max-w-xl w-full rounded-3xl p-8 sm:p-10 text-center space-y-6 shadow-2xl bg-[#181A1F] border border-[#282C36]"
+        >
+          <div className="w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center mx-auto text-amber-500">
+            <AlertCircle className="w-8 h-8" />
+          </div>
+
+          <div className="space-y-2">
+            <h2 className="text-2xl sm:text-3xl font-bold font-sans text-white">
+              Confirming Your Payment
+            </h2>
+            <p className="text-sm leading-relaxed text-slate-300">
+              Razorpay reported an issue completing this checkout in your browser, but if money left your account, your access will still be granted automatically — this can take a few minutes.
+            </p>
+            <p className="text-sm leading-relaxed text-amber-400 font-semibold">
+              Please do not pay again. We are not asking you to retry payment right now.
+            </p>
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-3 pt-2">
+            <button
+              onClick={async () => {
+                if (currentOrderIdRef.current) {
+                  setIsProcessing(true);
+                  const result = await reconcileOrderStatus(currentOrderIdRef.current);
+                  setIsProcessing(false);
+                  if (result === 'paid') return;
+                }
+              }}
+              disabled={isProcessing}
+              className="flex-1 py-3.5 px-6 rounded-xl bg-amber-500 hover:bg-amber-400 disabled:opacity-50 text-[#121419] font-bold text-sm tracking-wide shadow-md transition-all duration-200 active:scale-[0.98]"
+            >
+              {isProcessing ? 'Checking…' : 'Check Payment Status Again'}
+            </button>
+            <button
+              onClick={() => router.push('/dashboard')}
+              className="flex-1 py-3.5 px-6 rounded-xl font-semibold text-sm transition-colors bg-[#272B33] hover:bg-[#343942] text-white"
+            >
+              Go to Dashboard
+            </button>
+          </div>
+          <p className="text-[11px] text-[#475569] leading-relaxed">
+            If this doesn&apos;t resolve within 15–20 minutes, contact support with your registered email — do not attempt payment a second time.
+          </p>
+        </motion.div>
+      </div>
+    );
+  }
+
 
   return (
     <div className="min-h-screen pt-24 pb-24 px-6 md:px-8 bg-[#121419] text-[#FBFBF9]">
@@ -416,11 +521,12 @@ function CheckoutContent() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div className="space-y-2">
-                  <label className="text-xs tabular-nums text-slate-300 flex items-center gap-1.5">
+                  <label htmlFor="checkout-name" className="text-xs tabular-nums text-slate-300 flex items-center gap-1.5">
                     <User className="w-3.5 h-3.5 text-amber-500" />
                     <span>Full Candidate Name *</span>
                   </label>
                   <input
+                    id="checkout-name"
                     type="text"
                     required
                     value={name}
@@ -431,11 +537,12 @@ function CheckoutContent() {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-xs tabular-nums text-slate-300 flex items-center gap-1.5">
+                  <label htmlFor="checkout-email" className="text-xs tabular-nums text-slate-300 flex items-center gap-1.5">
                     <Mail className="w-3.5 h-3.5 text-amber-500" />
                     <span>Email Address *</span>
                   </label>
                   <input
+                    id="checkout-email"
                     type="email"
                     required
                     value={email}
@@ -446,11 +553,12 @@ function CheckoutContent() {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-xs tabular-nums text-slate-300 flex items-center gap-1.5">
+                  <label htmlFor="checkout-phone" className="text-xs tabular-nums text-slate-300 flex items-center gap-1.5">
                     <Phone className="w-3.5 h-3.5 text-amber-500" />
                     <span>Mobile Number *</span>
                   </label>
                   <input
+                    id="checkout-phone"
                     type="tel"
                     required
                     value={phone}
@@ -461,11 +569,12 @@ function CheckoutContent() {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-xs tabular-nums text-slate-300 flex items-center gap-1.5">
+                  <label htmlFor="checkout-org" className="text-xs tabular-nums text-slate-300 flex items-center gap-1.5">
                     <Building2 className="w-3.5 h-3.5 text-[#475569]" />
                     <span>Institution / University (Optional)</span>
                   </label>
                   <input
+                    id="checkout-org"
                     type="text"
                     value={org}
                     onChange={(e) => setOrg(e.target.value)}

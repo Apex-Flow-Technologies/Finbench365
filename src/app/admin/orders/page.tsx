@@ -2,9 +2,10 @@
 
 import React, { useEffect, useState } from 'react';
 import { collection, query, getDocs, orderBy, doc, getDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase/config';
-import { CreditCard, CheckCircle2, ShieldCheck, Download, Search } from 'lucide-react';
+import { db, auth } from '@/lib/firebase/config';
+import { CreditCard, CheckCircle2, ShieldCheck, Download, Search, RefreshCw } from 'lucide-react';
 import { PLAN_PRICING } from '@/constants/pricing';
+import toast from 'react-hot-toast';
 
 interface Order {
   id: string;
@@ -23,6 +24,27 @@ export default function AdminOrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [reconciling, setReconciling] = useState(false);
+
+  const handleReconcile = async () => {
+    if (!auth.currentUser) return;
+    setReconciling(true);
+    try {
+      const token = await auth.currentUser.getIdToken();
+      const res = await fetch('/api/admin/reconcile-orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Reconciliation failed');
+      const healed = (data.results || []).filter((r: any) => r.outcome === 'healed-and-granted').length;
+      toast.success(`Reconciliation complete: scanned ${data.scanned}, healed ${healed} stuck order(s).`);
+    } catch (err: any) {
+      toast.error(err.message || 'Reconciliation failed');
+    } finally {
+      setReconciling(false);
+    }
+  };
 
   useEffect(() => {
     async function fetchOrders() {
@@ -89,7 +111,17 @@ export default function AdminOrdersPage() {
           </p>
         </div>
         
-        <div className="relative w-full sm:w-72">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
+          <button
+            onClick={handleReconcile}
+            disabled={reconciling}
+            title="Cross-checks orders stuck in 'created' status directly against Razorpay and grants access if they were actually captured"
+            className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold bg-amber-500 hover:bg-amber-400 disabled:opacity-50 text-slate-950 transition-colors whitespace-nowrap"
+          >
+            <RefreshCw className={`w-4 h-4 ${reconciling ? 'animate-spin' : ''}`} />
+            {reconciling ? 'Reconciling…' : 'Reconcile Stuck Orders'}
+          </button>
+          <div className="relative w-full sm:w-72">
           <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
             type="text"
@@ -98,6 +130,7 @@ export default function AdminOrdersPage() {
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-9 pr-4 py-2 bg-white dark:bg-[#121419] border border-slate-200 dark:border-[#282C36] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 text-slate-900 dark:text-white"
           />
+          </div>
         </div>
       </div>
 
