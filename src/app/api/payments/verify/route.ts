@@ -19,19 +19,15 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { razorpay_payment_id, razorpay_order_id, razorpay_signature, planId, courseId } = await req.json();
+    const { razorpay_payment_id, razorpay_order_id, razorpay_signature } = await req.json();
 
-    if (!razorpay_payment_id || !razorpay_order_id || !razorpay_signature || !planId || !courseId) {
+    if (!razorpay_payment_id || !razorpay_order_id || !razorpay_signature) {
       return NextResponse.json({ error: 'Missing payment verification fields' }, { status: 400 });
     }
 
-    const planData = PLAN_PRICING[planId];
-    if (!planData) {
-      return NextResponse.json({ error: 'Invalid planId provided during verification' }, { status: 400 });
-    }
-
+    const keyId = process.env.RAZORPAY_KEY_ID;
     const keySecret = process.env.RAZORPAY_KEY_SECRET;
-    if (!keySecret) {
+    if (!keyId || !keySecret) {
       return NextResponse.json({ error: 'Payment gateway not configured' }, { status: 503 });
     }
 
@@ -51,8 +47,37 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Payment verification failed' }, { status: 400 });
     }
 
-    // Signature is genuine — grant entitlement idempotently (safe even if the
-    // webhook already granted it for this order).
+    // The signature only proves this payment_id/order_id pair is genuine — it
+    // says nothing about which plan/course it was for. Fetch the order from
+    // Razorpay directly and use ITS notes (set server-side in create-order)
+    // as the source of truth, never client-supplied planId/courseId, which
+    // would otherwise let a caller pay for a cheap plan and request an
+    // expensive one in the same request.
+    const credentials = Buffer.from(`${keyId}:${keySecret}`).toString('base64');
+    const orderRes = await fetch(`https://api.razorpay.com/v1/orders/${razorpay_order_id}`, {
+      headers: { 'Authorization': `Basic ${credentials}` },
+    });
+
+    if (!orderRes.ok) {
+      console.error('Could not fetch order during verify:', orderRes.status);
+      return NextResponse.json({ error: 'Could not verify order' }, { status: 502 });
+    }
+
+    const orderData = await orderRes.json();
+    const notes = orderData.notes || {};
+
+    if (notes.userId !== decodedToken.uid) {
+      console.error('Verify ownership mismatch. order userId:', notes.userId, 'caller:', decodedToken.uid);
+      return NextResponse.json({ error: 'Order does not belong to this user' }, { status: 403 });
+    }
+
+    const planId = notes.planId;
+    const courseId = notes.courseId;
+    const planData = PLAN_PRICING[planId];
+    if (!planId || !courseId || !planData) {
+      return NextResponse.json({ error: 'Order is missing required metadata' }, { status: 400 });
+    }
+
     const basePrice = planData.price;
     const gstAmount = Math.round((basePrice * GST_RATE) * 100) / 100;
     const amountPaid = Math.round((basePrice + gstAmount) * 100) / 100;
@@ -74,7 +99,7 @@ export async function POST(req: Request) {
   } catch (error: any) {
     console.error('Payment verify error:', error);
     return NextResponse.json({
-      error: error.message || 'Internal Server Error',
+      error: 'Internal Server Error',
     }, { status: 500 });
   }
 }

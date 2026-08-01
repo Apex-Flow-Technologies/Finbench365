@@ -8,6 +8,17 @@ service cloud.firestore {
       return request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
+    function testDoc(testId) {
+      return get(/databases/$(database)/documents/mock_tests/$(testId)).data;
+    }
+
+    // True if the signed-in caller has a live (unexpired) entitlement for courseId.
+    function isEnrolledInCourse(courseId) {
+      let user = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+      let entitlement = user.get('enrolledCourses', {}).get(courseId, null);
+      return entitlement != null && entitlement.expiresAt > request.time;
+    }
+
     // Users Collection
     match /users/{userId} {
       // Anyone can create their initial user doc upon signup
@@ -43,7 +54,16 @@ service cloud.firestore {
       allow write: if isAdmin();
       
       match /questions/{questionId} {
-        allow read: if true;
+        // The actual paid exam content — public read here means anyone can
+        // scrape every question of every mock exam without paying. Only
+        // admins, and signed-in users who are either taking a free practice
+        // test or hold a live (unexpired) entitlement for the test's course,
+        // may read it.
+        allow read: if isAdmin()
+          || (request.auth != null && (
+            testDoc(testId).type == 'practice'
+            || isEnrolledInCourse(testDoc(testId).courseId)
+          ));
         allow write: if isAdmin();
       }
       
