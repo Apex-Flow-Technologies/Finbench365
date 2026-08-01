@@ -483,6 +483,22 @@ function CheckoutContent() {
           <p className="text-[11px] text-[#475569] leading-relaxed">
             If this doesn&apos;t resolve within 15–20 minutes, contact support with your registered email — do not attempt payment a second time.
           </p>
+
+          <button
+            onClick={() => {
+              // Explicit, user-initiated escape hatch — only ever fires on a
+              // deliberate click, never automatically, so it can't mask a
+              // genuine "money may be in flight" case. Lets someone who
+              // knowingly cancelled (e.g. closed the QR/UPI screen without
+              // paying) get back to a clean checkout without needing devtools.
+              forgetPendingOrder();
+              setPendingConfirmation(false);
+              setFormError('');
+            }}
+            className="text-xs text-[#475569] hover:text-white underline underline-offset-2 transition-colors"
+          >
+            I&apos;m sure I didn&apos;t complete this payment — start over
+          </button>
         </motion.div>
       </div>
     );
