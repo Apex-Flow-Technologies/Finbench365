@@ -710,8 +710,8 @@ function CheckoutContent() {
 
                 {couponApplied && (
                   <div className="flex items-center justify-between text-emerald-500 text-xs">
-                    <span>Institutional Discount (FINBENCH10)</span>
-                    <span>-₹0.00 (Tier Verified)</span>
+                    <span>Coupon ({coupon.trim().toUpperCase()}) — {discountPercent}% off</span>
+                    <span>-₹{(basePrice - discountedPrice).toFixed(2)}</span>
                   </div>
                 )}
 
