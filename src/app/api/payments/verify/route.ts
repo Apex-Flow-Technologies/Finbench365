@@ -71,6 +71,15 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Order does not belong to this user' }, { status: 403 });
     }
 
+    // A valid signature can exist for an order that later ends up merely
+    // authorized rather than captured — Razorpay only marks the order
+    // 'paid' once a payment against it is actually captured, so require
+    // that here rather than trusting the signature alone.
+    if (orderData.status !== 'paid') {
+      console.error('Verify called for a non-captured order. status:', orderData.status, 'orderId:', razorpay_order_id);
+      return NextResponse.json({ error: 'Payment not yet captured' }, { status: 409 });
+    }
+
     const planId = notes.planId;
     const courseId = notes.courseId;
     const planData = PLAN_PRICING[planId];
