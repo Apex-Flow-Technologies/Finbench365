@@ -72,6 +72,10 @@ function CheckoutContent() {
   const currentOrderIdRef = useRef<string | null>(null);
   const isReconciling = useRef(false);
   const clickLock = useRef(false);
+  // True only when Razorpay's SDK actually reported payment.failed for this
+  // attempt — lets modal.ondismiss (which fires right after) tell a genuine
+  // failure apart from a plain "user closed the popup" cancel.
+  const paymentFailedRef = useRef(false);
 
   const PENDING_ORDER_STORAGE_KEY = 'finbench_pending_order';
 
@@ -330,14 +334,21 @@ function CheckoutContent() {
         theme: { color: '#F59E0B' },
         modal: {
           ondismiss: async () => {
-            // User closed the popup — check if payment actually went through
-            // before assuming it was abandoned cleanly.
+            // payment.failed (below) already handled a genuine failed attempt
+            // and shown the cautious screen — don't double-handle it here.
+            if (paymentFailedRef.current) {
+              paymentFailedRef.current = false;
+              return;
+            }
+            // A plain "user closed the popup" with no failure ever reported.
+            // Still worth one quiet check in case it actually succeeded, but
+            // otherwise there's nothing ambiguous here — just drop it and
+            // return to a clean checkout instead of a scary warning.
             if (currentOrderIdRef.current) {
               const result = await reconcileOrderStatus(currentOrderIdRef.current);
-              if (result !== 'paid' && result !== 'not-found') {
-                setPendingConfirmation(true);
-                setIsProcessing(false);
-              }
+              if (result === 'paid') return;
+              forgetPendingOrder();
+              setIsProcessing(false);
             } else {
               setIsProcessing(false);
             }
@@ -348,6 +359,7 @@ function CheckoutContent() {
       // Handle SDK-reported failures — check real status before showing error
       rzp.on('payment.failed', async (failedResponse: any) => {
         console.warn('Razorpay SDK reported payment.failed:', failedResponse?.error?.description);
+        paymentFailedRef.current = true;
         // Don't trust the SDK — the payment may have actually succeeded (e.g. 429 rate limit)
         if (currentOrderIdRef.current) {
           // Wait a brief moment for Razorpay to process the payment on their end
