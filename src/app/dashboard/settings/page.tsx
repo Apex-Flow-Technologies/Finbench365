@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { useAuth } from '@/context/AuthContext';
+import { useRouter } from 'next-nprogress-bar';
 import { auth, db } from '@/lib/firebase/config';
 import { updateProfile } from 'firebase/auth';
 import { doc, updateDoc, serverTimestamp, collection, onSnapshot, query, orderBy } from 'firebase/firestore';
@@ -18,6 +19,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 export default function SettingsPage() {
   const { user } = useAuth();
+  const router = useRouter();
 
   // Active Tab State
   const [activeTab, setActiveTab] = useState<'user' | 'admin'>('user');
@@ -110,57 +112,6 @@ export default function SettingsPage() {
   // ----------------------------------------------------
   // TAB 2: ADMIN CONTROLS STATE
   // ----------------------------------------------------
-  // Feature Flags State
-  const [featureFlags, setFeatureFlags] = useState({
-    pdfExport: true,
-    excelMetrics: true,
-    serverTimers: true,
-    rateLimiting: true,
-    aiExplainer: false
-  });
-
-  const handleToggleFlag = async (key: keyof typeof featureFlags) => {
-    const newValue = !featureFlags[key];
-    setFeatureFlags(prev => ({ ...prev, [key]: newValue }));
-    try {
-      await updateDoc(doc(db, 'config', 'featureFlags'), {
-        [key]: newValue,
-        updatedAt: serverTimestamp()
-      });
-      toast.success(`Feature flag "${key}" ${newValue ? 'enabled' : 'disabled'}`);
-    } catch (err: any) {
-      // Revert on failure
-      setFeatureFlags(prev => ({ ...prev, [key]: !newValue }));
-      toast.error('Failed to update feature flag.');
-    }
-  };
-
-  // Tier Pricing Matrix State (INR ₹)
-  const [pricing, setPricing] = useState({ tier1: '999', tier2: '1499', tier3: '2499' });
-  const [isSavingPricing, setIsSavingPricing] = useState(false);
-  const [pricingSaved, setPricingSaved] = useState(false);
-
-  const handleSavePricing = async (e: React.FormEvent) => {
-    e.preventDefault();
-    triggerTopProgress();
-    setIsSavingPricing(true);
-    try {
-      await updateDoc(doc(db, 'config', 'pricing'), {
-        tier1: Number(pricing.tier1),
-        tier2: Number(pricing.tier2),
-        tier3: Number(pricing.tier3),
-        updatedAt: serverTimestamp()
-      });
-      setPricingSaved(true);
-      toast.success('Pricing updated successfully!');
-      setTimeout(() => setPricingSaved(false), 2500);
-    } catch (err: any) {
-      toast.error('Failed to save pricing: ' + (err.message || 'Unknown error'));
-    } finally {
-      setIsSavingPricing(false);
-    }
-  };
-
   // User Management — load real users from Firestore
   const [userSearch, setUserSearch] = useState('');
   const [managedUsers, setManagedUsers] = useState<any[]>([]);
@@ -215,11 +166,6 @@ export default function SettingsPage() {
     } finally {
       setTogglingUserId(null);
     }
-  };
-
-  const handleGrantDays = async (id: string, days: number) => {
-    // Grant additional days — requires knowing which course; log for now
-    toast('To grant days, use the Admin Users page to update enrollment directly.', { icon: 'ℹ️' });
   };
 
   const filteredUsers = managedUsers.filter(u =>
@@ -550,125 +496,11 @@ export default function SettingsPage() {
               transition={{ duration: 0.2 }}
               className="space-y-8"
             >
-              {/* 1. Feature Flag Configurator */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                
-                {/* Feature Toggles Grid */}
-                <div className="backdrop-blur-md bg-zinc-900/80 border border-white/10 rounded-2xl p-6 sm:p-8 space-y-6 shadow-xl">
-                  <div className="flex items-center justify-between border-b border-white/10 pb-4">
-                    <div className="flex items-center gap-2.5 font-bold text-lg text-white">
-                      <Sliders className="w-5 h-5 text-amber-500" />
-                      1. Interactive Feature Flags
-                    </div>
-                    <span className="text-xs tabular-nums text-indigo-400 bg-indigo-500/10 border border-indigo-500/20 px-2.5 py-0.5 rounded font-bold">
-                      Platform Rules
-                    </span>
-                  </div>
-
-                  <div className="space-y-4">
-                    {[
-                      { key: 'pdfExport' as const, label: 'PDF Export & Study Downloads', desc: 'Allow candidates to download flat PDF materials.' },
-                      { key: 'excelMetrics' as const, label: 'Excel Score Metrics', desc: 'Enable downloadable CSV/XLSX analytics reports.' },
-                      { key: 'serverTimers' as const, label: 'Server-Authoritative Timers', desc: 'Force CBT timer sync with Firebase Cloud Timestamp.' },
-                      { key: 'rateLimiting' as const, label: 'API Rate Limiting Guard', desc: 'Restrict submit endpoints to 60 requests/minute.' },
-                      { key: 'aiExplainer' as const, label: 'AI Question Explainer', desc: 'Automated solution breakdowns for mock exam MCQs.' },
-                    ].map((flag) => {
-                      const isActive = featureFlags[flag.key];
-                      return (
-                        <div key={flag.key} className="flex items-center justify-between p-4 bg-slate-900/90 border border-white/10 rounded-xl">
-                          <div>
-                            <div className="font-bold text-white text-sm">{flag.label}</div>
-                            <div className="text-xs text-[#475569] mt-0.5">{flag.desc}</div>
-                          </div>
-                          <button
-                            onClick={() => handleToggleFlag(flag.key)}
-                            className={`relative inline-flex items-center h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${
-                              isActive ? 'bg-emerald-500' : 'bg-slate-700'
-                            }`}
-                          >
-                            <span className={`inline-block h-5 w-5 rounded-full bg-white transform transition duration-200 ease-in-out ${
-                              isActive ? 'translate-x-5' : 'translate-x-0'
-                            }`} />
-                          </button>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Pricing Matrix Configurator */}
-                <div className="backdrop-blur-md bg-zinc-900/80 border border-white/10 rounded-2xl p-6 sm:p-8 space-y-6 shadow-xl">
-                  <div className="flex items-center justify-between border-b border-white/10 pb-4">
-                    <div className="flex items-center gap-2.5 font-bold text-lg text-white">
-                      <DollarSign className="w-5 h-5 text-amber-500" />
-                      2. Tier Pricing Matrix (INR ₹)
-                    </div>
-                    <span className="text-xs tabular-nums text-[#475569]">18% GST Excl.</span>
-                  </div>
-
-                  <div className="text-xs text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-xl px-3 py-2 leading-relaxed">
-                    Reference only — actual checkout pricing is governed by server-side plan constants and does not read from these values.
-                  </div>
-
-                  <form onSubmit={handleSavePricing} className="space-y-4">
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-bold text-[#475569] uppercase">Tier 1: Starter Pack (INR ₹)</label>
-                      <div className="relative">
-                        <span className="absolute left-4 top-3 text-[#475569] font-bold text-sm">₹</span>
-                        <input
-                          type="number"
-                          value={pricing.tier1}
-                          onChange={(e) => setPricing({ ...pricing, tier1: e.target.value })}
-                          className="w-full bg-slate-900/90 border border-white/10 rounded-xl pl-9 pr-4 py-2.5 text-sm tabular-nums font-bold text-white focus:outline-none focus:border-amber-500"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-bold text-[#475569] uppercase">Tier 2: NISM V-A Pro Pack (INR ₹)</label>
-                      <div className="relative">
-                        <span className="absolute left-4 top-3 text-[#475569] font-bold text-sm">₹</span>
-                        <input
-                          type="number"
-                          value={pricing.tier2}
-                          onChange={(e) => setPricing({ ...pricing, tier2: e.target.value })}
-                          className="w-full bg-slate-900/90 border border-white/10 rounded-xl pl-9 pr-4 py-2.5 text-sm tabular-nums font-bold text-white focus:outline-none focus:border-amber-500"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-bold text-[#475569] uppercase">Tier 3: Institutional Suite (INR ₹)</label>
-                      <div className="relative">
-                        <span className="absolute left-4 top-3 text-[#475569] font-bold text-sm">₹</span>
-                        <input
-                          type="number"
-                          value={pricing.tier3}
-                          onChange={(e) => setPricing({ ...pricing, tier3: e.target.value })}
-                          className="w-full bg-slate-900/90 border border-white/10 rounded-xl pl-9 pr-4 py-2.5 text-sm tabular-nums font-bold text-white focus:outline-none focus:border-amber-500"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="pt-2">
-                      <button
-                        type="submit"
-                        disabled={isSavingPricing}
-                        className="w-full py-3 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl text-sm transition-all shadow-[0_0_20px_rgba(245,158,11,0.3)] active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2"
-                      >
-                        {isSavingPricing ? (
-                          <><Loader2 className="w-4 h-4 animate-spin" /> Saving Rates...</>
-                        ) : pricingSaved ? (
-                          <><CheckCircle2 className="w-4 h-4" /> Rates Saved!</>
-                        ) : (
-                          'Save Pricing Matrix'
-                        )}
-                      </button>
-                    </div>
-                  </form>
-                </div>
-
-              </div>
+              {/* Feature-flag and pricing-matrix panels were removed: they wrote
+                  to Firestore but nothing in the application ever read those
+                  values back, so toggling them changed nothing while appearing
+                  to work. Plan pricing is defined in src/constants/pricing.ts and
+                  applied server-side at order creation and payment verification. */}
 
               {/* 2. Candidate User Search & Entitlement Actions */}
               <div className="backdrop-blur-md bg-zinc-900/80 border border-white/10 rounded-2xl p-6 sm:p-8 space-y-6 shadow-xl">
@@ -722,17 +554,15 @@ export default function SettingsPage() {
                           </td>
                           <td className="py-4 px-4 text-right">
                             <div className="flex items-center justify-end gap-2">
+                              {/* Granting days needs a target course, which this
+                                  view doesn't carry — send the admin to the page
+                                  that can actually do it instead of offering
+                                  buttons that only raise a toast. */}
                               <button
-                                onClick={() => handleGrantDays(usr.id, 15)}
+                                onClick={() => router.push('/admin/users')}
                                 className="px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-lg text-xs font-bold transition-all"
                               >
-                                +15 Days
-                              </button>
-                              <button
-                                onClick={() => handleGrantDays(usr.id, 30)}
-                                className="px-3 py-1.5 bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-300 border border-indigo-500/30 rounded-lg text-xs font-bold transition-all"
-                              >
-                                +30 Days
+                                Manage Access
                               </button>
                               <button
                                 disabled={togglingUserId === usr.id}

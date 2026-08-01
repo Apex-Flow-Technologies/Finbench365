@@ -1,43 +1,34 @@
 import { NextResponse } from 'next/server';
-import { adminDb, adminAuth } from '@/lib/firebase/admin';
+import { adminDb } from '@/lib/firebase/admin';
+import { requireEntitlement } from '@/lib/api/requireEntitlement';
 
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const authHeader = request.headers.get('Authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const token = authHeader.split('Bearer ')[1];
-    await adminAuth.verifyIdToken(token); // Verify user is logged in
-
     const testId = (await params).id;
     if (!testId) {
       return NextResponse.json({ error: 'Test ID required' }, { status: 400 });
     }
 
-    // 1. Fetch the mock test
-    const testRef = adminDb.collection('mock_tests').doc(testId);
-    const testDoc = await testRef.get();
-
-    if (!testDoc.exists) {
-      return NextResponse.json({ error: 'Test not found' }, { status: 404 });
+    // Answer keys are paid content — being signed in is not enough. The caller
+    // must hold a live entitlement for the course that owns this test.
+    const check = await requireEntitlement(request, testId);
+    if (!check.ok) {
+      return NextResponse.json({ error: check.error, reason: check.reason }, { status: check.status });
     }
 
-    const testData = testDoc.data();
-
-    // 2. Check if the test is a practice test
-    if (testData?.type !== 'practice') {
+    // Only practice tests ever release their answer key to the browser;
+    // certification exams are graded server-side and never expose solutions.
+    if (check.testData.type !== 'practice') {
       return NextResponse.json({ error: 'Solutions not available for exam mode' }, { status: 403 });
     }
 
-    // 3. Fetch solutions
-    const solutionsSnap = await testRef.collection('solutions').get();
+    const solutionsSnap = await adminDb
+      .collection('mock_tests').doc(testId).collection('solutions').get();
+
     const solutionsMap: Record<string, any> = {};
-    
     solutionsSnap.forEach((doc) => {
       solutionsMap[doc.id] = doc.data();
     });
@@ -45,6 +36,6 @@ export async function GET(
     return NextResponse.json({ solutions: solutionsMap });
   } catch (error: any) {
     console.error('Error fetching solutions:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }

@@ -8,15 +8,31 @@ service cloud.firestore {
       return request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
+    // Editors author courses and question banks; admins can do everything.
+    function isEditor() {
+      return request.auth != null &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['editor', 'admin'];
+    }
+
     function testDoc(testId) {
       return get(/databases/$(database)/documents/mock_tests/$(testId)).data;
     }
 
     // True if the signed-in caller has a live (unexpired) entitlement for courseId.
+    // An empty/unknown courseId can never match, so tests that are unlinked or
+    // point at a deleted course fail closed rather than falling open.
     function isEnrolledInCourse(courseId) {
       let user = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
       let entitlement = user.get('enrolledCourses', {}).get(courseId, null);
-      return entitlement != null && entitlement.expiresAt > request.time;
+      return courseId != '' && entitlement != null && entitlement.expiresAt > request.time;
+    }
+
+    // Single gate for paid exam content. Applies to practice tests as well as
+    // certification exams — practice material is part of the paid course, and
+    // exempting it left every published practice test readable by any account.
+    function canReadTestContent(testId) {
+      return isEditor() ||
+        (request.auth != null && isEnrolledInCourse(testDoc(testId).get('courseId', '')));
     }
 
     // Users Collection
@@ -39,38 +55,36 @@ service cloud.firestore {
     // Courses Collection
     match /courses/{courseId} {
       allow read: if true; // Public can read published courses
-      allow write: if isAdmin();
+      allow write: if isEditor();
     }
     
     // Chapters Collection
     match /chapters/{chapterId} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow write: if isEditor();
     }
 
     // Mock Tests Collection
     match /mock_tests/{testId} {
+      // Test metadata (title, duration, question count) stays publicly readable
+      // so the catalogue and marketing pages can list what a course contains.
+      // The questions and solutions below are the actual paid content.
       allow read: if true;
-      allow write: if isAdmin();
-      
+      allow write: if isEditor();
+
       match /questions/{questionId} {
-        // The actual paid exam content — public read here means anyone can
-        // scrape every question of every mock exam without paying. Only
-        // admins, and signed-in users who are either taking a free practice
-        // test or hold a live (unexpired) entitlement for the test's course,
-        // may read it.
-        allow read: if isAdmin()
-          || (request.auth != null && (
-            testDoc(testId).type == 'practice'
-            || isEnrolledInCourse(testDoc(testId).courseId)
-          ));
-        allow write: if isAdmin();
+        allow read: if canReadTestContent(testId);
+        allow write: if isEditor();
       }
-      
+
       match /solutions/{questionId} {
-        // Only admins can read/write the hidden solutions, or users taking a practice test
-        allow read: if isAdmin() || (request.auth != null && get(/databases/$(database)/documents/mock_tests/$(testId)).data.type == 'practice');
-        allow write: if isAdmin();
+        // Answer keys. Practice solutions are released to entitled candidates
+        // as part of the learning flow; certification answer keys are never
+        // served to any browser — grading happens server-side via the Admin SDK,
+        // which bypasses these rules entirely.
+        allow read: if isEditor() ||
+          (canReadTestContent(testId) && testDoc(testId).get('type', '') == 'practice');
+        allow write: if isEditor();
       }
     }
 

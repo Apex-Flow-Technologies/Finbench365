@@ -161,12 +161,28 @@ function TestBuilderContent({ params }: { params: Promise<{ id: string }> }) {
         await updateCourse(effectiveCourseId, { mockTestId: currentTestId });
       }
     } else {
+      // Access to a test is resolved through the course that owns it. A test
+      // with no courseId (or one pointing at a deleted course) can never be
+      // entitled to, so publishing it would make it silently unreadable for
+      // every candidate — including paying ones. Block that here rather than
+      // letting it fail later as an unexplained "exam not found".
+      if ((test?.isPublished ?? false) && !effectiveCourseId) {
+        alert(
+          "This test isn't linked to a course, so it can't be published — candidates would be unable to open it. " +
+          "Create it from inside a course, or contact support to relink it."
+        );
+        return null;
+      }
+
       await updateMockTest(currentTestId, {
         title: test?.title || 'Mock Test',
         durationMinutes: test?.durationMinutes || 120,
         totalQuestions: questions.length,
         isPublished: test?.isPublished || false,
-        type: test?.type || 'practice'
+        type: test?.type || 'practice',
+        // Heal legacy rows that predate courseId being required, when we can
+        // infer the owning course from how the editor was opened.
+        ...(effectiveCourseId ? { courseId: effectiveCourseId } : {}),
       });
     }
 

@@ -1,23 +1,10 @@
 import { NextResponse } from 'next/server';
-import { adminDb, adminAuth } from '@/lib/firebase/admin';
+import { adminDb } from '@/lib/firebase/admin';
 import { FieldValue } from 'firebase-admin/firestore';
+import { requireEntitlement } from '@/lib/api/requireEntitlement';
 
 export async function POST(req: Request) {
   try {
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const idToken = authHeader.split('Bearer ')[1];
-    let decodedToken;
-    try {
-      decodedToken = await adminAuth.verifyIdToken(idToken);
-    } catch (err) {
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
-    }
-
-    const uid = decodedToken.uid;
     const body = await req.json();
     const { attemptId, testId, answers } = body;
 
@@ -25,10 +12,13 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    const callerDoc = await adminDb.collection('users').doc(uid).get();
-    if (callerDoc.exists && callerDoc.data()?.suspended) {
-      return NextResponse.json({ error: 'Account suspended' }, { status: 403 });
+    // Authenticates, rejects suspended accounts, and confirms a live
+    // entitlement for the course owning this test before anything is graded.
+    const check = await requireEntitlement(req, testId);
+    if (!check.ok) {
+      return NextResponse.json({ error: check.error, reason: check.reason }, { status: check.status });
     }
+    const uid = check.uid;
 
     // 1. Verify Attempt limits (Server-side enforcement)
     const attemptsSnapshot = await adminDb.collection('test_attempts')

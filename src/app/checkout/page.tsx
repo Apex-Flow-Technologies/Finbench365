@@ -62,9 +62,13 @@ function CheckoutContent() {
   const [orderCompleted, setOrderCompleted] = useState(false);
   const [completedOrderId, setCompletedOrderId] = useState('');
   const [agreeLegal, setAgreeLegal] = useState(false);
-  // True when money may have moved but we haven't confirmed entitlement yet —
-  // shown instead of a false "success" or false "failure" message.
+  // Shown only after Razorpay reports a genuine payment.failed — money may have
+  // moved without us being able to confirm entitlement in the browser.
   const [pendingConfirmation, setPendingConfirmation] = useState(false);
+  // A soft, non-blocking banner: a payment was started against a previous order
+  // but never confirmed. Enough to stop a double payment, without alarming
+  // someone who simply changed their mind.
+  const [recentAttemptNotice, setRecentAttemptNotice] = useState(false);
 
   // Track the current Razorpay order to prevent double charges and enable recovery.
   // Also mirrored to sessionStorage so a page reload/close doesn't lose the
@@ -103,9 +107,10 @@ function CheckoutContent() {
     }
   }, [courseId]);
 
-  // On mount, recover a pending order from a previous tab session (e.g. the
-  // user closed the tab right after seeing "Too many requests") and silently
-  // re-check its real status, instead of leaving them with no path back.
+  // On mount, quietly re-check any order left over from a previous tab session.
+  // If it was actually paid the success screen appears; otherwise the candidate
+  // lands on a normal checkout page. Nothing here ever blocks the page — an
+  // abandoned order is the common case and should not look like an emergency.
   useEffect(() => {
     if (!user) return;
     try {
@@ -115,12 +120,12 @@ function CheckoutContent() {
       const ONE_DAY_MS = 24 * 60 * 60 * 1000;
       if (saved?.orderId && saved.courseId === courseId && Date.now() - saved.ts < ONE_DAY_MS) {
         currentOrderIdRef.current = saved.orderId;
-        setIsProcessing(true);
         reconcileOrderStatus(saved.orderId).then((result) => {
-          if (result !== 'paid' && result !== 'not-found') {
-            setPendingConfirmation(true);
-            setIsProcessing(false);
-          }
+          if (result === 'paid') return;
+          // Only if a payment was actually started against this order do we
+          // surface a gentle, non-blocking reminder not to pay twice.
+          if (result === 'attempted') setRecentAttemptNotice(true);
+          forgetPendingOrder();
         });
       } else {
         sessionStorage.removeItem(PENDING_ORDER_STORAGE_KEY);
@@ -169,7 +174,7 @@ function CheckoutContent() {
   // Razorpay. If paid, the server grants entitlement itself (idempotently) —
   // the client never fabricates a signature. Returns the resolved state so
   // callers can decide what to show instead of this function guessing.
-  const reconcileOrderStatus = useCallback(async (orderId: string): Promise<'paid' | 'not-paid' | 'not-found' | 'error'> => {
+  const reconcileOrderStatus = useCallback(async (orderId: string): Promise<'paid' | 'attempted' | 'not-paid' | 'not-found' | 'error'> => {
     if (!user) return 'error';
     if (isReconciling.current) return 'error';
     isReconciling.current = true;
@@ -205,6 +210,10 @@ function CheckoutContent() {
           setPendingConfirmation(false);
           return 'not-found';
         }
+        // 'attempted' means the gateway saw a real payment attempt against this
+        // order (a UPI collect request was raised, a card was submitted, …).
+        // 'created' means the checkout was opened but nothing was ever tried.
+        if (data.status === 'attempted') return 'attempted';
         return 'not-paid';
       }
       return 'error';
@@ -342,11 +351,12 @@ function CheckoutContent() {
             }
             // A plain "user closed the popup" with no failure ever reported.
             // Still worth one quiet check in case it actually succeeded, but
-            // otherwise there's nothing ambiguous here — just drop it and
-            // return to a clean checkout instead of a scary warning.
+            // otherwise this is an ordinary cancel: return to a clean checkout
+            // exactly like any other store, never a full-screen warning.
             if (currentOrderIdRef.current) {
               const result = await reconcileOrderStatus(currentOrderIdRef.current);
               if (result === 'paid') return;
+              if (result === 'attempted') setRecentAttemptNotice(true);
               forgetPendingOrder();
               setIsProcessing(false);
             } else {
@@ -495,22 +505,6 @@ function CheckoutContent() {
           <p className="text-[11px] text-[#475569] leading-relaxed">
             If this doesn&apos;t resolve within 15–20 minutes, contact support with your registered email — do not attempt payment a second time.
           </p>
-
-          <button
-            onClick={() => {
-              // Explicit, user-initiated escape hatch — only ever fires on a
-              // deliberate click, never automatically, so it can't mask a
-              // genuine "money may be in flight" case. Lets someone who
-              // knowingly cancelled (e.g. closed the QR/UPI screen without
-              // paying) get back to a clean checkout without needing devtools.
-              forgetPendingOrder();
-              setPendingConfirmation(false);
-              setFormError('');
-            }}
-            className="text-xs text-[#475569] hover:text-white underline underline-offset-2 transition-colors"
-          >
-            I&apos;m sure I didn&apos;t complete this payment — start over
-          </button>
         </motion.div>
       </div>
     );
@@ -780,6 +774,37 @@ function CheckoutContent() {
                   I agree to the <Link href="/terms" className="text-amber-500 hover:underline">Terms of Service</Link> and the <Link href="/refunds" className="text-amber-500 hover:underline">Refund & Cancellation Policy</Link>. I understand that sales are final and access activates immediately upon payment.
                 </label>
               </div>
+
+              {/* Soft reminder after an abandoned-but-attempted payment.
+                  Deliberately non-blocking and dismissible — it exists only to
+                  prevent an accidental double payment, not to alarm. */}
+              <AnimatePresence>
+                {recentAttemptNotice && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    transition={{ duration: 0.25 }}
+                    className="overflow-hidden"
+                  >
+                    <div className="flex items-start gap-2 p-3 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-300 text-xs">
+                      <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                      <span className="flex-1">
+                        You started a payment a moment ago. If it went through, your access is granted
+                        automatically within a few minutes — no need to pay again.
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setRecentAttemptNotice(false)}
+                        className="shrink-0 text-blue-300/70 hover:text-white transition-colors"
+                        aria-label="Dismiss"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
               {/* Inline Form Error */}
               {formError && (

@@ -5,7 +5,7 @@ import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { useAuth } from '@/context/AuthContext';
 import { auth } from '@/lib/firebase/config';
 import { signOut } from 'firebase/auth';
-import { LogOut, BookOpen, Clock, Award, Layers, Loader2 } from 'lucide-react';
+import { LogOut, BookOpen, Clock, Award, Layers, Loader2, RefreshCw } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { getUserEntitlements, getCourses, getUserAnalytics } from '@/lib/firebase/db';
 import { useRouter } from 'next-nprogress-bar';
@@ -176,12 +176,19 @@ export default function DashboardPage() {
                     const isPending = pendingCourseId === entitlement.courseId;
 
                     return (
-                      <motion.div 
+                      <motion.div
                         variants={itemVariants}
-                        whileHover={{ scale: 1.02, y: -4 }}
+                        whileHover={isExpired ? { scale: 1.01 } : { scale: 1.02, y: -4 }}
                         whileTap={{ scale: 0.98 }}
-                        key={entitlement.courseId} 
-                        className="rounded-2xl border transition-all duration-300 overflow-hidden flex flex-col bg-white border-slate-200 hover:shadow-xl dark:bg-[#181A1F] dark:border-white/10 dark:hover:border-white/20 dark:hover:shadow-[0_8px_30px_rgba(0,0,0,0.4)] relative group"
+                        key={entitlement.courseId}
+                        className={`rounded-2xl border transition-all duration-300 overflow-hidden flex flex-col relative group ${
+                          isExpired
+                            // Expired tracks are visibly retired — desaturated and
+                            // dimmed — so an active course is never confused with a
+                            // lapsed one at a glance.
+                            ? 'bg-slate-50 border-slate-200 grayscale opacity-70 hover:opacity-100 hover:grayscale-0 dark:bg-[#141518] dark:border-white/5'
+                            : 'bg-white border-slate-200 hover:shadow-xl dark:bg-[#181A1F] dark:border-white/10 dark:hover:border-white/20 dark:hover:shadow-[0_8px_30px_rgba(0,0,0,0.4)]'
+                        }`}
                       >
                         {/* Subtle glow effect on hover */}
                         <div className="absolute inset-0 bg-gradient-to-tr from-amber-500/0 to-amber-500/0 group-hover:from-amber-500/5 group-hover:to-transparent transition-colors duration-500 pointer-events-none" />
@@ -195,6 +202,16 @@ export default function DashboardPage() {
                             <span className="px-2.5 py-1 rounded-md bg-amber-500 text-slate-950 font-black text-[10px] uppercase tabular-nums tracking-wider shadow-sm">
                               ADMIN PREVIEW
                             </span>
+                          )}
+                          {isExpired && (
+                            <motion.span
+                              initial={{ opacity: 0, scale: 0.85 }}
+                              animate={{ opacity: 1, scale: 1 }}
+                              transition={{ delay: 0.15, type: 'spring', stiffness: 300, damping: 18 }}
+                              className="px-2.5 py-1 rounded-md bg-red-500/15 text-red-600 dark:text-red-400 border border-red-500/30 font-black text-[10px] uppercase tabular-nums tracking-wider"
+                            >
+                              EXPIRED
+                            </motion.span>
                           )}
                         </div>
 
@@ -238,12 +255,15 @@ export default function DashboardPage() {
 
                           <div className="mt-6 flex flex-wrap gap-3">
                             {isExpired ? (
-                              <button 
+                              <motion.button
+                                whileHover={{ scale: 1.02 }}
+                                whileTap={{ scale: 0.97 }}
                                 onClick={() => router.push(`/pricing?courseId=${entitlement.courseId}&track=${encodeURIComponent(entitlement.course.title)}`)}
-                                className="px-5 py-2.5 rounded-lg text-sm font-bold shadow-md transition-colors bg-slate-900 text-white hover:bg-slate-800 dark:bg-amber-500 dark:text-slate-900 dark:hover:bg-amber-400 w-full"
+                                className="px-5 py-3 rounded-xl text-sm font-bold shadow-md transition-colors bg-slate-900 text-white hover:bg-slate-800 dark:bg-amber-500 dark:text-slate-900 dark:hover:bg-amber-400 w-full flex items-center justify-center gap-2"
                               >
-                                Renew Access
-                              </button>
+                                <RefreshCw className="w-4 h-4" />
+                                <span>Renew Access</span>
+                              </motion.button>
                             ) : (
                               <button 
                                 onClick={() => handleOpenCourse(entitlement.courseId)}

@@ -13,7 +13,8 @@ import {
   getTestAttemptsCount,
   updateAttemptHeartbeat,
   expireAttemptDueToDisconnect,
-  getActiveAttemptForUser
+  getActiveAttemptForUser,
+  getUserEntitlements
 } from '@/lib/firebase/db';
 import { Clock, AlertCircle, ChevronLeft, ChevronRight, CheckCircle2, LayoutGrid, AlertTriangle, ShieldCheck } from 'lucide-react';
 import { AdminPreviewBanner } from '@/components/AdminPreviewBanner';
@@ -32,6 +33,12 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
   const [error, setError] = useState('');
   const [attemptsCount, setAttemptsCount] = useState<number>(0);
   const MAX_ATTEMPTS = 10;
+
+  // Entitlement gate. The server and Firestore rules are the real enforcement;
+  // this exists so an expired candidate sees "your access ran out — renew"
+  // instead of a misleading "this exam could not be found".
+  const [accessDenied, setAccessDenied] = useState<null | 'expired' | 'not-enrolled' | 'misconfigured'>(null);
+  const [accessCourseId, setAccessCourseId] = useState<string | null>(null);
   
   // Anti-Cheat & Disconnect State
   const [isDisqualified, setIsDisqualified] = useState(false);
@@ -61,16 +68,36 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
   useEffect(() => {
     async function loadTest() {
       try {
-        const testPromise = getMockTest(testId);
-        const questionsPromise = getTestQuestions(testId, false);
-        const attemptsCountPromise = user ? getTestAttemptsCount(user.uid, testId) : Promise.resolve(0);
-        const activeAttemptPromise = user ? getActiveAttemptForUser(user.uid, testId) : Promise.resolve(null);
+        // Test metadata is readable before entitlement — we need its courseId
+        // to know what entitlement to look for in the first place.
+        const testData: any = await getMockTest(testId);
+        const isAdminOrEditorRole = user?.role === 'admin' || user?.role === 'editor';
+        setAccessCourseId(testData?.courseId || null);
 
-        const [testData, questionsData, count, activeAttempt] = await Promise.all([
-          testPromise,
-          questionsPromise,
-          attemptsCountPromise,
-          activeAttemptPromise
+        if (user && !isAdminOrEditorRole) {
+          if (!testData?.courseId) {
+            setAccessDenied('misconfigured');
+            setLoading(false);
+            return;
+          }
+          const entitlements = await getUserEntitlements(user.uid);
+          const entitlement = entitlements.find((e) => e.courseId === testData.courseId);
+          if (!entitlement) {
+            setAccessDenied('not-enrolled');
+            setLoading(false);
+            return;
+          }
+          if (!entitlement.isActive) {
+            setAccessDenied('expired');
+            setLoading(false);
+            return;
+          }
+        }
+
+        const [questionsData, count, activeAttempt] = await Promise.all([
+          getTestQuestions(testId, false),
+          user ? getTestAttemptsCount(user.uid, testId) : Promise.resolve(0),
+          user ? getActiveAttemptForUser(user.uid, testId) : Promise.resolve(null),
         ]);
 
         setTest(testData as any);
@@ -470,6 +497,58 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
       <ProtectedRoute>
         <div className="min-h-screen bg-slate-900 flex items-center justify-center text-white">
           <AlertCircle className="w-8 h-8 animate-spin text-amber-500 mb-2" />
+        </div>
+      </ProtectedRoute>
+    );
+  }
+
+  if (accessDenied) {
+    const copy = {
+      expired: {
+        title: 'Your Access Has Expired',
+        body: 'Your enrolment for this course has ended, so this exam is no longer available. Renewing restores access to every test in the track along with your existing progress.',
+        cta: 'Renew Access',
+      },
+      'not-enrolled': {
+        title: 'Access Required',
+        body: 'This exam is part of a paid certification track you are not currently enrolled in.',
+        cta: 'View Plans',
+      },
+      misconfigured: {
+        title: 'Exam Unavailable',
+        body: 'This exam is not currently linked to a course, so access cannot be verified. Please contact support and quote this exam link.',
+        cta: 'Back to Dashboard',
+      },
+    }[accessDenied];
+
+    return (
+      <ProtectedRoute requiredRole="student">
+        <div className="min-h-screen bg-slate-900 text-white flex flex-col items-center justify-center p-6 text-center">
+          <div className="w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center mb-5 text-amber-500">
+            <Clock className="w-8 h-8" />
+          </div>
+          <h2 className="text-2xl font-bold mb-3">{copy.title}</h2>
+          <p className="text-[#94A3B8] mb-7 max-w-md text-sm leading-relaxed">{copy.body}</p>
+          <div className="flex flex-col sm:flex-row gap-3">
+            <button
+              onClick={() =>
+                accessDenied === 'misconfigured'
+                  ? router.push('/dashboard')
+                  : router.push(accessCourseId ? `/pricing?courseId=${accessCourseId}` : '/pricing')
+              }
+              className="px-6 py-3 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl shadow-lg transition-colors active:scale-[0.98]"
+            >
+              {copy.cta}
+            </button>
+            {accessDenied !== 'misconfigured' && (
+              <button
+                onClick={() => router.push('/dashboard')}
+                className="px-6 py-3 bg-[#272B33] hover:bg-[#343942] text-white font-semibold rounded-xl transition-colors"
+              >
+                Back to Dashboard
+              </button>
+            )}
+          </div>
         </div>
       </ProtectedRoute>
     );
