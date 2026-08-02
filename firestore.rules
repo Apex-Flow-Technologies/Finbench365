@@ -123,6 +123,19 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // Admin audit trail. Readable by admins so it can be reviewed in the panel,
+    // but never client-writable — an audit log an actor can edit is worthless.
+    // All entries are written by the Admin SDK, which bypasses these rules.
+    match /admin_audit/{document} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    // Discount codes are deliberately absent from these rules, which means
+    // clients are default-denied. Do NOT add a read rule: it would expose a
+    // browsable list of working discount codes to every visitor. All access
+    // goes through /api/admin/coupons and the server-side redemption path.
+
     // App Configuration (feature flags, display pricing, etc.) — admin only.
     // Client SDK reads are allowed so authenticated users can react to feature
     // flags; actual checkout pricing is never read from here (see constants/pricing.ts).

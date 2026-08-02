@@ -10,7 +10,18 @@ interface GrantParams {
   paymentId: string;
   orderId: string;
   amountPaid: number; // rupees, final amount actually paid (incl. GST)
-  source: 'verify' | 'webhook' | 'reconcile' | 'coupon';
+  source: 'verify' | 'webhook' | 'reconcile' | 'coupon' | 'admin';
+  /**
+   * 'grant' (default) sets access to now + the plan's duration.
+   * 'extend' adds the duration on top of any remaining access instead.
+   *
+   * This distinction matters: a plain grant on a student who still has 40 days
+   * left would SHORTEN their access to the plan length. Extending must only
+   * ever move the expiry forward.
+   */
+  mode?: 'grant' | 'extend';
+  /** Suppresses the invoice email — an admin grant is not a purchase. */
+  skipInvoiceEmail?: boolean;
 }
 
 interface GrantResult {
@@ -27,7 +38,8 @@ interface GrantResult {
  * are only run when this call is the one that actually transitioned the order.
  */
 export async function grantEntitlementIdempotent(params: GrantParams): Promise<GrantResult> {
-  const { userId, planId, courseId, paymentId, orderId, amountPaid, source } = params;
+  const { userId, planId, courseId, paymentId, orderId, amountPaid, source,
+          mode = 'grant', skipInvoiceEmail = false } = params;
 
   const planData = PLAN_PRICING[planId];
   if (!planData) {
@@ -41,13 +53,31 @@ export async function grantEntitlementIdempotent(params: GrantParams): Promise<G
   const userRef = adminDb.collection('users').doc(userId);
 
   const alreadyProcessed = await adminDb.runTransaction(async (tx: Transaction) => {
-    const existing = await tx.get(orderRef);
+    // Firestore requires every read in a transaction to happen before any
+    // write, so both reads are issued up front even though the user document
+    // is only needed for 'extend'.
+    const [existing, userSnap] = await Promise.all([tx.get(orderRef), tx.get(userRef)]);
+
     if (existing.exists && existing.data()?.status === 'success') {
       return true;
     }
 
     const days = planData.durationDays;
-    const expiresAt = new Date();
+
+    // Extending measures from whatever access remains, never from today —
+    // otherwise topping up a student with 40 days left would cut them back to
+    // the plan length. A lapsed entitlement restarts from now.
+    let base = Date.now();
+    if (mode === 'extend') {
+      const current = userSnap.exists
+        ? (userSnap.data()?.enrolledCourses ?? {})[courseId]
+        : null;
+      const currentMs = current?.expiresAt?.toMillis?.()
+        ?? (current?.expiresAt ? new Date(current.expiresAt).getTime() : 0);
+      if (Number.isFinite(currentMs) && currentMs > base) base = currentMs;
+    }
+
+    const expiresAt = new Date(base);
     expiresAt.setDate(expiresAt.getDate() + days);
 
     tx.set(userRef, {
@@ -110,7 +140,7 @@ export async function grantEntitlementIdempotent(params: GrantParams): Promise<G
         .catch((e) => console.error('Could not denormalise userEmail on order:', e));
     }
 
-    if (userRecord.email) {
+    if (userRecord.email && !skipInvoiceEmail) {
       const courseDoc = await adminDb.collection('courses').doc(courseId).get();
       const courseTitle = courseDoc.exists ? courseDoc.data()?.title : 'Certification Track';
 

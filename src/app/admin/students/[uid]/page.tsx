@@ -13,9 +13,10 @@ import {
 } from '@/components/admin/primitives';
 import {
   ArrowLeft, Mail, Calendar, ShieldCheck, UserX, UserCheck,
-  BookOpen, CreditCard, ClipboardList, AlertTriangle,
+  BookOpen, CreditCard, ClipboardList, AlertTriangle, Gift,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { PLAN_PRICING } from '@/constants/pricing';
 
 /**
  * Everything about one student in one place.
@@ -40,6 +41,9 @@ export default function StudentDetailPage({ params }: { params: Promise<{ uid: s
 
   const [confirmSuspend, setConfirmSuspend] = useState(false);
   const [working, setWorking] = useState(false);
+  const [grantOpen, setGrantOpen] = useState(false);
+  const [grantForm, setGrantForm] = useState({ courseId: '', planId: 'plan-30', mode: 'grant' as 'grant' | 'extend', reason: '' });
+  const [confirmRevoke, setConfirmRevoke] = useState<{ courseId: string; title: string } | null>(null);
 
   const courseTitle = (courseId: string) =>
     content?.courses.find((c) => c.id === courseId)?.title ?? courseId;
@@ -83,6 +87,62 @@ export default function StudentDetailPage({ params }: { params: Promise<{ uid: s
     })();
     return () => { cancelled = true; };
   }, [uid]);
+
+  const adminAction = async (url: string, body: any) => {
+    if (!auth.currentUser) throw new Error('Not signed in');
+    const token = await auth.currentUser.getIdToken();
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify(body),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || 'Request failed');
+    return data;
+  };
+
+  const handleGrant = async () => {
+    if (!student || !grantForm.courseId) return;
+    setWorking(true);
+    try {
+      await adminAction('/api/admin/grant-access', {
+        targetUserId: student.id,
+        courseId: grantForm.courseId,
+        planId: grantForm.planId,
+        mode: grantForm.mode,
+        reason: grantForm.reason,
+      });
+      toast.success(grantForm.mode === 'extend' ? 'Access extended.' : 'Access granted.');
+      setGrantOpen(false);
+      setGrantForm({ courseId: '', planId: 'plan-30', mode: 'grant', reason: '' });
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setWorking(false);
+    }
+  };
+
+  const handleRevoke = async () => {
+    if (!student || !confirmRevoke) return;
+    setWorking(true);
+    try {
+      const data = await adminAction('/api/admin/user-actions', {
+        action: 'revokeCourse',
+        targetUserId: student.id,
+        courseId: confirmRevoke.courseId,
+      });
+      toast.success(
+        data.ordersMarkedRefunded
+          ? `Access revoked. ${data.ordersMarkedRefunded} order(s) marked refunded.`
+          : 'Access revoked.',
+      );
+      setConfirmRevoke(null);
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setWorking(false);
+    }
+  };
 
   // Suspension goes through the server API, never a direct client write:
   // `suspended` is a rules-protected field and the API records who did it.
@@ -129,7 +189,10 @@ export default function StudentDetailPage({ params }: { params: Promise<{ uid: s
       <PageHeader
         title={student.name || 'Unnamed student'}
         subtitle={student.email || student.id}
-        actions={
+        actions={<>
+          <Button variant="secondary" onClick={() => setGrantOpen(true)}>
+            <span className="flex items-center gap-2"><Gift className="w-4 h-4" /> Grant access</span>
+          </Button>
           <Button
             variant={student.suspended ? 'primary' : 'danger'}
             onClick={() => setConfirmSuspend(true)}
@@ -139,7 +202,7 @@ export default function StudentDetailPage({ params }: { params: Promise<{ uid: s
               {student.suspended ? 'Reactivate' : 'Suspend'}
             </span>
           </Button>
-        }
+        </>}
       />
 
       {student.incomplete && (
@@ -170,9 +233,9 @@ export default function StudentDetailPage({ params }: { params: Promise<{ uid: s
       {/* --------------------------------------------------- entitlements */}
       <section>
         <SectionTitle hint={`${student.activeCount} active`}>Course access</SectionTitle>
-        <Table head={<><Th>Course</Th><Th>Plan</Th><Th>Expires</Th><Th className="text-right">Status</Th></>}>
+        <Table head={<><Th>Course</Th><Th>Plan</Th><Th>Expires</Th><Th className="text-right">Status</Th><Th /></>}>
           {student.entitlements.length === 0 ? (
-            <EmptyRow colSpan={4}>This student has no course access.</EmptyRow>
+            <EmptyRow colSpan={5}>This student has no course access.</EmptyRow>
           ) : (
             student.entitlements.map((e) => (
               <Row key={e.courseId}>
@@ -189,6 +252,14 @@ export default function StudentDetailPage({ params }: { params: Promise<{ uid: s
                         {e.daysLeft <= 0 ? 'expires today' : `${e.daysLeft} day${e.daysLeft === 1 ? '' : 's'} left`}
                       </Badge>
                     : <Badge tone="neutral">Expired</Badge>}
+                </Td>
+                <Td className="text-right">
+                  <button
+                    onClick={() => setConfirmRevoke({ courseId: e.courseId, title: courseTitle(e.courseId) })}
+                    className="text-xs font-bold text-rose-600 dark:text-rose-400 hover:underline"
+                  >
+                    Revoke
+                  </button>
                 </Td>
               </Row>
             ))
@@ -267,6 +338,97 @@ export default function StudentDetailPage({ params }: { params: Promise<{ uid: s
       </section>
 
       <Dialog
+        open={grantOpen}
+        title="Grant course access"
+        description="Gives this student access without a payment. It is recorded as a comped enrolment, so it never counts toward revenue, and it is written to the audit log."
+        onClose={() => !working && setGrantOpen(false)}
+      >
+        <form onSubmit={(e) => { e.preventDefault(); handleGrant(); }} className="space-y-4">
+          <label className="block">
+            <span className="text-xs font-medium text-slate-600 dark:text-slate-300">Course</span>
+            <select
+              value={grantForm.courseId}
+              onChange={(ev) => setGrantForm({ ...grantForm, courseId: ev.target.value })}
+              className={selectCls}
+            >
+              <option value="">Select a course…</option>
+              {(content?.courses ?? []).map((c) => (
+                <option key={c.id} value={c.id}>{c.title}</option>
+              ))}
+            </select>
+          </label>
+
+          <label className="block">
+            <span className="text-xs font-medium text-slate-600 dark:text-slate-300">Duration</span>
+            <select
+              value={grantForm.planId}
+              onChange={(ev) => setGrantForm({ ...grantForm, planId: ev.target.value })}
+              className={selectCls}
+            >
+              {Object.entries(PLAN_PRICING).map(([id, plan]) => (
+                <option key={id} value={id}>{plan.name} — {plan.durationDays} days</option>
+              ))}
+            </select>
+          </label>
+
+          <div className="flex gap-2">
+            {(['grant', 'extend'] as const).map((m) => (
+              <button
+                key={m}
+                type="button"
+                onClick={() => setGrantForm({ ...grantForm, mode: m })}
+                className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition-colors ${
+                  grantForm.mode === m
+                    ? 'bg-amber-500 text-[#111B35]'
+                    : 'bg-slate-100 text-slate-600 dark:bg-white/5 dark:text-slate-400'
+                }`}
+              >
+                {m === 'grant' ? 'Set from today' : 'Add to existing'}
+              </button>
+            ))}
+          </div>
+          <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed -mt-1">
+            {grantForm.mode === 'grant'
+              ? 'Access runs from today for the full duration. If they already have longer remaining, this will shorten it.'
+              : 'The duration is added on top of whatever access remains, so their expiry only ever moves forward.'}
+          </p>
+
+          <label className="block">
+            <span className="text-xs font-medium text-slate-600 dark:text-slate-300">
+              Reason <span className="text-slate-400 font-normal">· recorded in the audit log</span>
+            </span>
+            <input
+              value={grantForm.reason}
+              onChange={(ev) => setGrantForm({ ...grantForm, reason: ev.target.value })}
+              placeholder="e.g. compensation for the failed payment on 2 Aug"
+              className={selectCls}
+            />
+          </label>
+
+          <DialogActions>
+            <Button type="submit" disabled={working || !grantForm.courseId}>
+              {working ? 'Working…' : grantForm.mode === 'extend' ? 'Extend access' : 'Grant access'}
+            </Button>
+            <Button variant="secondary" onClick={() => setGrantOpen(false)} disabled={working}>Cancel</Button>
+          </DialogActions>
+        </form>
+      </Dialog>
+
+      <Dialog
+        open={Boolean(confirmRevoke)}
+        title={`Revoke access to "${confirmRevoke?.title ?? ''}"?`}
+        description="The student loses access to this course immediately. Any successful orders for it are marked refunded so the ledger matches — do issue the actual refund in Razorpay separately, as this does not move money."
+        onClose={() => !working && setConfirmRevoke(null)}
+      >
+        <DialogActions>
+          <Button variant="danger" onClick={handleRevoke} disabled={working}>
+            {working ? 'Revoking…' : 'Revoke access'}
+          </Button>
+          <Button variant="secondary" onClick={() => setConfirmRevoke(null)} disabled={working}>Cancel</Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
         open={confirmSuspend}
         title={student.suspended ? 'Reactivate this account?' : 'Suspend this account?'}
         description={student.suspended
@@ -290,6 +452,9 @@ export default function StudentDetailPage({ params }: { params: Promise<{ uid: s
     </div>
   );
 }
+
+const selectCls =
+  'mt-1 w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-[#121419] border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white text-sm focus:outline-none focus:border-amber-500 transition-colors';
 
 function BackLink() {
   return (
