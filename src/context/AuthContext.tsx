@@ -7,7 +7,7 @@ import { doc, getDoc } from 'firebase/firestore';
 import { updateUserActiveSession, createUserProfile } from '@/lib/firebase/db';
 
 export interface UserProfile extends User {
-  role?: 'student' | 'editor' | 'admin';
+  role?: 'student' | 'admin';
 }
 
 interface AuthContextType {

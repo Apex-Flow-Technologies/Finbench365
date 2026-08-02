@@ -61,7 +61,7 @@ export async function requireEntitlement(
     return { ok: false, status: 403, error: 'Account suspended', reason: 'suspended' };
   }
 
-  const isStaff = userData.role === 'admin' || userData.role === 'editor';
+  const isStaff = userData.role === 'admin';
   const courseId: string | undefined = testData.courseId;
 
   if (isStaff) {

@@ -23,8 +23,8 @@ export default function DashboardPage() {
   useEffect(() => {
     if (!user) return;
 
-    if (user.role === 'admin' || user.role === 'editor') {
-      // Admins/editors get universal access to preview ALL courses
+    if (user.role === 'admin') {
+      // Admins get universal access to preview every course
       getCourses().then(allCourses => {
         const previewEntitlements = allCourses.map(course => ({
           courseId: course.id,
@@ -129,7 +129,7 @@ export default function DashboardPage() {
             <section>
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-bold text-[#111B35] dark:text-white">Your Enrolled Tracks</h2>
-                {(user?.role === 'admin' || user?.role === 'editor') && (
+                {(user?.role === 'admin') && (
                   <span className="px-3 py-1 bg-amber-500/10 text-amber-600 dark:text-amber-500 border border-amber-500/20 rounded-full text-xs tabular-nums font-bold uppercase tracking-wider">
                     ● Admin Universal Access
                   </span>

@@ -291,7 +291,7 @@ export async function getUserEntitlements(userId: string) {
 }
 
 // --- Admin Portal ---
-export async function updateUserRole(userId: string, newRole: 'student' | 'editor' | 'admin') {
+export async function updateUserRole(userId: string, newRole: 'student' | 'admin') {
   const userRef = doc(db, 'users', userId);
   await updateDoc(userRef, { role: newRole });
 }

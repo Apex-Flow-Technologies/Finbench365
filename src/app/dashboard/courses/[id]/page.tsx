@@ -38,7 +38,7 @@ export default function StudentExamPage({ params }: { params: Promise<{ id: stri
   const examId = unwrappedParams.id;
   const router = useRouter();
   const { user } = useAuth();
-  const isAdminOrEditor = user?.role === 'admin' || user?.role === 'editor';
+  const isAdminUser = user?.role === 'admin';
 
   const [exam, setExam] = useState<any>(null);
   const [tests, setTests] = useState<any[]>([]);
@@ -57,7 +57,7 @@ export default function StudentExamPage({ params }: { params: Promise<{ id: stri
 
       try {
         // 1. Check if Admin/Editor override applies
-        if (user.role === 'admin' || user.role === 'editor') {
+        if (user.role === 'admin') {
           setHasAccess(true);
           setDaysLeft(999);
         } else {
@@ -94,7 +94,7 @@ export default function StudentExamPage({ params }: { params: Promise<{ id: stri
         setExam(examData);
 
         // Filter to published tests (admins see all tests)
-        const publishedTests = user.role === 'admin' || user.role === 'editor'
+        const publishedTests = user.role === 'admin'
           ? testsData
           : testsData.filter((t: any) => t.isPublished !== false);
         setTests(publishedTests);
@@ -192,7 +192,7 @@ export default function StudentExamPage({ params }: { params: Promise<{ id: stri
                   <p className="text-[#334155] dark:text-[#94A3B8] text-sm max-w-2xl leading-relaxed">{exam?.description}</p>
                 </div>
                 <div className="shrink-0 flex flex-col items-end gap-1">
-                  {isAdminOrEditor ? (
+                  {isAdminUser ? (
                     <span className="text-xs tabular-nums text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 px-3.5 py-1.5 rounded-full font-bold uppercase tracking-wider">
                       ● ADMIN ACCESS
                     </span>
@@ -323,7 +323,7 @@ export default function StudentExamPage({ params }: { params: Promise<{ id: stri
                   tests.map((test, idx) => {
                     const attempts = attemptCounts[test.id] || 0;
                     const maxAttempts = 10;
-                    const isExhausted = !isAdminOrEditor && attempts >= maxAttempts;
+                    const isExhausted = !isAdminUser && attempts >= maxAttempts;
                     const progressPct = Math.min((attempts / maxAttempts) * 100, 100);
                     const isStarting = startingTestId === test.id;
 
@@ -350,7 +350,7 @@ export default function StudentExamPage({ params }: { params: Promise<{ id: stri
                                 <span>{test.totalQuestions} Questions</span>
                                 <span>·</span>
                                 <span className={isExhausted ? 'text-red-500' : 'text-amber-600 dark:text-amber-500'}>
-                                  {isAdminOrEditor ? 'Unlimited Attempts' : `${attempts}/${maxAttempts} attempts`}
+                                  {isAdminUser ? 'Unlimited Attempts' : `${attempts}/${maxAttempts} attempts`}
                                 </span>
                               </div>
                             </div>
@@ -378,7 +378,7 @@ export default function StudentExamPage({ params }: { params: Promise<{ id: stri
                         </div>
 
                         {/* Attempt progress bar */}
-                        {!isAdminOrEditor && (
+                        {!isAdminUser && (
                           <div className="h-1 bg-slate-100 dark:bg-[#282C36]">
                             <div
                               className={`h-full transition-all duration-500 ${isExhausted ? 'bg-red-400' : 'bg-amber-500'}`}

@@ -130,7 +130,7 @@ export function Navbar() {
               try {
                 if (!user) {
                   router.push('/login');
-                } else if (user.role === 'admin' || user.role === 'editor') {
+                } else if (user.role === 'admin') {
                   router.push('/admin');
                 } else {
                   router.push('/dashboard');
@@ -141,7 +141,7 @@ export function Navbar() {
             }}
             className="px-5 py-2.5 text-sm font-bold rounded-lg transition-all duration-300 shadow-sm bg-[#111B35] text-[#FBFBF9] dark:bg-white dark:text-[#111B35] hover:opacity-90 hover:shadow-md press-effect focus-ring"
           >
-            {user ? (user.role === 'admin' || user.role === 'editor' ? 'Admin Portal' : 'My Dashboard') : 'Login'}
+            {user ? (user.role === 'admin' ? 'Admin Portal' : 'My Dashboard') : 'Login'}
           </LoadingButton>
         </div>
 
@@ -198,7 +198,7 @@ export function Navbar() {
                     try {
                       if (!user) {
                         router.push('/login');
-                      } else if (user.role === 'admin' || user.role === 'editor') {
+                      } else if (user.role === 'admin') {
                         router.push('/admin');
                       } else {
                         router.push('/dashboard');
@@ -209,7 +209,7 @@ export function Navbar() {
                   }}
                   className="w-full py-3.5 text-center rounded-lg bg-[#111B35] text-[#FBFBF9] dark:bg-white dark:text-[#111B35] font-bold flex items-center justify-center gap-2 shadow-sm hover:opacity-90 transition-all press-effect"
                 >
-                  {user ? (user.role === 'admin' || user.role === 'editor' ? 'Admin Portal' : 'My Dashboard') : 'Login'}
+                  {user ? (user.role === 'admin' ? 'Admin Portal' : 'My Dashboard') : 'Login'}
                 </LoadingButton>
               </div>
             </div>

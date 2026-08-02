@@ -9,7 +9,7 @@ export function AdminPreviewBanner() {
   const { user } = useAuth();
   const router = useRouter();
 
-  if (!user || (user.role !== 'admin' && user.role !== 'editor')) {
+  if (!user || user.role !== 'admin') {
     return null;
   }
 

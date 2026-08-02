@@ -337,8 +337,8 @@ export default function ExamsPage() {
 
                     {/* Bottom Action Button */}
                     {(() => {
-                      // Admins/editors cannot buy — redirect to editor
-                      if (user?.role === 'admin' || user?.role === 'editor') {
+                      // Admins cannot buy their own product — send them to the editor
+                      if (user?.role === 'admin') {
                         return (
                           <button
                             onClick={() => router.push('/admin/content')}
@@ -431,8 +431,8 @@ export default function ExamsPage() {
                       {/* Right: Action Button */}
                       <div className="w-full lg:w-auto flex-shrink-0">
                         {(() => {
-                          // Admins/editors cannot buy — redirect to editor
-                          if (user?.role === 'admin' || user?.role === 'editor') {
+                          // Admins cannot buy their own product — send them to the editor
+                          if (user?.role === 'admin') {
                             return (
                               <button
                                 onClick={() => router.push('/admin/content')}

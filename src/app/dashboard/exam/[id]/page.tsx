@@ -71,10 +71,10 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
         // Test metadata is readable before entitlement — we need its courseId
         // to know what entitlement to look for in the first place.
         const testData: any = await getMockTest(testId);
-        const isAdminOrEditorRole = user?.role === 'admin' || user?.role === 'editor';
+        const isAdminUser = user?.role === 'admin';
         setAccessCourseId(testData?.courseId || null);
 
-        if (user && !isAdminOrEditorRole) {
+        if (user && !isAdminUser) {
           if (!testData?.courseId) {
             setAccessDenied('misconfigured');
             setLoading(false);
@@ -127,8 +127,6 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
         setQuestions(questionsData as any);
         setTimeRemaining((testData as any).durationMinutes * 60);
 
-        const isAdminOrEditor = user?.role === 'admin' || user?.role === 'editor';
-
         // Auto-restore backup from LocalStorage
         const cached = localStorage.getItem(`cbt_backup_${testId}`);
         let restored = false;
@@ -160,7 +158,7 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
         }
 
         // ONLY enforce 15-minute disconnect if they actually have an active session!
-        if (hasActiveSession && !isAdminOrEditor) {
+        if (hasActiveSession && !isAdminUser) {
           const lastActiveStr = localStorage.getItem(`cbt_last_active_${testId}`);
           if (lastActiveStr) {
             const lastActive = parseInt(lastActiveStr, 10);
@@ -640,13 +638,13 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
 
   // Pre-exam instructions screen
   if (status === 'pre_exam') {
-    const isAdminOrEditor = user?.role === 'admin' || user?.role === 'editor';
-    const isExhausted = !isAdminOrEditor && attemptsCount >= MAX_ATTEMPTS;
+    const isAdminUser = user?.role === 'admin';
+    const isExhausted = !isAdminUser && attemptsCount >= MAX_ATTEMPTS;
 
     return (
       <ProtectedRoute requiredRole="student">
         <div className="min-h-screen bg-slate-900 text-white pt-28 pb-16 px-6">
-          {isAdminOrEditor && <AdminPreviewBanner />}
+          {isAdminUser && <AdminPreviewBanner />}
           <div className="max-w-3xl mx-auto bg-zinc-900 border border-white/10 rounded-2xl p-8 space-y-6 shadow-2xl">
             <h1 className="text-2xl font-bold text-amber-500">{test.title} — CBT Simulator</h1>
             <p className="text-slate-300 text-sm">{test.description || "NISM Series V-A Official Standard Mock Exam."}</p>

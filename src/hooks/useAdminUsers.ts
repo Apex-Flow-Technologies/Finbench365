@@ -29,7 +29,7 @@ export interface AdminUser {
   id: string;
   name: string;
   email: string;
-  role: 'student' | 'editor' | 'admin';
+  role: 'student' | 'admin';
   suspended: boolean;
   createdAt: Date | null;
   totalSpent: number;
