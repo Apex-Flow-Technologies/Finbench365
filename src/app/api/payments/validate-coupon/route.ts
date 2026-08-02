@@ -1,9 +1,48 @@
 import { NextResponse } from 'next/server';
-import { adminDb } from '@/lib/firebase/admin';
+import { adminAuth, adminDb } from '@/lib/firebase/admin';
+import { rateLimit, clientIp } from '@/lib/api/rateLimit';
 
-// Server-side coupon validation — never expose coupon logic client-side
+/**
+ * Server-side coupon validation.
+ *
+ * This endpoint answers "is CODE valid, and for how much?", which makes it a
+ * guessing oracle for discount codes. Codes are short and human-chosen, and a
+ * discovered 100%-off code grants free course access through the bypass path
+ * in create-order — so this must not be open to anonymous callers.
+ *
+ * The coupons collection itself is deliberately unreadable by clients
+ * (see firestore.rules); leaving this endpoint unauthenticated would have
+ * handed out the same information one guess at a time.
+ */
 export async function POST(req: Request) {
   try {
+    // Sign-in required. A coupon is only usable at checkout, which already
+    // requires an account, so this costs a real customer nothing.
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      return NextResponse.json({ valid: false, message: 'Please sign in to apply a coupon.' }, { status: 401 });
+    }
+    let uid: string;
+    try {
+      uid = (await adminAuth.verifyIdToken(authHeader.split('Bearer ')[1])).uid;
+    } catch {
+      return NextResponse.json({ valid: false, message: 'Please sign in to apply a coupon.' }, { status: 401 });
+    }
+
+    // Durable, cross-instance limits. The in-memory middleware counter resets
+    // on cold start and is per-instance, so it cannot bound guessing on its own.
+    const [byUser, byIp] = await Promise.all([
+      rateLimit({ scope: 'coupon-check:uid', identifier: uid, limit: 20, windowMs: 60 * 60 * 1000 }),
+      rateLimit({ scope: 'coupon-check:ip', identifier: clientIp(req), limit: 40, windowMs: 60 * 60 * 1000 }),
+    ]);
+    const blocked = !byUser.allowed ? byUser : !byIp.allowed ? byIp : null;
+    if (blocked) {
+      return NextResponse.json(
+        { valid: false, message: 'Too many coupon attempts. Please try again later.' },
+        { status: 429, headers: { 'Retry-After': String(blocked.retryAfterSeconds) } },
+      );
+    }
+
     const body = await req.json();
     const { code } = body;
 

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, use } from 'react';
+import React, { useState, useEffect, useRef, use } from 'react';
 import { useRouter } from 'next-nprogress-bar';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { useAuth } from '@/context/AuthContext';
@@ -58,6 +58,18 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
   const [timeRemaining, setTimeRemaining] = useState<number>(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [score, setScore] = useState<number | null>(null);
+
+  // The anti-cheat and timer effects depend on [status], not [answers], so the
+  // handleAutoSubmit they capture closes over `answers` as it was when the exam
+  // STARTED — i.e. empty. Any auto-submit (3 strikes, or the clock running out)
+  // therefore submitted nothing and scored the candidate 0 despite their having
+  // answered. These refs always hold the live values.
+  const answersRef = useRef<Record<string, number>>({});
+  const questionsRef = useRef<any[]>([]);
+  const attemptIdRef = useRef<string | null>(null);
+  useEffect(() => { answersRef.current = answers; }, [answers]);
+  useEffect(() => { questionsRef.current = questions; }, [questions]);
+  useEffect(() => { attemptIdRef.current = attemptId; }, [attemptId]);
 
   // Mark current question as visited when index changes
   useEffect(() => {
@@ -158,7 +170,7 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
         }
 
         // ONLY enforce 15-minute disconnect if they actually have an active session!
-        if (hasActiveSession && !isAdminUser) {
+        if (hasActiveSession && !isAdminUser && testData?.type === 'exam') {
           const lastActiveStr = localStorage.getItem(`cbt_last_active_${testId}`);
           if (lastActiveStr) {
             const lastActive = parseInt(lastActiveStr, 10);
@@ -211,8 +223,11 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
   }, [answers, markedForReview, status, testId, attemptId]);
 
   // Anti-Cheat Logic (3 Strikes + 15s Timer)
+  // Certification exams only. Practice mode exists to be studied with — it
+  // reveals answers and explanations — so forcing fullscreen and disqualifying
+  // a learner for opening a reference in another tab defeats its purpose.
   useEffect(() => {
-    if (status !== 'in_progress') return;
+    if (status !== 'in_progress' || test?.type !== 'exam') return;
 
     // Graceful check for browsers without requestFullscreen (e.g. iOS Safari)
     if (typeof document !== 'undefined' && 'requestFullscreen' in document.documentElement && document.documentElement.requestFullscreen && !document.fullscreenElement) {
@@ -245,8 +260,14 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
         setAntiCheatWarning(secondsLeft);
         if (secondsLeft <= 0) {
           if (warningTimer) clearInterval(warningTimer);
-          setIsDisqualified(true);
-          handleAutoSubmit();
+          warningTimer = null;
+          // Letting the countdown lapse is not itself a disqualification —
+          // the strike was already counted when the warning appeared. Clearing
+          // here is what makes "3 strikes" true; previously the first
+          // unacknowledged warning ended the exam, contradicting the on-screen
+          // promise and punishing anyone who simply stepped away.
+          isCurrentlyWarning = false;
+          setAntiCheatWarning(null);
         }
       }, 1000);
     };
@@ -287,11 +308,13 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
       if (warningTimer) clearInterval(warningTimer);
       delete (window as any).clearAntiCheatWarning;
     };
-  }, [status]);
+  }, [status, test?.type]);
 
   // Aggressive Anti-Cheat (Disable Right-Click, Selection, Copy, DevTools)
+  // Also exam-only: blocking copy and text selection in practice stops a
+  // learner taking notes from material they have paid to study.
   useEffect(() => {
-    if (status !== 'in_progress') return;
+    if (status !== 'in_progress' || test?.type !== 'exam') return;
 
     const preventDefault = (e: Event) => e.preventDefault();
     
@@ -329,7 +352,7 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
       document.removeEventListener('cut', preventDefault);
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [status]);
+  }, [status, test?.type]);
 
   // Timer Logic — Only for 'exam' type tests (Real Exam Feel)
   useEffect(() => {
@@ -402,19 +425,21 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
     }
   };
 
-  const calculateScore = () => {
+  const calculateScore = (source?: Record<string, number>) => {
+    const graded = source ?? answers;
+    const qs = source ? questionsRef.current : questions;
     let correct = 0;
     let incorrect = 0;
-    questions.forEach(q => {
-      if (answers[q.id] !== undefined) {
-        if (answers[q.id] === q.correctOptionIndex) {
+    qs.forEach(q => {
+      if (graded[q.id] !== undefined) {
+        if (graded[q.id] === q.correctOptionIndex) {
           correct++;
         } else {
           incorrect++;
         }
       }
     });
-    return { correct, incorrect, scorePct: questions.length > 0 ? Math.round((correct / questions.length) * 100) : 0 };
+    return { correct, incorrect, scorePct: qs.length > 0 ? Math.round((correct / qs.length) * 100) : 0 };
   };
 
   const handleAutoSubmit = async () => {
@@ -429,12 +454,17 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
   };
 
   const performSubmit = async () => {
-    if (!attemptId || !user) return;
+    // Read through refs: an auto-submit fired from the anti-cheat or timer
+    // effect carries the closure those effects were created with, where these
+    // are still empty.
+    const liveAnswers = answersRef.current;
+    const liveAttemptId = attemptIdRef.current;
+    if (!liveAttemptId || !user) return;
     setIsSubmitting(true);
     try {
       if (test?.type === 'practice') {
-        const { correct } = calculateScore();
-        await submitTestAttempt(attemptId, answers, correct);
+        const { correct } = calculateScore(liveAnswers);
+        await submitTestAttempt(liveAttemptId, liveAnswers, correct);
         setScore(correct);
       } else {
         let token = '';
@@ -452,9 +482,9 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
             'Authorization': `Bearer ${token}`
           },
           body: JSON.stringify({
-            attemptId,
+            attemptId: liveAttemptId,
             testId,
-            answers
+            answers: liveAnswers
           })
         });
 

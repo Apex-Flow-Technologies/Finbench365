@@ -177,9 +177,17 @@ function CheckoutContent() {
     
     setIsApplyingCoupon(true);
     try {
+      if (!user) {
+        setCouponError('Please sign in to apply a coupon.');
+        setIsApplyingCoupon(false);
+        return;
+      }
+      // Coupon validation is authenticated — it would otherwise be an
+      // anonymous guessing oracle for working discount codes.
+      const token = await user.getIdToken();
       const res = await fetch('/api/payments/validate-coupon', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ code: coupon.trim().toUpperCase() })
       });
       const data = await res.json();

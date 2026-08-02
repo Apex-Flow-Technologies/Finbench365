@@ -31,8 +31,19 @@ service cloud.firestore {
 
     // Users Collection
     match /users/{userId} {
-      // Anyone can create their initial user doc upon signup
-      allow create: if request.auth != null && request.auth.uid == userId;
+      // Anyone can create their own initial profile — but only a plain student
+      // one. Without these constraints the create rule was a privilege
+      // escalation: any authenticated principal whose document did not yet
+      // exist could write it from the browser with role:'admin' (or with
+      // enrolledCourses granting themselves paid content), which would then
+      // satisfy every isAdmin() check and requireAdmin() on the server.
+      // Reachable in the window between Auth account creation and the server
+      // writing the profile, and again if an admin ever deletes a user doc
+      // while the Auth account survives.
+      allow create: if request.auth != null && request.auth.uid == userId
+                    && request.resource.data.get('role', 'student') == 'student'
+                    && !request.resource.data.keys().hasAny(
+                         ['enrolledCourses', 'totalSpent', 'suspended', 'pendingOrder']);
       
       // Users can read their own data
       allow read: if request.auth != null && (request.auth.uid == userId || isAdmin());
