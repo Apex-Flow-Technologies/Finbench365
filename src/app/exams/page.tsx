@@ -14,7 +14,7 @@ import {
   Layers,
   Loader2
 } from 'lucide-react';
-import { getCourses, getUserEntitlements } from '@/lib/firebase/db';
+import { getCourses, getCourseTests, getUserEntitlements } from '@/lib/firebase/db';
 import { useAuth } from '@/context/AuthContext';
 
 interface CoursePackage {
@@ -73,8 +73,25 @@ export default function ExamsPage() {
       try {
         const data = await getCourses();
         const published = data.filter((c: any) => c.isPublished);
-        
-        const mapped = published.map((course: any) => {
+
+        // Count what each course actually contains instead of reading the
+        // mockCount/notesCount fields, which were never populated and so had
+        // every course on the storefront advertising "0 Full Mocks".
+        const counts = await Promise.all(
+          published.map(async (course: any) => {
+            try {
+              const tests = await getCourseTests(course.id);
+              return {
+                mocks: (tests as any[]).filter((t) => t?.isPublished).length,
+                notes: Array.isArray(course.materials) ? course.materials.length : 0,
+              };
+            } catch {
+              return { mocks: 0, notes: 0 };
+            }
+          })
+        );
+
+        const mapped = published.map((course: any, i: number) => {
           let colorIndex = 0;
           if (course.track === 'Track B') colorIndex = 1;
           else if (course.track === 'Track C') colorIndex = 2;
@@ -87,8 +104,8 @@ export default function ExamsPage() {
             description: course.description || '',
             trackBadge: `${course.track || 'Track A'} • ${course.tier || 'Foundation Tier'}`,
             category: course.tier || 'Foundation',
-            mockCount: `${course.mockCount || 0} Full Mocks`,
-            notesCount: `${course.notesCount || 0} PDF Notes`,
+            mockCount: `${counts[i].mocks} Full Mock${counts[i].mocks === 1 ? '' : 's'}`,
+            notesCount: `${counts[i].notes} PDF Note${counts[i].notes === 1 ? '' : 's'}`,
             features: [
               'Exact CBT terminal simulation with flag & review',
               'Step-by-step matrix derivation walkthroughs',

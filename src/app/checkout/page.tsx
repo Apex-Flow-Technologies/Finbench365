@@ -22,7 +22,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { PLAN_PRICING, GST_RATE } from '@/constants/pricing';
-import { getCourse } from '@/lib/firebase/db';
+import { getCourse, getCourseTests } from '@/lib/firebase/db';
 
 function CheckoutContent() {
   const searchParams = useSearchParams();
@@ -100,11 +100,37 @@ function CheckoutContent() {
   };
 
   const [course, setCourse] = useState<any>(null);
+  // What this course actually contains, counted from live data rather than the
+  // mockCount/notesCount fields on the course doc — those were never populated,
+  // so the checkout page was advertising "0 mock exams" directly above the pay
+  // button. null means "still counting", so we never render a misleading 0.
+  const [contents, setContents] = useState<{ mocks: number; materials: number } | null>(null);
 
   useEffect(() => {
-    if (courseId) {
-      getCourse(courseId).then(setCourse).catch(console.error);
-    }
+    if (!courseId) return;
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const [courseData, tests] = await Promise.all([
+          getCourse(courseId),
+          getCourseTests(courseId).catch(() => [] as any[]),
+        ]);
+        if (cancelled) return;
+        setCourse(courseData);
+        setContents({
+          // Only published tests — a buyer must not be promised drafts.
+          mocks: (tests as any[]).filter((t) => t?.isPublished).length,
+          materials: Array.isArray((courseData as any)?.materials)
+            ? (courseData as any).materials.length
+            : 0,
+        });
+      } catch (err) {
+        console.error('Could not load course contents:', err);
+      }
+    })();
+
+    return () => { cancelled = true; };
   }, [courseId]);
 
   // On mount, quietly re-check any order left over from a previous tab session.
@@ -686,17 +712,41 @@ function CheckoutContent() {
 
               {/* Inclusions Checkmarks */}
               <div className="space-y-2.5 text-xs text-slate-300">
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                  <span>{course?.mockCount || 0} Full-length CBT mock exams</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                  <span>{course?.notesCount || 0} PDF formula notes & derivations</span>
-                </div>
+                {contents === null ? (
+                  // Still counting — placeholder rows rather than a premature "0".
+                  <>
+                    <div className="h-3.5 w-48 rounded bg-white/5 animate-pulse" />
+                    <div className="h-3.5 w-40 rounded bg-white/5 animate-pulse" />
+                  </>
+                ) : (
+                  <>
+                    {contents.mocks > 0 && (
+                      <div className="flex items-center gap-2">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0" />
+                        <span>
+                          <span className="font-semibold text-white tabular-nums">{contents.mocks}</span>{' '}
+                          Full-length CBT mock exam{contents.mocks === 1 ? '' : 's'}
+                        </span>
+                      </div>
+                    )}
+                    {contents.materials > 0 && (
+                      <div className="flex items-center gap-2">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0" />
+                        <span>
+                          <span className="font-semibold text-white tabular-nums">{contents.materials}</span>{' '}
+                          PDF study material{contents.materials === 1 ? '' : 's'}
+                        </span>
+                      </div>
+                    )}
+                  </>
+                )}
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0" />
                   <span>Instant activation & progress tracking</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0" />
+                  <span>Full access for {planData.durationDays} days</span>
                 </div>
               </div>
 
