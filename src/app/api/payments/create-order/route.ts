@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { PLAN_PRICING, GST_RATE } from '@/constants/pricing';
-import { Timestamp, FieldValue, Transaction } from 'firebase-admin/firestore';
+import { FieldValue, Transaction } from 'firebase-admin/firestore';
+import { randomUUID } from 'crypto';
+import { grantEntitlementIdempotent } from '@/lib/payments/grantEntitlement';
 
 // How long a just-created Razorpay order is considered "still in progress" —
 // past this, create-order will start a fresh order instead of trying to reuse it.
@@ -81,38 +83,30 @@ export async function POST(req: Request) {
     const finalTotal = Math.round((discountedPrice + gstAmount) * 100) / 100;
 
     if (finalTotal <= 0) {
-      // 100% Discount applied! Bypass Razorpay and grant entitlement directly.
-      const days = planData.durationDays;
-      const expiresAt = new Date();
-      expiresAt.setDate(expiresAt.getDate() + days);
+      // 100% discount — no gateway round trip. This still routes through the
+      // shared entitlement path rather than writing enrolledCourses directly,
+      // so a free enrolment gets the same confirmation email, the same order
+      // record shape, and the same idempotency guarantee as a paid one. It
+      // previously wrote its own copy of that logic and therefore never sent
+      // the candidate any confirmation at all.
+      const orderId = `BYPASS-${randomUUID()}`;
 
-      await adminDb.collection('users').doc(userId).set({
-        enrolledCourses: {
-          [courseId]: {
-            expiresAt: Timestamp.fromDate(expiresAt),
-            enrolledAt: FieldValue.serverTimestamp(),
-            durationDays: days,
-            planId: planId,
-            paymentId: `bypassed_coupon_${appliedCouponCode}`,
-          }
-        },
-      }, { merge: true });
-
-      const mockOrderId = `BYPASS-${Math.floor(1000 + Math.random() * 9000)}`;
-
-      const orderRef = adminDb.collection('orders').doc(mockOrderId);
-      await orderRef.set({
+      const result = await grantEntitlementIdempotent({
         userId,
-        courseId,
         planId,
-        paymentId: `bypassed_coupon_${appliedCouponCode}`,
-        orderId: mockOrderId,
-        amount: 0,
-        status: 'bypassed',
-        createdAt: FieldValue.serverTimestamp(),
+        courseId,
+        paymentId: `coupon_${appliedCouponCode ?? 'FREE'}`,
+        orderId,
+        amountPaid: 0,
+        source: 'coupon',
       });
 
-      return NextResponse.json({ success: true, bypassed: true, orderId: mockOrderId });
+      return NextResponse.json({
+        success: true,
+        bypassed: true,
+        orderId,
+        granted: result.granted || result.alreadyProcessed,
+      });
     }
 
     const keyId = process.env.RAZORPAY_KEY_ID;

@@ -15,7 +15,8 @@ import {
   ShieldCheck,
   CheckCircle2,
   ArrowLeft,
-  ChevronDown
+  ChevronDown,
+  Check
 } from 'lucide-react';
 import { auth } from '@/lib/firebase/config';
 import {
@@ -26,7 +27,7 @@ import {
 import { useAuth } from '@/context/AuthContext';
 import { LoadingButton } from '@/components/ui/LoadingButton';
 import { friendlyAuthError } from '@/lib/auth/authErrors';
-import { suggestEmailDomain } from '@/lib/auth/otp';
+import { suggestEmailDomain, passwordChecks, passwordMeetsAll } from '@/lib/auth/otp';
 import toast from 'react-hot-toast';
 
 function LoginContent() {
@@ -63,6 +64,8 @@ function LoginContent() {
   const [isSendingReset, setIsSendingReset] = useState(false);
   const [resetSent, setResetSent] = useState(false);
   
+  const pwChecks = passwordChecks(password);
+
   const { user, loading } = useAuth();
 
   useEffect(() => {
@@ -88,6 +91,15 @@ function LoginContent() {
     
     if (activeTab === 'signup' && !agreeLegal) {
       setErrorMsg('You must agree to the Terms of Service and Privacy Policy to create an account.');
+      return;
+    }
+
+    // Password is entered in step 1 but was previously only checked by the
+    // server in step 2 — so a weak password was rejected only AFTER a code had
+    // been sent, leaving the candidate to fix it and then hit the resend
+    // cooldown. Enforce it here, before anything is sent.
+    if (activeTab === 'signup' && !passwordMeetsAll(password)) {
+      setErrorMsg('Please meet all the password requirements below.');
       return;
     }
 
@@ -120,6 +132,17 @@ function LoginContent() {
         });
         const data = await res.json().catch(() => ({}));
         if (!res.ok) {
+          // A still-valid code from a moment ago isn't a failure — it happens
+          // whenever someone steps back to fix a detail. Show the code entry
+          // instead of blocking them behind the resend cooldown.
+          if (data.codeAlreadySent) {
+            setSignupStep('otp');
+            setOtpCooldown(data.retryAfterSeconds ?? 60);
+            setIsSubmitting(false);
+            setErrorMsg('');
+            toast('Enter the code we already sent you.', { icon: '📩' });
+            return;
+          }
           setErrorMsg(data.error || 'Could not send the verification code.');
           if (data.accountExists) setActiveTab('signin');
           setIsSubmitting(false);
@@ -473,6 +496,47 @@ function LoginContent() {
                       className="w-full pl-10 pr-4 py-3 rounded-xl bg-slate-50 border-slate-200 text-[#111B35] dark:bg-[#121419] border dark:border-[#282C36] dark:text-white placeholder-slate-400 dark:placeholder-slate-500 text-sm font-sans focus:outline-none focus:border-amber-500 dark:focus:border-amber-500 transition-colors"
                     />
                   </div>
+
+                  {/* Live requirements. Driven by the same passwordChecks() the
+                      server uses, so this can never claim a password is fine
+                      when the API would reject it. */}
+                  <AnimatePresence>
+                    {activeTab === 'signup' && password.length > 0 && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="overflow-hidden"
+                      >
+                        <ul className="pt-2 space-y-1.5">
+                          {([
+                            ['length', 'At least 8 characters'],
+                            ['letter', 'Contains a letter'],
+                            ['number', 'Contains a number'],
+                          ] as const).map(([key, label]) => {
+                            const ok = pwChecks[key];
+                            return (
+                              <li key={key} className="flex items-center gap-2 text-[11px]">
+                                <span
+                                  className={`w-3.5 h-3.5 rounded-full flex items-center justify-center shrink-0 transition-colors duration-200 ${
+                                    ok ? 'bg-emerald-500/15 text-emerald-500' : 'bg-slate-200 text-slate-400 dark:bg-white/10 dark:text-slate-500'
+                                  }`}
+                                >
+                                  {ok ? <Check className="w-2.5 h-2.5" strokeWidth={3.5} /> : <span className="w-1 h-1 rounded-full bg-current" />}
+                                </span>
+                                <span className={`transition-colors duration-200 ${
+                                  ok ? 'text-emerald-600 dark:text-emerald-400' : 'text-[#475569] dark:text-[#94A3B8]'
+                                }`}>
+                                  {label}
+                                </span>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
 
                 {activeTab === 'signup' && (

@@ -123,6 +123,10 @@ export async function sendInvoiceEmail(params: InvoiceEmailParams) {
   const resend = new Resend(process.env.RESEND_API_KEY);
   const issued = new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
 
+  // A fully-discounted enrolment is not a taxable supply, so it must not be
+  // presented as a tax invoice — it is an access confirmation.
+  const isFree = total <= 0;
+
   // Email clients (Gmail, Outlook) do not support flexbox or grid — the layout
   // below is deliberately table-based with inline styles for that reason.
   const row = (label: string, value: string, bold = false) => `
@@ -131,7 +135,7 @@ export async function sendInvoiceEmail(params: InvoiceEmailParams) {
       <td align="right" style="padding:8px 0;font-size:14px;color:${bold ? '#111827' : '#4b5563'};${bold ? 'font-weight:700;' : ''}">${value}</td>
     </tr>`;
 
-  const legalBlock = (LEGAL_NAME || LEGAL_GSTIN || LEGAL_ADDRESS) ? `
+  const legalBlock = (!isFree && (LEGAL_NAME || LEGAL_GSTIN || LEGAL_ADDRESS)) ? `
     <tr><td style="padding:18px 28px 0;font-size:11px;line-height:17px;color:#9ca3af;border-top:1px solid #e5e7eb;">
       ${LEGAL_NAME ? `<strong style="color:#6b7280;">${esc(LEGAL_NAME)}</strong><br/>` : ''}
       ${LEGAL_ADDRESS ? `${esc(LEGAL_ADDRESS)}<br/>` : ''}
@@ -155,7 +159,7 @@ export async function sendInvoiceEmail(params: InvoiceEmailParams) {
           <h1 style="margin:0 0 6px;font-size:20px;color:#111827;">Enrolment confirmed</h1>
           <p style="margin:0;font-size:14px;line-height:22px;color:#4b5563;">
             Hi ${esc(name)}, your access to <strong style="color:#111827;">${esc(courseTitle)}</strong> is now active.
-            This email is also your tax invoice — keep it for your records.
+            ${isFree ? 'Your access was granted in full using a discount code.' : 'This email is also your tax invoice — keep it for your records.'}
           </p>
         </td></tr>
 
@@ -164,14 +168,14 @@ export async function sendInvoiceEmail(params: InvoiceEmailParams) {
                  style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;">
             <tr><td style="padding:16px 18px;">
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-                ${row('Invoice date', esc(issued))}
+                ${row(isFree ? 'Date' : 'Invoice date', esc(issued))}
                 ${row('Order ID', esc(orderId))}
                 ${row('Plan', esc(planName))}
                 <tr><td colspan="2" style="border-top:1px solid #e5e7eb;height:1px;line-height:1px;">&nbsp;</td></tr>
                 ${row('Base price', inr(amount))}
                 ${row('GST @ 18%', inr(gstAmount))}
                 <tr><td colspan="2" style="border-top:2px solid #e5e7eb;height:1px;line-height:1px;">&nbsp;</td></tr>
-                ${row('Total paid', inr(total), true)}
+                ${row(isFree ? 'Total' : 'Total paid', inr(total), true)}
               </table>
             </td></tr>
           </table>
@@ -202,7 +206,9 @@ export async function sendInvoiceEmail(params: InvoiceEmailParams) {
   const text = [
     `Enrolment confirmed — MyExams365`, '',
     `Hi ${name},`,
-    `Your access to ${courseTitle} is now active. This email is also your tax invoice.`, '',
+    isFree
+      ? `Your access to ${courseTitle} is now active (granted in full using a discount code).`
+      : `Your access to ${courseTitle} is now active. This email is also your tax invoice.`, '',
     `Invoice date: ${issued}`,
     `Order ID:     ${orderId}`,
     `Plan:         ${planName}`,
@@ -219,7 +225,9 @@ export async function sendInvoiceEmail(params: InvoiceEmailParams) {
     from: `${FROM_NAME} <${FROM_EMAIL}>`,
     to: email,
     replyTo: SUPPORT_EMAIL,
-    subject: `Invoice ${orderId} — enrolment confirmed for ${courseTitle}`,
+    subject: isFree
+      ? `Enrolment confirmed — ${courseTitle}`
+      : `Invoice ${orderId} — enrolment confirmed for ${courseTitle}`,
     html,
     text,
   });

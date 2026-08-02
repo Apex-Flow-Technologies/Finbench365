@@ -59,8 +59,17 @@ export async function POST(req: Request) {
       const lastSentMs: number = existing.data()?.lastSentAt?.toMillis?.() ?? 0;
       const since = Date.now() - lastSentMs;
       if (since < OTP_RESEND_COOLDOWN_MS) {
+        const stillValid = (existing.data()?.expiresAt?.toMillis?.() ?? 0) > Date.now();
+        // The previous code is still usable, so this is not really an error —
+        // it happens whenever someone steps back to correct a detail and
+        // resubmits. Tell the client to show the code entry rather than
+        // stranding them behind a cooldown for a code they already have.
         return NextResponse.json(
-          { error: 'A code was just sent. Please wait a moment before requesting another.' },
+          {
+            error: 'A code was already sent to this address. Please enter it below.',
+            codeAlreadySent: stillValid,
+            retryAfterSeconds: Math.ceil((OTP_RESEND_COOLDOWN_MS - since) / 1000),
+          },
           { status: 429, headers: { 'Retry-After': String(Math.ceil((OTP_RESEND_COOLDOWN_MS - since) / 1000)) } },
         );
       }

@@ -120,6 +120,31 @@ export function suggestEmailDomain(email: string): string | null {
   return threshold && best && best !== domain ? `${local}@${best}` : null;
 }
 
+export interface PasswordChecks {
+  length: boolean;
+  letter: boolean;
+  number: boolean;
+}
+
+/**
+ * Per-rule results for live feedback as the user types. Kept in the same module
+ * as passwordProblem() so the checklist shown in the browser can never drift
+ * from what the server actually enforces.
+ */
+export function passwordChecks(password: string): PasswordChecks {
+  const p = typeof password === 'string' ? password : '';
+  return {
+    length: p.length >= 8 && p.length <= 128,
+    letter: /[A-Za-z]/.test(p),
+    number: /[0-9]/.test(p),
+  };
+}
+
+export function passwordMeetsAll(password: string): boolean {
+  const c = passwordChecks(password);
+  return c.length && c.letter && c.number;
+}
+
 export function passwordProblem(password: string): string | null {
   if (typeof password !== 'string' || password.length < 8) {
     return 'Password must be at least 8 characters.';

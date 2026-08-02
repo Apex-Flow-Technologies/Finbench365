@@ -10,7 +10,7 @@ interface GrantParams {
   paymentId: string;
   orderId: string;
   amountPaid: number; // rupees, final amount actually paid (incl. GST)
-  source: 'verify' | 'webhook' | 'reconcile';
+  source: 'verify' | 'webhook' | 'reconcile' | 'coupon';
 }
 
 interface GrantResult {
