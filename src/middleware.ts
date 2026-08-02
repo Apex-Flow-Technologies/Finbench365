@@ -13,6 +13,11 @@ const LIMITS: Record<string, number> = {
   '/api/payments/check-order-status': 20,
   '/api/payments/validate-coupon': 15,
   '/api/admin': 60,
+  // Coarse first line of defence only. The auth routes additionally enforce
+  // durable, cross-instance limits in Firestore (see lib/api/rateLimit.ts),
+  // because this counter resets on cold start and is per-instance.
+  '/api/auth/request-otp': 10,
+  '/api/auth/verify-otp': 20,
 };
 
 const hits = new Map<string, { count: number; resetAt: number }>();
@@ -53,5 +58,5 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/api/payments/:path*', '/api/admin/:path*'],
+  matcher: ['/api/payments/:path*', '/api/admin/:path*', '/api/auth/:path*'],
 };

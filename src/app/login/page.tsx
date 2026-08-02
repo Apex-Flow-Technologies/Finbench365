@@ -17,16 +17,12 @@ import {
   ArrowLeft,
   ChevronDown
 } from 'lucide-react';
-import { auth, db } from '@/lib/firebase/config';
+import { auth } from '@/lib/firebase/config';
 import {
   signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
   signOut,
-  updateProfile,
-  sendEmailVerification,
   sendPasswordResetEmail,
 } from 'firebase/auth';
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { useAuth } from '@/context/AuthContext';
 import { LoadingButton } from '@/components/ui/LoadingButton';
 import { friendlyAuthError } from '@/lib/auth/authErrors';
@@ -49,6 +45,13 @@ function LoginContent() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [agreeLegal, setAgreeLegal] = useState(false);
+
+  // Signup is two-step: 'form' collects details and requests a code,
+  // 'otp' redeems it. No account exists until the code is redeemed.
+  const [signupStep, setSignupStep] = useState<'form' | 'otp'>('form');
+  const [otpCode, setOtpCode] = useState('');
+  const [otpCooldown, setOtpCooldown] = useState(0);
+  const [isResendingOtp, setIsResendingOtp] = useState(false);
 
   // Password reset flow
   const [showReset, setShowReset] = useState(false);
@@ -92,36 +95,27 @@ function LoginContent() {
         // Sign In — useEffect handles role-based redirect
         await signInWithEmailAndPassword(auth, email, password);
       } else {
-        // Sign Up
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        const newUser = userCredential.user;
-        
-        // Update display name
-        await updateProfile(newUser, {
-          displayName: name
+        // Signup step 1: request a verification code. No Firebase account and
+        // no Firestore document is created here — the account only comes into
+        // existence in /api/auth/verify-otp once the emailed code is redeemed,
+        // so an unreachable address can never produce an account.
+        const res = await fetch('/api/auth/request-otp', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: email.trim() }),
         });
-        
-        // Create user document in Firestore — role always 'student' (admin assigned manually by super-admin)
-        await setDoc(doc(db, 'users', newUser.uid), {
-          email: newUser.email,
-          name: name,
-          organization: org,
-          role: 'student', // SECURITY: never trust client-supplied role
-          createdAt: serverTimestamp()
-        });
-
-        // Confirm the address is real and reachable — the GST invoice and all
-        // enrolment mail go here, so a typo means a paying candidate silently
-        // never hears from us. Failure to send must not block the signup that
-        // has already succeeded, so this is best-effort.
-        try {
-          await sendEmailVerification(newUser);
-          toast.success(`Verification email sent to ${newUser.email}`, { duration: 6000 });
-        } catch (verifyErr) {
-          console.error('Could not send verification email:', verifyErr);
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          setErrorMsg(data.error || 'Could not send the verification code.');
+          if (data.accountExists) setActiveTab('signin');
+          setIsSubmitting(false);
+          return;
         }
-
-        // On success, the useEffect above will redirect them based on role
+        setSignupStep('otp');
+        setOtpCooldown(60);
+        setIsSubmitting(false);
+        toast.success(`Verification code sent to ${email.trim()}`);
+        return;
       }
       toast.success('Login successful. Redirecting...');
       // We intentionally do not set isSubmitting(false) here so the button stays in the loading state until the redirect happens.
@@ -129,6 +123,69 @@ function LoginContent() {
       console.error("Auth error:", error);
       setErrorMsg(friendlyAuthError(error));
       setIsSubmitting(false);
+    }
+  };
+
+  // Countdown for the "resend code" cooldown.
+  useEffect(() => {
+    if (otpCooldown <= 0) return;
+    const t = setTimeout(() => setOtpCooldown((c) => c - 1), 1000);
+    return () => clearTimeout(t);
+  }, [otpCooldown]);
+
+  const handleVerifyOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMsg('');
+    if (otpCode.trim().length !== 6) {
+      setErrorMsg('Enter the 6-digit code from your email.');
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      const res = await fetch('/api/auth/verify-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: email.trim(), otp: otpCode.trim(), name, password, organization: org,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setErrorMsg(data.error || 'Could not verify the code.');
+        if (data.accountExists) { setActiveTab('signin'); setSignupStep('form'); }
+        setIsSubmitting(false);
+        return;
+      }
+      // The account now exists and is already marked verified. Sign in to
+      // establish the session; the redirect effect takes it from here.
+      await signInWithEmailAndPassword(auth, email.trim(), password);
+      toast.success('Account verified. Welcome aboard!');
+    } catch (error: any) {
+      console.error('OTP verify error:', error);
+      setErrorMsg(friendlyAuthError(error));
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleResendOtp = async () => {
+    if (otpCooldown > 0 || isResendingOtp) return;
+    setIsResendingOtp(true);
+    setErrorMsg('');
+    try {
+      const res = await fetch('/api/auth/request-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim() }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setErrorMsg(data.error || 'Could not resend the code.');
+      } else {
+        setOtpCooldown(60);
+        toast.success('A new code is on its way.');
+      }
+    } finally {
+      setIsResendingOtp(false);
     }
   };
 
@@ -255,7 +312,84 @@ function LoginContent() {
                 </button>
               </div>
 
-              {/* Form */}
+              {/* Step 2 of signup: redeem the emailed code. Shown instead of the
+                  form once a code has been sent. */}
+              {activeTab === 'signup' && signupStep === 'otp' ? (
+                <motion.form
+                  key="otp-step"
+                  initial={{ opacity: 0, x: 12 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.25 }}
+                  onSubmit={handleVerifyOtp}
+                  className="space-y-5"
+                >
+                  <div className="text-center space-y-2">
+                    <div className="w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center mx-auto text-amber-500">
+                      <Mail className="w-7 h-7" />
+                    </div>
+                    <h3 className="text-lg font-bold text-[#111B35] dark:text-white">Check your email</h3>
+                    <p className="text-sm text-[#475569] dark:text-[#94A3B8] leading-relaxed">
+                      We sent a 6-digit code to<br />
+                      <span className="font-semibold text-[#111B35] dark:text-white">{email.trim()}</span>
+                    </p>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label htmlFor="otp-input" className="text-xs font-medium text-[#334155] dark:text-[#E2E8F0]">
+                      Verification Code
+                    </label>
+                    <input
+                      id="otp-input"
+                      inputMode="numeric"
+                      autoComplete="one-time-code"
+                      autoFocus
+                      maxLength={6}
+                      value={otpCode}
+                      onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                      placeholder="000000"
+                      className="w-full px-4 py-3.5 rounded-xl bg-slate-50 border-slate-200 text-[#111B35] dark:bg-[#121419] border dark:border-[#282C36] dark:text-white placeholder-slate-300 dark:placeholder-slate-600 text-center text-2xl font-bold tracking-[0.5em] font-mono focus:outline-none focus:border-amber-500 transition-colors"
+                    />
+                    <p className="text-[11px] text-[#475569] dark:text-[#64748B] text-center pt-1">
+                      The code expires in 10 minutes.
+                    </p>
+                  </div>
+
+                  {errorMsg && (
+                    <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-500 text-xs">
+                      {errorMsg}
+                    </div>
+                  )}
+
+                  <LoadingButton
+                    type="submit"
+                    isLoading={isSubmitting}
+                    loadingText="Verifying..."
+                    className="w-full py-3.5 px-6 rounded-xl bg-amber-500 hover:bg-amber-400 disabled:opacity-75 disabled:pointer-events-none text-[#111B35] font-bold text-sm shadow-[0_4px_14px_rgba(245,158,11,0.3)] transition-all flex items-center justify-center gap-2 active:scale-[0.98]"
+                  >
+                    <span>Verify &amp; Create Account</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </LoadingButton>
+
+                  <div className="flex items-center justify-between text-xs">
+                    <button
+                      type="button"
+                      onClick={() => { setSignupStep('form'); setOtpCode(''); setErrorMsg(''); }}
+                      className="text-[#475569] dark:text-[#94A3B8] hover:underline"
+                    >
+                      ← Change email
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleResendOtp}
+                      disabled={otpCooldown > 0 || isResendingOtp}
+                      className="text-amber-600 dark:text-amber-500 hover:underline disabled:opacity-50 disabled:no-underline disabled:cursor-not-allowed font-medium"
+                    >
+                      {otpCooldown > 0 ? `Resend in ${otpCooldown}s` : isResendingOtp ? 'Sending...' : 'Resend code'}
+                    </button>
+                  </div>
+                </motion.form>
+              ) : (
+              /* Form */
               <form onSubmit={handleSubmit} className="space-y-4">
                 <AnimatePresence mode="wait">
                   {activeTab === 'signup' && (
@@ -368,10 +502,11 @@ function LoginContent() {
                   loadingText={activeTab === 'signin' ? 'Signing In...' : 'Creating Account...'}
                   className="w-full mt-3 py-3.5 px-6 rounded-xl bg-amber-500 hover:bg-amber-400 disabled:opacity-75 disabled:pointer-events-none text-[#111B35] font-bold text-sm shadow-[0_4px_14px_rgba(245,158,11,0.3)] transition-all flex items-center justify-center gap-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 active:scale-[0.98]"
                 >
-                  <span>{activeTab === 'signin' ? 'Sign In & Proceed to Checkout' : 'Create Account & Proceed'}</span>
+                  <span>{activeTab === 'signin' ? 'Sign In & Proceed to Checkout' : 'Send Verification Code'}</span>
                   <ArrowRight className="w-4 h-4" />
                 </LoadingButton>
               </form>
+              )}
 
           <div className="mt-6 pt-5 border-t border-slate-200 dark:border-[#282C36]/50 flex items-center justify-center gap-2 text-[11px] tabular-nums text-[#475569] dark:text-[#94A3B8]">
             <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-500" />

@@ -24,6 +24,76 @@ const esc = (s: string) =>
   String(s).replace(/[&<>"']/g, (c) =>
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c] as string));
 
+/**
+ * Signup verification code. Sent before any account exists, so it must not
+ * imply one does — if this lands with someone who never asked to register, the
+ * correct action for them is to ignore it, and the copy says so.
+ */
+export async function sendOtpEmail({ email, code, minutes }: {
+  email: string; code: string; minutes: number;
+}) {
+  if (!process.env.RESEND_API_KEY) {
+    console.warn('RESEND_API_KEY is not set. Skipping OTP dispatch.');
+    return { skipped: true as const };
+  }
+  const resend = new Resend(process.env.RESEND_API_KEY);
+
+  const html = `<!doctype html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f3f4f6;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f3f4f6;padding:28px 12px;">
+    <tr><td align="center">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#ffffff;border-radius:14px;overflow:hidden;font-family:Arial,Helvetica,sans-serif;">
+        <tr><td style="background:#12141A;padding:22px 28px;">
+          <span style="color:#ffffff;font-size:18px;font-weight:700;">MyExams365</span><span style="color:#F59E0B;font-size:18px;font-weight:700;">.</span>
+        </td></tr>
+        <tr><td style="padding:28px 28px 8px;">
+          <h1 style="margin:0 0 8px;font-size:19px;color:#111827;">Confirm your email address</h1>
+          <p style="margin:0;font-size:14px;line-height:22px;color:#4b5563;">
+            Enter this code to finish creating your MyExams365 account.
+          </p>
+        </td></tr>
+        <tr><td align="center" style="padding:22px 28px;">
+          <div style="display:inline-block;background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:16px 30px;">
+            <span style="font-family:'Courier New',monospace;font-size:32px;font-weight:700;letter-spacing:9px;color:#111827;">${esc(code)}</span>
+          </div>
+        </td></tr>
+        <tr><td style="padding:0 28px 22px;font-size:13px;line-height:21px;color:#6b7280;">
+          This code expires in ${minutes} minutes and can only be used once.<br/>
+          <strong style="color:#374151;">Didn't request this?</strong> You can safely ignore this email — no account has been created, and nobody can register with your address without this code.
+        </td></tr>
+        <tr><td style="padding:14px 28px 22px;border-top:1px solid #e5e7eb;font-size:11px;color:#9ca3af;">
+          Never share this code. MyExams365 staff will never ask you for it.
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body></html>`;
+
+  const text = [
+    'Confirm your email address — MyExams365', '',
+    `Your verification code is: ${code}`, '',
+    `It expires in ${minutes} minutes and can only be used once.`,
+    "Didn't request this? Ignore this email — no account has been created.",
+    'Never share this code. MyExams365 staff will never ask you for it.',
+  ].join('\n');
+
+  const { data, error } = await resend.emails.send({
+    from: `${FROM_NAME} <${FROM_EMAIL}>`,
+    to: email,
+    replyTo: SUPPORT_EMAIL,
+    subject: `${code} is your MyExams365 verification code`,
+    html,
+    text,
+  });
+
+  if (error) {
+    console.error('Resend rejected the OTP email:', error);
+    throw new Error(`Resend: ${error.message ?? 'send failed'}`);
+  }
+  return data;
+}
+
 export interface InvoiceEmailParams {
   email: string;
   name: string;

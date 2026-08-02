@@ -110,6 +110,19 @@ service cloud.firestore {
       allow write: if false; // Only server (Admin SDK) should write orders
     }
 
+    // Pending signups (hashed OTPs) and rate-limit counters are written only by
+    // the Admin SDK, which bypasses these rules. No client may read or write
+    // them under any circumstances — read access would expose the material
+    // needed to complete someone else's signup, and write access would let a
+    // caller reset their own attempt counter or rate-limit budget.
+    match /pending_signups/{document} {
+      allow read, write: if false;
+    }
+
+    match /rate_limits/{document} {
+      allow read, write: if false;
+    }
+
     // App Configuration (feature flags, display pricing, etc.) — admin only.
     // Client SDK reads are allowed so authenticated users can react to feature
     // flags; actual checkout pricing is never read from here (see constants/pricing.ts).
