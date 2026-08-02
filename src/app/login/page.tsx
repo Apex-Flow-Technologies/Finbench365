@@ -19,11 +19,7 @@ import {
   Check
 } from 'lucide-react';
 import { auth } from '@/lib/firebase/config';
-import {
-  signInWithEmailAndPassword,
-  signOut,
-  sendPasswordResetEmail,
-} from 'firebase/auth';
+import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import { useAuth } from '@/context/AuthContext';
 import { LoadingButton } from '@/components/ui/LoadingButton';
 import { friendlyAuthError } from '@/lib/auth/authErrors';
@@ -233,20 +229,24 @@ function LoginContent() {
 
     setIsSendingReset(true);
     try {
-      await sendPasswordResetEmail(auth, target);
-      setResetSent(true);
-    } catch (error: any) {
-      // Deliberately show the same confirmation whether or not an account
-      // exists — reporting "no such user" would let anyone test which email
-      // addresses are registered. Genuine faults (bad format, rate limit,
-      // offline) are still surfaced, since those are the user's to fix.
-      const code = error?.code;
-      if (code === 'auth/user-not-found') {
+      // Goes through our own endpoint rather than Firebase's client SDK so the
+      // email is sent from the verified myexams365.com domain — Firebase's own
+      // sender is unaligned with our domain and often lands in spam, which for
+      // a password reset just means the user stays locked out.
+      const res = await fetch('/api/auth/request-password-reset', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: target }),
+      });
+      if (res.ok) {
         setResetSent(true);
       } else {
-        toast.error(friendlyAuthError(error));
+        const data = await res.json().catch(() => ({}));
+        toast.error(data.error || 'Could not send the reset email. Please try again.');
       }
+    } catch (error: any) {
       console.error('Password reset error:', error);
+      toast.error('Could not reach the server. Please check your connection.');
     } finally {
       setIsSendingReset(false);
     }
