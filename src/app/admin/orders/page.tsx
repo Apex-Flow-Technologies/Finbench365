@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { collection, query, getDocs, orderBy, doc, getDoc } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase/config';
-import { CreditCard, CheckCircle2, ShieldCheck, Download, Search, RefreshCw } from 'lucide-react';
+import { CreditCard, CheckCircle2, ShieldCheck, Download, Search, RefreshCw, RotateCcw, Clock } from 'lucide-react';
 import { PLAN_PRICING } from '@/constants/pricing';
 import toast from 'react-hot-toast';
 
@@ -49,7 +49,10 @@ export default function AdminOrdersPage() {
   useEffect(() => {
     async function fetchOrders() {
       try {
-        const q = query(collection(db, 'orders'), orderBy('createdAt', 'desc'));
+        // Unordered read + client sort: ordering in the query drops any order
+        // document missing createdAt, which previously hid coupon/webhook-born
+        // orders from this list entirely.
+        const q = query(collection(db, 'orders'));
         const querySnapshot = await getDocs(q);
         
         const fetchedOrders: Order[] = [];
@@ -58,18 +61,22 @@ export default function AdminOrdersPage() {
         for (const document of querySnapshot.docs) {
           const data = document.data() as Omit<Order, 'id'>;
           
-          let userEmail = userCache.get(data.userId);
+          // Prefer the email denormalised onto the order at write time. The
+          // per-row lookup below is now only a fallback for historical orders
+          // written before that field existed, and its failure is logged
+          // rather than swallowed — previously a permissions error was
+          // indistinguishable from a genuinely missing user.
+          let userEmail: string | undefined = (data as any).userEmail || userCache.get(data.userId);
           if (!userEmail && data.userId) {
             try {
               const userDoc = await getDoc(doc(db, 'users', data.userId));
-              if (userDoc.exists() && userDoc.data().email) {
-                userEmail = userDoc.data().email;
-                userCache.set(data.userId, userEmail!);
-              } else {
-                userEmail = 'Unknown User';
+              const email = userDoc.exists() ? userDoc.data().email : null;
+              if (email) {
+                userEmail = email;
+                userCache.set(data.userId, email);
               }
             } catch (err) {
-              userEmail = 'Unknown User';
+              console.error(`Order ${document.id}: user lookup failed`, err);
             }
           }
 
@@ -80,7 +87,13 @@ export default function AdminOrdersPage() {
           });
         }
         
-        setOrders(fetchedOrders);
+        // Sorted here rather than in the query — see the note above. Orders
+        // with no createdAt sort last instead of vanishing from the list.
+        const ms = (o: any) =>
+          o?.createdAt?.toMillis ? o.createdAt.toMillis()
+            : o?.createdAt ? new Date(o.createdAt).getTime()
+            : 0;
+        setOrders([...fetchedOrders].sort((a, b) => ms(b) - ms(a)));
       } catch (error) {
         console.error('Error fetching orders:', error);
       } finally {
@@ -166,7 +179,12 @@ export default function AdminOrdersPage() {
               ) : (
                 filteredOrders.map((order) => {
                   const planData = PLAN_PRICING[order.planId as keyof typeof PLAN_PRICING];
+                  // 'bypassed' is the legacy status; coupon grants now write
+                  // 'success' with a zero amount, so detect both.
                   const isBypass = order.status === 'bypassed';
+                  const isComped = !isBypass
+                    && order.status === 'success'
+                    && ((order as any).amountPaid === 0 || String(order.orderId).startsWith('BYPASS-'));
                   
                   return (
                     <tr key={order.id} className="hover:bg-slate-50 dark:hover:bg-[#1A1C23] transition-colors">
@@ -181,9 +199,18 @@ export default function AdminOrdersPage() {
                         </div>
                       </td>
                       <td className="py-4 px-6">
-                        <span className="text-sm text-slate-700 dark:text-slate-300">
-                          {order.userEmail}
-                        </span>
+                        {order.userEmail ? (
+                          <span className="text-sm text-slate-700 dark:text-slate-300">
+                            {order.userEmail}
+                          </span>
+                        ) : (
+                          // Distinguish "we couldn't resolve this" from a real
+                          // account named "Unknown User", and keep the id
+                          // visible so it can actually be chased down.
+                          <span className="text-sm text-slate-400 dark:text-slate-500 italic" title={order.userId}>
+                            unresolved &middot; {order.userId ? `${order.userId.slice(0, 8)}…` : 'no user id'}
+                          </span>
+                        )}
                       </td>
                       <td className="py-4 px-6">
                         <div className="flex flex-col">
@@ -201,17 +228,46 @@ export default function AdminOrdersPage() {
                         </span>
                       </td>
                       <td className="py-4 px-6">
-                        {isBypass ? (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 text-xs font-medium border border-amber-500/20">
-                            <ShieldCheck className="w-3.5 h-3.5" />
-                            Bypassed
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-xs font-medium border border-emerald-500/20">
-                            <CheckCircle2 className="w-3.5 h-3.5" />
-                            Paid
-                          </span>
-                        )}
+                        {(() => {
+                          // Every non-'bypassed' status previously rendered as
+                          // a green "Paid" — including orders still in
+                          // 'created' (never paid) and 'refunded' (money
+                          // returned), which is actively misleading on a
+                          // financial screen.
+                          const badge = {
+                            base: 'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border',
+                          };
+                          if (isBypass || isComped) {
+                            return (
+                              <span className={`${badge.base} bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20`}>
+                                <ShieldCheck className="w-3.5 h-3.5" />
+                                Comped
+                              </span>
+                            );
+                          }
+                          if (order.status === 'refunded') {
+                            return (
+                              <span className={`${badge.base} bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20`}>
+                                <RotateCcw className="w-3.5 h-3.5" />
+                                Refunded
+                              </span>
+                            );
+                          }
+                          if (order.status === 'created') {
+                            return (
+                              <span className={`${badge.base} bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/20`}>
+                                <Clock className="w-3.5 h-3.5" />
+                                Unpaid
+                              </span>
+                            );
+                          }
+                          return (
+                            <span className={`${badge.base} bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20`}>
+                              <CheckCircle2 className="w-3.5 h-3.5" />
+                              Paid
+                            </span>
+                          );
+                        })()}
                       </td>
                       <td className="py-4 px-6 text-sm text-slate-500 dark:text-slate-400 whitespace-nowrap">
                         {order.createdAt?.toDate ? order.createdAt.toDate().toLocaleString('en-US', { month: 'short', day: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false }) : 'Unknown'}

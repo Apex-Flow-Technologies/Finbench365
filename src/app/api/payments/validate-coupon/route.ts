@@ -33,6 +33,18 @@ export async function POST(req: Request) {
       return NextResponse.json({ valid: false, message: 'This coupon has reached its maximum usage limit.' }, { status: 200 });
     }
 
+    // Expiry. Must mirror the check in create-order exactly — if this said
+    // "valid" for an expired code the candidate would see a discount applied
+    // in the summary and then be charged full price at the gateway.
+    if (couponData.expiresAt) {
+      const expiresAtMs = typeof couponData.expiresAt.toMillis === 'function'
+        ? couponData.expiresAt.toMillis()
+        : new Date(couponData.expiresAt).getTime();
+      if (Number.isFinite(expiresAtMs) && expiresAtMs <= Date.now()) {
+        return NextResponse.json({ valid: false, message: 'This coupon has expired.' }, { status: 200 });
+      }
+    }
+
     return NextResponse.json({
       valid: true,
       discountPercent: couponData.discountPercent || 0,

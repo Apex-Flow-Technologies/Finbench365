@@ -4,7 +4,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase/config';
 import { doc, getDoc } from 'firebase/firestore';
-import { updateUserActiveSession } from '@/lib/firebase/db';
+import { updateUserActiveSession, createUserProfile } from '@/lib/firebase/db';
 
 export interface UserProfile extends User {
   role?: 'student' | 'editor' | 'admin';
@@ -67,6 +67,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
               updateUserActiveSession(firebaseUser.uid, localSessionId).catch(console.error);
             }
           } else {
+            // Authenticated but no Firestore profile — create a complete one.
+            // Previously the session ping created a bare document with no
+            // email/name/role/createdAt, which then vanished from every
+            // ordered admin query and showed as "Unknown User" on orders.
+            createUserProfile(firebaseUser.uid, {
+              email: firebaseUser.email,
+              name: firebaseUser.displayName,
+            })
+              .then(() => updateUserActiveSession(firebaseUser.uid, localSessionId!))
+              .catch((err) => console.error('Could not create user profile:', err));
             setUser(Object.assign(firebaseUser, { role: 'student' as const }));
           }
 

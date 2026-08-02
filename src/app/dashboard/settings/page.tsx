@@ -121,7 +121,11 @@ export default function SettingsPage() {
 
   useEffect(() => {
     if (!isAdminUser) return;
-    const q = query(collection(db, 'users'), orderBy('createdAt', 'desc'));
+    // Deliberately NOT ordered by createdAt in the query. Firestore silently
+    // omits documents that lack the ordered field, which hid every user whose
+    // profile predated the createdAt write. Read unordered and sort client-side
+    // so an incomplete document is still visible (and fixable) in the admin UI.
+    const q = query(collection(db, 'users'));
     const unsub = onSnapshot(q, (snap) => {
       setManagedUsers(snap.docs.map(d => {
         const enrolled = d.data().enrolledCourses || {};

@@ -66,6 +66,8 @@ export async function grantEntitlementIdempotent(params: GrantParams): Promise<G
       pendingOrder: FieldValue.delete(),
     }, { merge: true });
 
+    const gstAmount = Math.round((planData.price * GST_RATE) * 100) / 100;
+
     tx.set(orderRef, {
       userId,
       courseId,
@@ -73,8 +75,18 @@ export async function grantEntitlementIdempotent(params: GrantParams): Promise<G
       paymentId,
       orderId,
       amount: planData.price,
+      // Explicit money fields, so admin revenue never has to infer whether a
+      // stored figure includes GST. amountPaid is what actually changed hands
+      // (0 for a comped/coupon grant), amountBase/gstAmount describe the plan.
+      amountBase: planData.price,
+      gstAmount,
+      amountPaid,
       status: 'success',
       grantedVia: source,
+      // Only on first creation. Without this, orders born here (coupon grants
+      // and webhook-first payments) carried no createdAt and were silently
+      // dropped from any admin query ordered by that field.
+      ...(existing.exists ? {} : { createdAt: FieldValue.serverTimestamp() }),
       updatedAt: FieldValue.serverTimestamp(),
     }, { merge: true });
 
@@ -89,6 +101,15 @@ export async function grantEntitlementIdempotent(params: GrantParams): Promise<G
   // they're network calls, not Firestore writes.
   try {
     const userRecord = await adminAuth.getUser(userId);
+
+    // Denormalise the email onto the order so the admin list never needs a
+    // per-row lookup. Best-effort and outside the transaction: a failure here
+    // must not undo a granted entitlement.
+    if (userRecord.email) {
+      orderRef.set({ userEmail: userRecord.email }, { merge: true })
+        .catch((e) => console.error('Could not denormalise userEmail on order:', e));
+    }
+
     if (userRecord.email) {
       const courseDoc = await adminDb.collection('courses').doc(courseId).get();
       const courseTitle = courseDoc.exists ? courseDoc.data()?.title : 'Certification Track';

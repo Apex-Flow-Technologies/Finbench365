@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebase/admin';
+import { Timestamp } from 'firebase-admin/firestore';
 import { PLAN_PRICING, GST_RATE } from '@/constants/pricing';
 import { requireAdmin } from '@/lib/api/requireAdmin';
 import { grantEntitlementIdempotent } from '@/lib/payments/grantEntitlement';
@@ -31,8 +32,14 @@ export async function POST(req: Request) {
 
   try {
     const cutoff = Date.now() - STALE_THRESHOLD_MS;
+    // The staleness filter belongs in the query, not the loop. Applying
+    // .limit() first meant a burst of fresh 'created' orders could fill the
+    // whole page and crowd out the genuinely stuck ones this sweep exists to
+    // heal. Requires the composite index on (status, createdAt).
     const stuckSnap = await adminDb.collection('orders')
       .where('status', '==', 'created')
+      .where('createdAt', '<', Timestamp.fromMillis(cutoff))
+      .orderBy('createdAt', 'asc')
       .limit(MAX_ORDERS_PER_RUN)
       .get();
 
@@ -40,10 +47,6 @@ export async function POST(req: Request) {
 
     for (const doc of stuckSnap.docs) {
       const order = doc.data();
-      const createdAtMs = order.createdAt?.toMillis ? order.createdAt.toMillis() : 0;
-      if (createdAtMs && createdAtMs > cutoff) {
-        continue; // still within the normal resolution window, skip
-      }
 
       try {
         const orderRes = await fetch(`https://api.razorpay.com/v1/orders/${order.orderId}`, {

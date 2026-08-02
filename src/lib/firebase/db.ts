@@ -312,10 +312,43 @@ export async function getUsers() {
   return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 }
 
-// Single active session enforcement
+// Single active session enforcement.
+//
+// Deliberately updateDoc, not setDoc({merge:true}). A merge-set CREATES the
+// document when it doesn't exist, which produced "skeleton" user records with
+// no email/name/role/createdAt for any Auth account that predated its Firestore
+// profile. Those records are invisible to any query ordered by createdAt
+// (Firestore silently drops documents missing the ordered field), which is why
+// the admin overview under-counted users and orders showed "Unknown User".
+// Profile creation belongs to createUserProfile below, not to a session ping.
 export async function updateUserActiveSession(userId: string, sessionId: string) {
   const userRef = doc(db, 'users', userId);
-  await setDoc(userRef, { activeSessionId: sessionId, lastLoginAt: serverTimestamp() }, { merge: true });
+  try {
+    await updateDoc(userRef, { activeSessionId: sessionId, lastLoginAt: serverTimestamp() });
+  } catch (err: any) {
+    // Document doesn't exist yet — the caller is responsible for creating a
+    // complete profile first. Nothing to do here.
+    if (err?.code !== 'not-found') throw err;
+  }
+}
+
+/**
+ * Creates a complete user profile document. Used when an authenticated account
+ * has no Firestore record yet (e.g. created before the profile write existed).
+ * Every field the admin screens rely on is written, so the document can never
+ * be dropped from an ordered query or render as "Unknown User".
+ */
+export async function createUserProfile(
+  userId: string,
+  data: { email: string | null; name: string | null },
+) {
+  const userRef = doc(db, 'users', userId);
+  await setDoc(userRef, {
+    email: data.email || '',
+    name: data.name || '',
+    role: 'student',
+    createdAt: serverTimestamp(),
+  }, { merge: true });
 }
 
 // Find existing active attempt for fallback recovery

@@ -13,11 +13,17 @@ export default function UsersManagementPage() {
 
   useEffect(() => {
     // Real-time Users Query
-    const q = query(collection(db, 'users'), orderBy('createdAt', 'desc'));
+    // Deliberately NOT ordered by createdAt in the query. Firestore silently
+    // omits documents that lack the ordered field, which hid every user whose
+    // profile predated the createdAt write. Read unordered and sort client-side
+    // so an incomplete document is still visible (and fixable) in the admin UI.
+    const q = query(collection(db, 'users'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const usersData = snapshot.docs.map(doc => {
         const data = doc.data();
-        let createdAt = new Date();
+        // Epoch, not now: an undated document must sort LAST rather than
+        // appear as the newest registration.
+        let createdAt = new Date(0);
         if (data.createdAt) {
           if (typeof data.createdAt.toDate === 'function') {
             createdAt = data.createdAt.toDate();
@@ -31,7 +37,9 @@ export default function UsersManagementPage() {
           createdAt
         };
       });
-      setUsers(usersData);
+      setUsers([...usersData].sort(
+        (a, b) => b.createdAt.getTime() - a.createdAt.getTime()
+      ));
       setLoading(false);
     }, (error) => {
       console.error("Error fetching users: ", error);

@@ -14,7 +14,11 @@ export default function SuperAdminDashboard() {
 
   useEffect(() => {
     // Real-time Users Query
-    const q = query(collection(db, 'users'), orderBy('createdAt', 'desc'));
+    // Deliberately NOT ordered by createdAt in the query. Firestore silently
+    // omits documents that lack the ordered field, which hid every user whose
+    // profile predated the createdAt write. Read unordered and sort client-side
+    // so an incomplete document is still visible (and fixable) in the admin UI.
+    const q = query(collection(db, 'users'));
     const unsubscribeUsers = onSnapshot(q, (snapshot) => {
       setTotalUsers(snapshot.size);
       
@@ -23,7 +27,9 @@ export default function SuperAdminDashboard() {
 
       const usersList = snapshot.docs.map(doc => {
         const data = doc.data();
-        let createdAt = new Date();
+        // Epoch, not now: a document with no createdAt must sort LAST, not
+        // masquerade as the newest signup. (Only used for ordering here.)
+        let createdAt = new Date(0);
         if (data.createdAt) {
           if (typeof data.createdAt.toDate === 'function') {
             createdAt = data.createdAt.toDate();
@@ -71,7 +77,12 @@ export default function SuperAdminDashboard() {
 
       setTotalEnrollments(enrollmentsCount);
       setTotalRevenue(Math.round(netRevenue));
-      setRecentUsers(usersList.slice(0, 10)); // Top 10 most recent
+      // Sorted here rather than in the query — see the note above. Users with
+      // no createdAt sort to the bottom instead of disappearing entirely.
+      const sorted = [...usersList].sort(
+        (a, b) => b.createdAt.getTime() - a.createdAt.getTime()
+      );
+      setRecentUsers(sorted.slice(0, 10));
     });
 
     return () => unsubscribeUsers();

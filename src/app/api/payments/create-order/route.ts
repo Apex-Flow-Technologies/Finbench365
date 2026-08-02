@@ -70,6 +70,14 @@ export async function POST(req: Request) {
         const couponData = couponDoc.data()!;
         if (!couponData.isActive) return 0;
         if (couponData.maxUses && couponData.usedCount >= couponData.maxUses) return 0;
+        // Expiry was previously not enforced anywhere — an expired coupon kept
+        // working indefinitely at both this redemption path and /validate-coupon.
+        if (couponData.expiresAt) {
+          const expiresAtMs = typeof couponData.expiresAt.toMillis === 'function'
+            ? couponData.expiresAt.toMillis()
+            : new Date(couponData.expiresAt).getTime();
+          if (Number.isFinite(expiresAtMs) && expiresAtMs <= Date.now()) return 0;
+        }
 
         tx.update(couponRef, { usedCount: FieldValue.increment(1) });
         appliedCouponCode = sanitizedCode;
@@ -182,10 +190,22 @@ export async function POST(req: Request) {
 
     await adminDb.collection('orders').doc(order.id).set({
       userId,
+      // Denormalised so the admin orders list needs no per-row user lookup.
+      // That lookup was an N+1 and fell back to "Unknown User" whenever the
+      // user document was incomplete.
+      userEmail: decodedToken.email || userData?.email || '',
       courseId,
       planId,
       orderId: order.id,
+      // `amount` kept for backwards compatibility with existing documents.
+      // The explicit trio below removes the ambiguity that made the admin
+      // revenue figure irreconcilable: `amount` was ex-GST while the user's
+      // totalSpent accumulated incl-GST, so the two could never agree.
       amount: planData.price,
+      amountBase: Math.round(discountedPrice * 100) / 100, // ex-GST, post-discount
+      gstAmount,
+      amountPaid: finalTotal,                              // incl-GST, what is charged
+      couponCode: appliedCouponCode,
       status: 'created',
       createdAt: FieldValue.serverTimestamp(),
     }, { merge: true });
