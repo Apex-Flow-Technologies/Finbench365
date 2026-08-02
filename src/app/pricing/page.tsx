@@ -235,7 +235,10 @@ function PricingContent() {
           })}
         </div>
         <div className="mt-8 text-center text-sm text-[#475569] dark:text-[#94A3B8] tabular-nums transition-colors">
-          * All prices are in Indian Rupees (INR) and are inclusive of 18% GST.
+          {/* This previously read "inclusive of 18% GST" while every card said
+              "+ GST" and checkout added 18% on top — contradictory on the page
+              that closes the sale. */}
+          * All prices are in Indian Rupees (INR), exclusive of GST. 18% GST is added at checkout.
         </div>
       </section>
 

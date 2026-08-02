@@ -87,9 +87,14 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Order is missing required metadata' }, { status: 400 });
     }
 
-    const basePrice = planData.price;
-    const gstAmount = Math.round((basePrice * GST_RATE) * 100) / 100;
-    const amountPaid = Math.round((basePrice + gstAmount) * 100) / 100;
+    // What the gateway actually captured, in rupees. Deriving this from the
+    // plan catalogue instead would ignore any discount — a Rs 10 coupon order
+    // would be recorded as Rs 706.82, inflating both the order record and the
+    // user's lifetime spend. Razorpay's own figure is authoritative.
+    const capturedPaise = typeof orderData.amount_paid === 'number' ? orderData.amount_paid : null;
+    const amountPaid = capturedPaise !== null
+      ? Math.round(capturedPaise) / 100
+      : Math.round((planData.price * (1 + GST_RATE)) * 100) / 100; // list price, last resort
 
     const result = await grantEntitlementIdempotent({
       userId: decodedToken.uid,

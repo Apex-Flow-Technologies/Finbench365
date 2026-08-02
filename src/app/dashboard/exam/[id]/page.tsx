@@ -64,12 +64,36 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
   // STARTED — i.e. empty. Any auto-submit (3 strikes, or the clock running out)
   // therefore submitted nothing and scored the candidate 0 despite their having
   // answered. These refs always hold the live values.
+  // Native confirm()/alert() drop out of fullscreen on several platforms,
+  // which fires `fullscreenchange` and costs the candidate a strike — for the
+  // act of submitting their own exam. These render in-page instead.
+  const [confirmSubmitOpen, setConfirmSubmitOpen] = useState(false);
+  const [examNotice, setExamNotice] = useState<string | null>(null);
+  // iOS Safari has no Fullscreen API. Without this the exam promised a
+  // fullscreen requirement it could never enforce, showed a button that did
+  // nothing, and still counted a strike every time the phone locked or a call
+  // arrived — penalising candidates for events they cannot prevent.
+  const [fullscreenSupported, setFullscreenSupported] = useState(true);
+  useEffect(() => {
+    setFullscreenSupported(
+      typeof document !== 'undefined' &&
+      'requestFullscreen' in document.documentElement &&
+      typeof document.documentElement.requestFullscreen === 'function'
+    );
+  }, []);
   const answersRef = useRef<Record<string, number>>({});
   const questionsRef = useRef<any[]>([]);
   const attemptIdRef = useRef<string | null>(null);
   useEffect(() => { answersRef.current = answers; }, [answers]);
   useEffect(() => { questionsRef.current = questions; }, [questions]);
   useEffect(() => { attemptIdRef.current = attemptId; }, [attemptId]);
+
+  // Lets AuthContext know not to sign this session out mid-attempt if the
+  // account is opened elsewhere.
+  useEffect(() => {
+    (window as any).__examInProgress = status === 'in_progress';
+    return () => { (window as any).__examInProgress = false; };
+  }, [status]);
 
   // Mark current question as visited when index changes
   useEffect(() => {
@@ -276,7 +300,10 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
     // The button click handler is implemented in the render block.
 
     const handleVisibilityChange = () => {
-      if (document.hidden) {
+      // Only meaningful where fullscreen can actually be enforced. On iOS
+      // Safari this event also fires for a lock screen or an incoming call,
+      // so counting it would fail candidates for things outside their control.
+      if (document.hidden && fullscreenSupported) {
         triggerWarning();
       }
     };
@@ -308,7 +335,7 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
       if (warningTimer) clearInterval(warningTimer);
       delete (window as any).clearAntiCheatWarning;
     };
-  }, [status, test?.type]);
+  }, [status, test?.type, fullscreenSupported]);
 
   // Aggressive Anti-Cheat (Disable Right-Click, Selection, Copy, DevTools)
   // Also exam-only: blocking copy and text selection in practice stops a
@@ -372,7 +399,7 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
 
   const handleStartExam = async () => {
     if (!user) {
-      alert("Your session has expired. Please sign in again.");
+      setExamNotice("Your session has expired. Please sign in again.");
       return;
     }
     try {
@@ -387,13 +414,13 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
       // Determine error type based on message or default to generic
       const errMsg = err?.message || err?.toString() || "";
       if (errMsg.includes("permission")) {
-        alert("You don't have permission to start this exam. Please check your enrollment.");
+        setExamNotice("You don't have permission to start this exam. Please check your enrollment.");
       } else if (errMsg.includes("not found")) {
-        alert("This exam could not be found or has been unpublished.");
+        setExamNotice("This exam could not be found or has been unpublished.");
       } else if (errMsg.includes("NProgress is not defined")) {
-        alert("A system error occurred. Please refresh the page and try again.");
+        setExamNotice("A system error occurred. Please refresh the page and try again.");
       } else {
-        alert("Unable to start the exam right now. Please check your connection and try again.");
+        setExamNotice("Unable to start the exam right now. Please check your connection and try again.");
       }
     } finally {
       setIsSubmitting(false);
@@ -447,11 +474,7 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
     await performSubmit();
   };
 
-  const handleManualSubmit = async () => {
-    if (window.confirm("Are you sure you want to submit your exam? You cannot change your answers after submission.")) {
-      await performSubmit();
-    }
-  };
+  const handleManualSubmit = () => setConfirmSubmitOpen(true);
 
   const performSubmit = async () => {
     // Read through refs: an auto-submit fired from the anti-cheat or timer
@@ -505,9 +528,9 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
       console.error("[SubmitExam] Failed to submit:", err);
       const errMsg = err?.message || err?.toString() || "";
       if (errMsg.includes("permission-denied")) {
-        alert("Submission rejected. You don't have permission.");
+        setExamNotice("Submission rejected. You don't have permission.");
       } else {
-        alert(err.message || "Failed to submit exam. Please try again.");
+        setExamNotice(err.message || "Failed to submit exam. Please try again.");
       }
     } finally {
       setIsSubmitting(false);
@@ -589,8 +612,8 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
           <AlertTriangle className="w-16 h-16 text-amber-500 mb-4 animate-bounce" />
           <h2 className="text-2xl font-bold mb-2">15-Minute Disconnect Window Exceeded</h2>
           <p className="text-[#475569] mb-6 max-w-md">
-            You were disconnected from the exam session for more than 15 minutes. 
-            In accordance with testing regulations, this attempt has been finalized and recorded as 1 attempt.
+            You were disconnected from the exam session for more than 15 minutes,
+            so this attempt has been closed in line with examination conditions.
           </p>
           <button 
             onClick={() => router.push('/dashboard')} 
@@ -720,6 +743,52 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
     <ProtectedRoute requiredRole="student">
       <div className="min-h-screen bg-slate-950 text-white flex flex-col select-none relative z-20">
         
+        {/* Submit confirmation. Deliberately in-page: a native confirm()
+            drops fullscreen on some platforms, which would register as a
+            violation for the act of submitting. */}
+        {confirmSubmitOpen && (
+          <div className="fixed inset-0 z-[60] bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-6">
+            <div className="w-full max-w-md rounded-2xl bg-zinc-900 border border-white/10 p-6 shadow-2xl">
+              <h3 className="text-lg font-bold text-white">Submit your exam?</h3>
+              <p className="text-sm text-slate-300 mt-2 leading-relaxed">
+                You have answered {Object.keys(answers).length} of {questions.length} questions.
+                You cannot change your answers after submitting.
+              </p>
+              <div className="flex flex-col-reverse sm:flex-row gap-2.5 mt-6">
+                <button
+                  onClick={() => { setConfirmSubmitOpen(false); performSubmit(); }}
+                  disabled={isSubmitting}
+                  className="flex-1 py-3 rounded-xl bg-amber-500 hover:bg-amber-400 disabled:opacity-60 text-slate-950 font-bold text-sm transition-colors"
+                >
+                  {isSubmitting ? 'Submitting…' : 'Submit exam'}
+                </button>
+                <button
+                  onClick={() => setConfirmSubmitOpen(false)}
+                  disabled={isSubmitting}
+                  className="flex-1 py-3 rounded-xl bg-white/10 hover:bg-white/20 text-white font-semibold text-sm transition-colors"
+                >
+                  Keep working
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {examNotice && (
+          <div className="fixed inset-0 z-[60] bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-6">
+            <div className="w-full max-w-md rounded-2xl bg-zinc-900 border border-white/10 p-6 shadow-2xl text-center">
+              <AlertTriangle className="w-10 h-10 text-amber-500 mx-auto mb-3" />
+              <p className="text-sm text-slate-200 leading-relaxed">{examNotice}</p>
+              <button
+                onClick={() => setExamNotice(null)}
+                className="mt-6 w-full py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-sm transition-colors"
+              >
+                OK
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Anti-Cheat Overlay */}
         {antiCheatWarning !== null && (
           <div className="fixed inset-0 z-50 bg-slate-950/95 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center">
@@ -732,19 +801,23 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
             <div className="bg-red-500/10 border border-red-500/30 rounded-2xl p-6 mb-8 max-w-md w-full shadow-lg">
               <div className="text-sm text-red-400 font-bold mb-2 uppercase tracking-widest">Strikes Recorded</div>
               <div className="text-3xl font-extrabold text-red-500">{strikes} / 3</div>
-              <div className="text-xs text-red-400/80 mt-2">3 strikes will result in immediate disqualification.</div>
+              <div className="text-xs text-red-400/80 mt-2">
+                {strikes >= 2
+                  ? 'One more violation will end this attempt.'
+                  : `${3 - strikes} more violations will end this attempt.`}
+              </div>
             </div>
             
             <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-6 mb-10 max-w-md w-full shadow-lg">
-              <div className="text-sm text-amber-400 font-bold mb-2 uppercase tracking-widest">Time to Return</div>
+              <div className="text-sm text-amber-400 font-bold mb-2 uppercase tracking-widest">Acknowledge within</div>
               <div className="text-5xl tabular-nums font-extrabold text-amber-500">{antiCheatWarning}s</div>
             </div>
-            
-            <button 
+
+            <button
               onClick={() => (window as any).clearAntiCheatWarning?.()}
               className="px-8 py-4 bg-red-600 hover:bg-red-500 text-white font-bold rounded-xl text-lg shadow-[0_0_30px_rgba(220,38,38,0.3)] transition-all hover:scale-105 active:scale-95"
             >
-              I Understand, Return to Fullscreen
+              {fullscreenSupported ? 'I Understand, Return to Fullscreen' : 'I Understand, Resume Exam'}
             </button>
           </div>
         )}

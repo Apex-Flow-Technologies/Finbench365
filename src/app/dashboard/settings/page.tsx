@@ -7,7 +7,7 @@ import { useRouter } from 'next-nprogress-bar';
 import { auth, db } from '@/lib/firebase/config';
 import { updateProfile } from 'firebase/auth';
 import { doc, updateDoc, serverTimestamp, collection, onSnapshot, query, orderBy } from 'firebase/firestore';
-import { updateUserRole } from '@/lib/firebase/db';
+import { getUserEntitlements } from '@/lib/firebase/db';
 import toast from 'react-hot-toast';
 import { 
   User, ShieldCheck, CreditCard, Lock, Phone, CheckCircle2, 
@@ -61,6 +61,12 @@ export default function SettingsPage() {
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [profileSuccess, setProfileSuccess] = useState(false);
 
+  // Was hardcoded at 85% for everyone, including users who had filled nothing in.
+  const profileCompletion = Math.round(
+    ([profile.fullName, profile.email, profile.phone, profile.targetExam]
+      .filter((v) => Boolean(v && String(v).trim())).length / 4) * 100
+  );
+
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!auth.currentUser) return;
@@ -86,19 +92,30 @@ export default function SettingsPage() {
     }
   };
 
-  // Invoices & Billing State
-  const [downloadingId, setDownloadingId] = useState<string | null>(null);
-  const [downloadSuccessId, setDownloadSuccessId] = useState<string | null>(null);
+  // The signed-in user's real course access, replacing hardcoded placeholders.
+  const [myEntitlements, setMyEntitlements] = useState<any[]>([]);
+  const [entitlementsLoading, setEntitlementsLoading] = useState(true);
 
-  // Real invoices are fetched from Firestore enrolledCourses payment records
-  const invoices: any[] = []; // Will be populated from Firestore in a future iteration
-
-  const handleDownloadInvoice = (invId: string) => {
-    toast('Invoice generation is being set up. Please contact support@myexams365.com for your GST invoice.', {
-      icon: '📄',
-      duration: 5000,
-    });
-  };
+  useEffect(() => {
+    if (!user?.uid) return;
+    let cancelled = false;
+    getUserEntitlements(user.uid)
+      .then((list) => {
+        if (cancelled) return;
+        const now = Date.now();
+        setMyEntitlements(list.map((e: any) => ({
+          courseId: e.courseId,
+          title: e.course?.title || e.courseId,
+          expiresAt: e.expiresAt,
+          durationDays: e.durationDays || 0,
+          isActive: e.isActive,
+          daysLeft: Math.max(0, Math.ceil((e.expiresAt.getTime() - now) / 86400000)),
+        })));
+      })
+      .catch((err) => console.error('Could not load entitlements:', err))
+      .finally(() => { if (!cancelled) setEntitlementsLoading(false); });
+    return () => { cancelled = true; };
+  }, [user?.uid]);
 
   return (
     <ProtectedRoute>
@@ -155,7 +172,7 @@ export default function SettingsPage() {
                       1. Profile & Contact Information
                     </div>
                     <span className="text-xs tabular-nums text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-full font-bold">
-                      85% Complete
+                      {profileCompletion}% Complete
                     </span>
                   </div>
 
@@ -163,10 +180,13 @@ export default function SettingsPage() {
                   <div className="space-y-1.5">
                     <div className="flex justify-between text-xs tabular-nums text-[#475569]">
                       <span>Profile Setup Meter</span>
-                      <span>85%</span>
+                      <span>{profileCompletion}%</span>
                     </div>
                     <div className="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
-                      <div className="h-full bg-emerald-500 rounded-full w-[85%] transition-all duration-500" />
+                      <div
+                        className="h-full bg-emerald-500 rounded-full transition-all duration-500"
+                        style={{ width: `${profileCompletion}%` }}
+                      />
                     </div>
                   </div>
 
@@ -247,46 +267,76 @@ export default function SettingsPage() {
                 </div>
 
                 {/* 2. Active Subscription Card */}
-                <div className="backdrop-blur-md bg-zinc-900/80 border border-white/10 rounded-2xl p-6 space-y-6 shadow-xl relative overflow-hidden">
+                {/* Real entitlements. This card previously displayed hardcoded
+                    values — "Tier 2 — NISM V-A Pro Pack", "42 Days Left",
+                    "Expires: 15 Oct 2026", a 70% progress bar — to every user
+                    regardless of what they had actually bought, and its
+                    Extend button only animated a progress bar. */}
+                <div className="backdrop-blur-md bg-zinc-900/80 border border-white/10 rounded-2xl p-6 space-y-5 shadow-xl relative overflow-hidden">
                   <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/10 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none" />
 
                   <div className="flex items-center justify-between border-b border-white/10 pb-4">
                     <div className="flex items-center gap-2 font-bold text-white text-base">
                       <CreditCard className="w-5 h-5 text-amber-500" />
-                      Active Subscription
+                      Your Access
                     </div>
-                    <span className="px-2.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] font-bold tabular-nums">
-                      ● LIVE
-                    </span>
+                    {myEntitlements.some((e) => e.isActive) && (
+                      <span className="px-2.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] font-bold tabular-nums">
+                        ● ACTIVE
+                      </span>
+                    )}
                   </div>
 
-                  <div className="space-y-4">
-                    <div>
-                      <div className="text-xs text-[#475569] tabular-nums uppercase tracking-wider">Current Tier Package</div>
-                      <div className="text-lg font-extrabold text-white mt-1">
-                        Tier 2 — NISM V-A Pro Pack
-                      </div>
+                  {entitlementsLoading ? (
+                    <div className="h-20 rounded-xl bg-white/5 animate-pulse" />
+                  ) : myEntitlements.length === 0 ? (
+                    <div className="text-center py-6">
+                      <p className="text-sm text-[#94A3B8]">You have no active course access.</p>
+                      <button
+                        onClick={() => router.push('/exams')}
+                        className="mt-4 px-5 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl text-sm transition-colors"
+                      >
+                        Browse courses
+                      </button>
                     </div>
-
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-xs tabular-nums text-[#475569]">
-                        <span>Access Clock</span>
-                        <span className="text-amber-400 font-bold">42 Days Left</span>
-                      </div>
-                      <div className="w-full h-2.5 bg-slate-800 rounded-full overflow-hidden p-0.5 border border-white/5">
-                        <div className="h-full bg-gradient-to-r from-amber-500 to-indigo-500 rounded-full w-[70%]" />
-                      </div>
-                      <div className="text-[11px] text-[#475569] tabular-nums text-right">Expires: 15 Oct 2026</div>
+                  ) : (
+                    <div className="space-y-5">
+                      {myEntitlements.map((e) => {
+                        const pct = e.durationDays > 0
+                          ? Math.max(0, Math.min(100, Math.round((e.daysLeft / e.durationDays) * 100)))
+                          : 0;
+                        return (
+                          <div key={e.courseId} className="space-y-2">
+                            <div className="text-sm font-bold text-white">{e.title}</div>
+                            <div className="flex justify-between text-xs tabular-nums text-[#94A3B8]">
+                              <span>Access clock</span>
+                              <span className={e.isActive ? 'text-amber-400 font-bold' : 'text-red-400 font-bold'}>
+                                {e.isActive ? `${e.daysLeft} day${e.daysLeft === 1 ? '' : 's'} left` : 'Expired'}
+                              </span>
+                            </div>
+                            <div className="w-full h-2.5 bg-slate-800 rounded-full overflow-hidden p-0.5 border border-white/5">
+                              <div
+                                className={`h-full rounded-full ${e.isActive ? 'bg-gradient-to-r from-amber-500 to-indigo-500' : 'bg-red-500/60'}`}
+                                style={{ width: `${e.isActive ? pct : 100}%` }}
+                              />
+                            </div>
+                            <div className="text-[11px] text-[#94A3B8] tabular-nums text-right">
+                              {e.expiresAt
+                                ? `${e.isActive ? 'Expires' : 'Expired'}: ${e.expiresAt.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}`
+                                : ''}
+                            </div>
+                            <button
+                              onClick={() => router.push(`/pricing?courseId=${e.courseId}`)}
+                              className="w-full py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl text-sm transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+                            >
+                              <span>{e.isActive ? 'Extend access' : 'Renew access'}</span>
+                              <ArrowRight className="w-4 h-4" />
+                            </button>
+                          </div>
+                        );
+                      })}
                     </div>
-
-                    <button
-                      onClick={triggerTopProgress}
-                      className="w-full py-3 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl text-sm transition-all shadow-[0_0_20px_rgba(245,158,11,0.3)] active:scale-95 flex items-center justify-center gap-2"
-                    >
-                      <span>Extend / Renew Access</span>
-                      <ArrowRight className="w-4 h-4" />
-                    </button>
-                  </div>
+                  )}
                 </div>
 
               </div>
@@ -317,36 +367,25 @@ export default function SettingsPage() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-white/10">
-                      {invoices.map((inv) => (
-                        <tr key={inv.id} className="hover:bg-white/5 transition-colors">
-                          <td className="py-4 px-4 tabular-nums font-bold text-white text-xs">{inv.id}</td>
-                          <td className="py-4 px-4 text-[#475569] text-xs tabular-nums">{inv.date}</td>
-                          <td className="py-4 px-4 font-semibold text-slate-200 text-sm">{inv.plan}</td>
-                          <td className="py-4 px-4 tabular-nums font-bold text-amber-400 text-sm">{inv.amount}</td>
-                          <td className="py-4 px-4 tabular-nums text-[#475569] text-xs">{inv.gst}</td>
-                          <td className="py-4 px-4">
-                            <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] tabular-nums font-bold">
-                              {inv.status}
-                            </span>
-                          </td>
-                          <td className="py-4 px-4 text-right">
-                            <button
-                              onClick={() => handleDownloadInvoice(inv.id)}
-                              disabled={downloadingId === inv.id}
-                              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-white/10 hover:bg-amber-500 hover:text-slate-950 text-white rounded-lg text-xs font-bold transition-all disabled:opacity-50"
-                            >
-                              {downloadingId === inv.id ? (
-                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                              ) : downloadSuccessId === inv.id ? (
-                                <Check className="w-3.5 h-3.5 text-emerald-400" />
-                              ) : (
-                                <Download className="w-3.5 h-3.5" />
-                              )}
-                              <span>{downloadSuccessId === inv.id ? 'Downloaded' : 'Download PDF'}</span>
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
+                      {/* `invoices` was a hardcoded empty array, so this table
+                          rendered headers above nothing, with no empty state and
+                          a download button that only raised a toast. Invoices are
+                          emailed on purchase, so point the user at that rather
+                          than implying an in-app archive that does not exist. */}
+                      <tr>
+                        <td colSpan={7} className="py-10 text-center">
+                          <p className="text-sm text-[#94A3B8]">
+                            Your GST invoice is emailed to you each time you buy or renew a course.
+                          </p>
+                          <p className="text-xs text-[#475569] mt-1.5">
+                            Can&apos;t find one? Email{' '}
+                            <a href="mailto:support@myexams365.com" className="text-amber-500 hover:underline">
+                              support@myexams365.com
+                            </a>{' '}
+                            and we&apos;ll resend it.
+                          </p>
+                        </td>
+                      </tr>
                     </tbody>
                   </table>
                 </div>

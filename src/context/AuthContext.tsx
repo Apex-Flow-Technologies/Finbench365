@@ -30,6 +30,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     let snapshotUnsubscribe: (() => void) | null = null;
 
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      // onAuthStateChanged also fires on token refresh. Without detaching the
+      // previous listener first, a long session accumulated duplicate
+      // onSnapshot subscriptions on the same document — extra billed reads and
+      // duplicate suspension alerts.
+      if (snapshotUnsubscribe) { snapshotUnsubscribe(); snapshotUnsubscribe = null; }
+
       if (firebaseUser) {
         // Ensure local session ID exists
         let localSessionId = localStorage.getItem('myexams_session_id');
@@ -96,6 +102,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
               const currentLocalSess = localStorage.getItem('myexams_session_id');
               if (data.activeSessionId && currentLocalSess && data.activeSessionId !== currentLocalSess) {
+                // Never yank someone out of a running exam. Opening a second
+                // tab would otherwise destroy a live attempt — losing work the
+                // candidate cannot get back and burning one of their attempts.
+                // The exam page sets this flag while an attempt is in progress.
+                if (typeof window !== 'undefined' && (window as any).__examInProgress) {
+                  console.warn('Session revoked elsewhere; deferring sign-out until the exam finishes.');
+                  return;
+                }
                 alert("Security Alert: Your account was logged in on another device. You have been signed out of this session.");
                 auth.signOut();
                 localStorage.removeItem('myexams_session_id');

@@ -96,7 +96,13 @@ export async function grantEntitlementIdempotent(params: GrantParams): Promise<G
       pendingOrder: FieldValue.delete(),
     }, { merge: true });
 
-    const gstAmount = Math.round((planData.price * GST_RATE) * 100) / 100;
+    // create-order already stored the DISCOUNTED base and GST for this order.
+    // Recomputing them from the plan catalogue here would overwrite a coupon
+    // order's real figures with list price and overstate revenue, so only fall
+    // back to the catalogue when the order carries no breakdown of its own.
+    const prior = existing.exists ? existing.data()! : {};
+    const amountBase = prior.amountBase ?? planData.price;
+    const gstAmount = prior.gstAmount ?? Math.round((planData.price * GST_RATE) * 100) / 100;
 
     tx.set(orderRef, {
       userId,
@@ -107,8 +113,8 @@ export async function grantEntitlementIdempotent(params: GrantParams): Promise<G
       amount: planData.price,
       // Explicit money fields, so admin revenue never has to infer whether a
       // stored figure includes GST. amountPaid is what actually changed hands
-      // (0 for a comped/coupon grant), amountBase/gstAmount describe the plan.
-      amountBase: planData.price,
+      // (0 for a comped/coupon grant), amountBase/gstAmount describe the sale.
+      amountBase,
       gstAmount,
       amountPaid,
       status: 'success',
