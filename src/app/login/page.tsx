@@ -26,6 +26,7 @@ import {
 import { useAuth } from '@/context/AuthContext';
 import { LoadingButton } from '@/components/ui/LoadingButton';
 import { friendlyAuthError } from '@/lib/auth/authErrors';
+import { suggestEmailDomain } from '@/lib/auth/otp';
 import toast from 'react-hot-toast';
 
 function LoginContent() {
@@ -49,6 +50,9 @@ function LoginContent() {
   // Signup is two-step: 'form' collects details and requests a code,
   // 'otp' redeems it. No account exists until the code is redeemed.
   const [signupStep, setSignupStep] = useState<'form' | 'otp'>('form');
+  // Set when the typed domain looks like a slip (gamil.com -> gmail.com).
+  // A code sent to a typo'd address is unrecoverable, so we confirm first.
+  const [emailSuggestion, setEmailSuggestion] = useState<string | null>(null);
   const [otpCode, setOtpCode] = useState('');
   const [otpCooldown, setOtpCooldown] = useState(0);
   const [isResendingOtp, setIsResendingOtp] = useState(false);
@@ -85,6 +89,16 @@ function LoginContent() {
     if (activeTab === 'signup' && !agreeLegal) {
       setErrorMsg('You must agree to the Terms of Service and Privacy Policy to create an account.');
       return;
+    }
+
+    // Catch a likely mistyped provider before a code is sent somewhere the
+    // candidate can't reach. They can override by submitting again.
+    if (activeTab === 'signup' && !emailSuggestion) {
+      const suggestion = suggestEmailDomain(email.trim().toLowerCase());
+      if (suggestion) {
+        setEmailSuggestion(suggestion);
+        return;
+      }
     }
 
     setIsSubmitting(true);
@@ -495,6 +509,38 @@ function LoginContent() {
                     </label>
                   </div>
                 )}
+
+                <AnimatePresence>
+                  {activeTab === 'signup' && emailSuggestion && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="overflow-hidden"
+                    >
+                      <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/25 text-xs space-y-2">
+                        <p className="text-[#334155] dark:text-[#E2E8F0] leading-relaxed">
+                          Did you mean{' '}
+                          <button
+                            type="button"
+                            onClick={() => { setEmail(emailSuggestion); setEmailSuggestion(null); }}
+                            className="font-bold text-amber-600 dark:text-amber-500 underline underline-offset-2"
+                          >
+                            {emailSuggestion}
+                          </button>
+                          ? We can only send your code to the address you enter.
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => setEmailSuggestion(null)}
+                          className="text-[11px] text-[#475569] dark:text-[#94A3B8] hover:underline"
+                        >
+                          No, use {email.trim()} as typed
+                        </button>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
 
                 <LoadingButton
                   type="submit"

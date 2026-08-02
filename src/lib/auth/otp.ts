@@ -66,6 +66,60 @@ export function isValidEmail(email: string): boolean {
   return e.length >= 5 && e.length <= 254 && EMAIL_RE.test(e) && !e.includes('..');
 }
 
+// Domains our candidates actually use, for typo detection below.
+const COMMON_DOMAINS = [
+  'gmail.com', 'googlemail.com', 'yahoo.com', 'yahoo.in', 'yahoo.co.in',
+  'outlook.com', 'hotmail.com', 'live.com', 'icloud.com', 'me.com',
+  'protonmail.com', 'proton.me', 'zoho.com', 'zoho.in',
+  'rediffmail.com', 'aol.com',
+];
+
+function editDistance(a: string, b: string): number {
+  const m = a.length, n = b.length;
+  let prev = Array.from({ length: n + 1 }, (_, j) => j);
+  for (let i = 1; i <= m; i++) {
+    const cur = [i, ...Array(n).fill(0)];
+    for (let j = 1; j <= n; j++) {
+      cur[j] = Math.min(
+        prev[j] + 1,
+        cur[j - 1] + 1,
+        prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1),
+      );
+    }
+    prev = cur;
+  }
+  return prev[n];
+}
+
+/**
+ * Suggests a correction for a mistyped provider domain, e.g. gamil.com ->
+ * gmail.com. Returns null when the domain looks intentional.
+ *
+ * This matters more than ordinary form politeness here: a code sent to a
+ * typo'd address cannot be recovered by the user, and typo domains of popular
+ * providers are frequently registered by third parties who collect whatever
+ * arrives — so a slip does not bounce harmlessly, it silently delivers
+ * elsewhere.
+ */
+export function suggestEmailDomain(email: string): string | null {
+  const at = email.lastIndexOf('@');
+  if (at < 1) return null;
+  const local = email.slice(0, at);
+  const domain = email.slice(at + 1).trim().toLowerCase();
+  if (!domain || COMMON_DOMAINS.includes(domain)) return null;
+
+  let best: string | null = null;
+  let bestScore = Infinity;
+  for (const candidate of COMMON_DOMAINS) {
+    const d = editDistance(domain, candidate);
+    if (d < bestScore) { bestScore = d; best = candidate; }
+  }
+  // One or two edits from a common provider is almost always a slip. Beyond
+  // that it is probably a genuine corporate or institutional domain.
+  const threshold = bestScore <= 2 && Math.abs(domain.length - (best?.length ?? 0)) <= 2;
+  return threshold && best && best !== domain ? `${local}@${best}` : null;
+}
+
 export function passwordProblem(password: string): string | null {
   if (typeof password !== 'string' || password.length < 8) {
     return 'Password must be at least 8 characters.';
