@@ -142,7 +142,7 @@ export default function ExamBuilderPage({ params }: { params: Promise<{ id: stri
         courseId,
         type: 'exam',
       });
-      router.push(`/editor/tests/${testId}?courseId=${courseId}`);
+      router.push(`/admin/content/tests/${testId}?courseId=${courseId}`);
     } catch (err) {
       alert('Failed to save draft and create test.');
       setIsCreatingTest(false);
@@ -179,7 +179,7 @@ export default function ExamBuilderPage({ params }: { params: Promise<{ id: stri
       <header className="shrink-0 bg-white dark:bg-[#121419] transition-colors duration-300 border-b border-slate-200 dark:border-[#282C36] p-4 flex justify-between items-center z-10 sticky top-0">
         <div className="flex items-center gap-4">
           <button
-            onClick={() => router.push('/editor')}
+            onClick={() => router.push('/admin/content')}
             className="p-2 hover:bg-slate-100 dark:hover:bg-[#282C36] rounded-lg transition-colors text-slate-600 dark:text-slate-400"
           >
             <ChevronLeft className="w-5 h-5" />
@@ -213,7 +213,10 @@ export default function ExamBuilderPage({ params }: { params: Promise<{ id: stri
         </button>
       </header>
 
-      <div className="flex-1 overflow-y-auto p-6 md:p-8 max-w-4xl mx-auto w-full space-y-10 pb-32">
+      {/* No outer padding/scroll container: the admin layout already provides
+          page padding and the page itself scrolls. Keeping both nested a
+          scroll area inside a scroll area. */}
+      <div className="flex-1 max-w-4xl mx-auto w-full space-y-10 pt-6 pb-20">
 
         {/* ── Section 1: Exam Settings ── */}
         <section className="space-y-5">
@@ -386,7 +389,7 @@ export default function ExamBuilderPage({ params }: { params: Promise<{ id: stri
                     </div>
                   </div>
                   <button
-                    onClick={() => handleNavigateWithSave(`/editor/tests/${test.id}?courseId=${courseId}`)}
+                    onClick={() => handleNavigateWithSave(`/admin/content/tests/${test.id}?courseId=${courseId}`)}
                     disabled={isSaving}
                     className="shrink-0 px-4 py-2 rounded-lg bg-slate-100 dark:bg-[#272B33] hover:bg-amber-500 hover:text-slate-900 dark:hover:bg-amber-500 dark:hover:text-[#121419] text-slate-700 dark:text-slate-300 text-xs font-bold transition-all disabled:opacity-50 flex items-center gap-1.5"
                   >

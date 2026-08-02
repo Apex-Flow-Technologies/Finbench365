@@ -59,7 +59,7 @@ export function Navbar() {
     }
   };
 
-  if (mounted && (pathname.startsWith('/editor') || pathname.startsWith('/admin'))) {
+  if (mounted && pathname.startsWith('/admin')) {
     return null;
   }
 

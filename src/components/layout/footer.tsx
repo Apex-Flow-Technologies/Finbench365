@@ -25,7 +25,7 @@ export function Footer() {
     }
   };
 
-  if (mounted && pathname.startsWith('/editor')) {
+  if (mounted && pathname.startsWith('/admin')) {
     return null;
   }
 

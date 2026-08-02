@@ -37,6 +37,19 @@ const nextConfig: NextConfig = {
     ignoreBuildErrors: true,
   },
   serverExternalPackages: ['firebase-admin'],
+  // The exam editor moved from its own /editor shell into the unified admin
+  // panel. These keep existing bookmarks and any pasted links working instead
+  // of 404ing. Permanent so browsers stop re-requesting the old path.
+  async redirects() {
+    return [
+      { source: '/editor', destination: '/admin/content', permanent: true },
+      { source: '/editor/settings', destination: '/admin/users', permanent: true },
+      { source: '/editor/courses/:id', destination: '/admin/content/courses/:id', permanent: true },
+      { source: '/editor/tests/:id', destination: '/admin/content/tests/:id', permanent: true },
+      // Anything else that lived under /editor lands on the section index.
+      { source: '/editor/:path*', destination: '/admin/content', permanent: true },
+    ];
+  },
   async headers() {
     return [
       {

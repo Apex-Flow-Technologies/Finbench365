@@ -70,7 +70,7 @@ export default function AdminOverviewPage() {
       items.push({
         label: `${incomplete.length} incomplete user record${incomplete.length === 1 ? '' : 's'}`,
         detail: 'Missing email, role or signup date. These can drop out of reports.',
-        href: '/admin/users',
+        href: '/admin/students',
         tone: 'warn',
       });
     }
@@ -79,7 +79,7 @@ export default function AdminOverviewPage() {
       items.push({
         label: `${people.expiringSoon.length} student${people.expiringSoon.length === 1 ? '' : 's'} expiring within ${EXPIRY_WARNING_DAYS} days`,
         detail: 'A renewal opportunity while they are still active.',
-        href: '/admin/users',
+        href: '/admin/students',
         tone: 'warn',
       });
     }

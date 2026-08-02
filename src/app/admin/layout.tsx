@@ -22,14 +22,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     router.push('/login');
   };
 
-  // One flat list. The exam editor is admin work, not an "external tool" —
-  // it moves fully inside /admin/content in the next phase, at which point
-  // this entry changes href without changing position.
+  // One flat list. The exam editor used to live in its own shell filed under
+  // "External Tools"; it is admin work, so it is now just the Content section.
   const navItems = [
     { name: 'Overview', href: '/admin', icon: LayoutDashboard },
-    { name: 'Students', href: '/admin/users', icon: Users },
+    { name: 'Students', href: '/admin/students', icon: Users },
     { name: 'Orders', href: '/admin/orders', icon: CreditCard },
-    { name: 'Content', href: '/editor', icon: PenTool },
+    { name: 'Content', href: '/admin/content', icon: PenTool },
   ];
 
   return (

@@ -213,7 +213,7 @@ function TestBuilderContent({ params }: { params: Promise<{ id: string }> }) {
     try {
       const savedId = await performSave();
       if (!savedId) return;
-      const parentUrl = effectiveCourseId ? `/editor/courses/${effectiveCourseId}` : '/editor';
+      const parentUrl = effectiveCourseId ? `/admin/content/courses/${effectiveCourseId}` : '/admin/content';
       router.push(parentUrl);
     } catch (err) {
       console.error(err);
@@ -251,7 +251,7 @@ function TestBuilderContent({ params }: { params: Promise<{ id: string }> }) {
         <div className="flex flex-wrap items-center gap-4">
           <button
             onClick={() => {
-              const parentUrl = effectiveCourseId ? `/editor/courses/${effectiveCourseId}` : '/editor';
+              const parentUrl = effectiveCourseId ? `/admin/content/courses/${effectiveCourseId}` : '/admin/content';
               router.push(parentUrl);
             }}
             className="flex items-center justify-center gap-1.5 h-10 px-4 rounded-lg bg-slate-100 dark:bg-[#272B33] hover:bg-slate-200 dark:hover:bg-[#323842] text-slate-700 dark:text-slate-300 transition-colors text-xs font-bold shrink-0 whitespace-nowrap"

@@ -341,7 +341,7 @@ export default function ExamsPage() {
                       if (user?.role === 'admin' || user?.role === 'editor') {
                         return (
                           <button
-                            onClick={() => router.push('/editor')}
+                            onClick={() => router.push('/admin/content')}
                             className="w-full py-3.5 px-6 rounded-xl bg-slate-100 border border-slate-200 hover:bg-slate-200 dark:bg-[#272B33] dark:hover:bg-[#2c303a] dark:border-[#323842] text-[#334155] dark:text-[#E2E8F0] font-bold text-sm tracking-wide transition-all duration-300 flex items-center justify-center gap-2 group/btn focus:outline-none"
                           >
                             <span>Manage in Editor</span>
@@ -435,7 +435,7 @@ export default function ExamsPage() {
                           if (user?.role === 'admin' || user?.role === 'editor') {
                             return (
                               <button
-                                onClick={() => router.push('/editor')}
+                                onClick={() => router.push('/admin/content')}
                                 className="w-full lg:w-48 py-3.5 px-6 rounded-xl bg-slate-100 border border-slate-200 hover:bg-slate-200 dark:bg-[#272B33] dark:hover:bg-[#2c303a] dark:border-[#323842] text-[#334155] dark:text-[#E2E8F0] font-bold text-sm tracking-wide transition-all duration-300 flex items-center justify-center gap-2 group/btn focus:outline-none"
                               >
                                 <span>Manage in Editor</span>
