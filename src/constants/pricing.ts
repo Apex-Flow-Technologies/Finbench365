@@ -17,3 +17,11 @@ export const PLAN_PRICING: Record<string, { price: number; durationDays: number;
 };
 
 export const GST_RATE = 0.18;
+
+/**
+ * Razorpay's cut as a fraction of the gross amount charged: a 2% platform fee
+ * plus 18% GST levied on that fee (2% x 1.18 = 2.36%). Used only for the
+ * indicative "net after fees" figure in the admin panel — the authoritative
+ * number is always the Razorpay settlement report.
+ */
+export const RAZORPAY_FEE_RATE = 0.0236;

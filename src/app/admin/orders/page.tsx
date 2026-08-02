@@ -104,7 +104,36 @@ export default function AdminOrdersPage() {
     fetchOrders();
   }, []);
 
-  const filteredOrders = orders.filter(order => 
+  /**
+   * Exports what is currently on screen (so a search narrows the export too).
+   * Fields are quoted and internal quotes doubled per RFC 4180 — an order id
+   * or coupon code containing a comma would otherwise shift every later column.
+   */
+  const handleExportCsv = () => {
+    const cell = (v: any) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+    const header = [
+      'Order ID', 'Payment ID', 'Email', 'Course', 'Plan',
+      'Base (ex-GST)', 'GST', 'Paid (incl GST)', 'Coupon', 'Status', 'Date',
+    ];
+    const rows = filteredOrders.map((o: any) => [
+      o.orderId, o.paymentId, o.userEmail, o.courseId, o.planId,
+      o.amountBase ?? '', o.gstAmount ?? '', o.amountPaid ?? '',
+      o.couponCode ?? '', o.status,
+      o.createdAt?.toDate ? o.createdAt.toDate().toISOString() : '',
+    ]);
+
+    const csv = [header, ...rows].map((r) => r.map(cell).join(',')).join('\r\n');
+    // BOM so Excel opens UTF-8 correctly rather than mangling the rupee sign.
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `myexams365-orders-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const filteredOrders = orders.filter(order =>
     order.orderId.toLowerCase().includes(searchQuery.toLowerCase()) ||
     order.paymentId.toLowerCase().includes(searchQuery.toLowerCase()) ||
     (order.userEmail && order.userEmail.toLowerCase().includes(searchQuery.toLowerCase())) ||
@@ -125,6 +154,15 @@ export default function AdminOrdersPage() {
         </div>
         
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
+          <button
+            onClick={handleExportCsv}
+            disabled={filteredOrders.length === 0}
+            title="Download the orders currently shown as a CSV file"
+            className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-white/10 dark:hover:bg-white/20 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
+          >
+            <Download className="w-4 h-4" />
+            Export CSV
+          </button>
           <button
             onClick={handleReconcile}
             disabled={reconciling}

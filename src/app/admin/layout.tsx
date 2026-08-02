@@ -22,10 +22,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     router.push('/login');
   };
 
+  // One flat list. The exam editor is admin work, not an "external tool" —
+  // it moves fully inside /admin/content in the next phase, at which point
+  // this entry changes href without changing position.
   const navItems = [
-    { name: 'Dashboard Overview', href: '/admin', icon: LayoutDashboard },
-    { name: 'User Management', href: '/admin/users', icon: Users },
-    { name: 'Orders & Revenue', href: '/admin/orders', icon: CreditCard },
+    { name: 'Overview', href: '/admin', icon: LayoutDashboard },
+    { name: 'Students', href: '/admin/users', icon: Users },
+    { name: 'Orders', href: '/admin/orders', icon: CreditCard },
+    { name: 'Content', href: '/editor', icon: PenTool },
   ];
 
   return (
@@ -41,7 +45,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             
             <nav className="space-y-2">
               {navItems.map((item) => {
-                const isActive = pathname === item.href;
+                // Nested routes (e.g. a course editor) should keep their
+                // section highlighted, not just the exact index page.
+                const isActive = item.href === '/admin'
+                  ? pathname === '/admin'
+                  : pathname === item.href || pathname.startsWith(`${item.href}/`);
                 return (
                   <Link 
                     key={item.name} 
@@ -66,21 +74,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 );
               })}
 
+              {/* Not part of the admin nav — this is a way out of it, into the
+                  product as a student sees it. */}
               <div className="pt-6 mt-6 border-t border-slate-200 dark:border-white/10">
-                <div className="text-xs font-mono text-slate-500 dark:text-slate-500 mb-2 px-4 uppercase tracking-wider">External Tools</div>
-                <Link 
-                  href="/editor"
+                <Link
+                  href="/dashboard"
                   className="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-500 hover:text-slate-900 hover:bg-slate-50 dark:text-slate-400 dark:hover:text-white dark:hover:bg-white/5 transition-all"
                 >
-                  <PenTool className="w-5 h-5" />
-                  <span>Exam Editor</span>
-                </Link>
-                <Link 
-                  href="/dashboard"
-                  className="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-500 hover:text-slate-900 hover:bg-slate-50 dark:text-slate-400 dark:hover:text-white dark:hover:bg-white/5 transition-all mt-1"
-                >
                   <Home className="w-5 h-5" />
-                  <span>Student Portal</span>
+                  <span>Preview student portal</span>
                 </Link>
               </div>
             </nav>
