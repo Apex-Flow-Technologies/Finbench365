@@ -43,7 +43,9 @@ const nextConfig: NextConfig = {
   async redirects() {
     return [
       { source: '/editor', destination: '/admin/content', permanent: true },
-      { source: '/editor/settings', destination: '/admin/users', permanent: true },
+      // /admin/users was itself renamed to /admin/students, so pointing here
+      // would have redirected an old bookmark straight into a 404.
+      { source: '/editor/settings', destination: '/admin/students', permanent: true },
       { source: '/editor/courses/:id', destination: '/admin/content/courses/:id', permanent: true },
       { source: '/editor/tests/:id', destination: '/admin/content/tests/:id', permanent: true },
       // Anything else that lived under /editor lands on the section index.
