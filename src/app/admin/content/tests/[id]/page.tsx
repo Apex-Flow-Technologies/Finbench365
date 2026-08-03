@@ -57,6 +57,9 @@ function TestBuilderContent({ params }: { params: Promise<{ id: string }> }) {
           setTest(testData);
           const qData = await getTestQuestions(testId, true); // Load with solutions for the editor
           setQuestions(qData);
+          // Remembered so a question removed in the editor can actually be
+          // deleted from Firestore on the next save.
+          savedIdsRef.current = (qData as any[]).map((q: any) => q.id).filter(Boolean);
         } else {
           setTest({ title: 'New Mock Test', durationMinutes: 120, totalQuestions: 0 });
         }
@@ -135,6 +138,10 @@ function TestBuilderContent({ params }: { params: Promise<{ id: string }> }) {
   }
 
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  // Ids currently persisted in Firestore, so we can (a) diff for deletions and
+  // (b) write generated ids back into state — without which every save created
+  // a fresh copy of every question.
+  const savedIdsRef = useRef<string[]>([]);
   const effectiveCourseId = courseId || test?.courseId;
 
   const performSave = async () => {
@@ -186,7 +193,16 @@ function TestBuilderContent({ params }: { params: Promise<{ id: string }> }) {
       });
     }
 
-    await saveQuestionsBatch(currentTestId, questions, test?.type || testType || 'practice');
+    const ids = await saveQuestionsBatch(
+      currentTestId,
+      questions,
+      test?.type || testType || 'practice',
+      savedIdsRef.current,
+    );
+    // Write the generated ids back, so the next save UPDATES these questions
+    // instead of creating duplicates.
+    setQuestions((prev) => prev.map((q, i) => (q.id ? q : { ...q, id: ids[i] })));
+    savedIdsRef.current = ids;
     return currentTestId;
   };
 
@@ -218,6 +234,11 @@ function TestBuilderContent({ params }: { params: Promise<{ id: string }> }) {
     } catch (err) {
       console.error(err);
       alert("Failed to save test.");
+    } finally {
+      // Previously absent. When performSave() returned null — which it does
+      // when publishing is blocked for an unlinked test — this returned with
+      // isSaving still true, disabling every button including Save. The only
+      // way out was a reload, which discarded every unsaved question.
       setIsSaving(false);
     }
   };

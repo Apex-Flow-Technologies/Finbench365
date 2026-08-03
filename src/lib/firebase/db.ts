@@ -12,7 +12,8 @@ import {
   serverTimestamp,
   writeBatch,
   Timestamp,
-  deleteDoc
+  deleteDoc,
+  deleteField
 } from 'firebase/firestore';
 
 // --- Courses & Chapters ---
@@ -192,13 +193,34 @@ export async function createMockTest(data: {
   return testRef.id;
 }
 
-export async function saveQuestionsBatch(testId: string, questions: any[], testType?: string) {
+/**
+ * Persists the question bank and returns the document id for each question, in
+ * order.
+ *
+ * Returning the ids matters: questions created here get auto-generated ids, and
+ * if the caller does not write them back into its state the NEXT save treats
+ * every question as new again and writes a second copy. Saving twice after a
+ * 100-question import produced 200 question documents, and students would have
+ * sat the test with every question duplicated.
+ *
+ * Also deletes questions removed since the last load — previously removing a
+ * question only changed local state, so a deleted question stayed live for
+ * students while the editor reported success.
+ */
+export async function saveQuestionsBatch(
+  testId: string,
+  questions: any[],
+  testType?: string,
+  previousIds: string[] = [],
+): Promise<string[]> {
   const batch = writeBatch(db);
-  
+  const savedIds: string[] = [];
+
   questions.forEach((q, index) => {
     // If it already has an ID, update it. Otherwise, create a new doc in the subcollection.
     const questionsRef = collection(db, `mock_tests/${testId}/questions`);
     const qRef = q.id ? doc(db, `mock_tests/${testId}/questions`, q.id) : doc(questionsRef);
+    savedIds.push(qRef.id);
     
     // We explicitly exclude the local 'id' and 'explanation' fields from public data
     const { id, correctOptionIndex, explanation, ...publicData } = q;
@@ -213,6 +235,10 @@ export async function saveQuestionsBatch(testId: string, questions: any[], testT
     // 1. Save public question data 
     batch.set(qRef, {
       ...finalPublicData,
+      // merge:true only OMITS correctOptionIndex for exams, it does not remove
+      // an existing one — so a test switched from practice to exam kept its
+      // answer key readable by every entitled student. Delete it explicitly.
+      ...(testType === 'practice' ? {} : { correctOptionIndex: deleteField() }),
       order: index,
       updatedAt: serverTimestamp()
     }, { merge: true });
@@ -226,7 +252,17 @@ export async function saveQuestionsBatch(testId: string, questions: any[], testT
     }, { merge: true });
   });
 
+  // Anything present before but not now has been removed in the editor. Delete
+  // the question and its solution together so no orphan answer key survives.
+  const keep = new Set(savedIds);
+  for (const staleId of previousIds) {
+    if (keep.has(staleId)) continue;
+    batch.delete(doc(db, `mock_tests/${testId}/questions`, staleId));
+    batch.delete(doc(db, `mock_tests/${testId}/solutions`, staleId));
+  }
+
   await batch.commit();
+  return savedIds;
 }
 
 // --- Entitlements (Student Pipeline) ---
