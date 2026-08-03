@@ -35,7 +35,14 @@ export interface AdminUser {
   totalSpent: number;
   entitlements: AdminEntitlement[];
   activeCount: number;
-  /** Longest remaining access across this user's courses; 0 when none. */
+  /**
+   * Days until this user's SOONEST-expiring active entitlement; 0 when none.
+   *
+   * Deliberately the soonest and not the longest: every consumer is a renewal
+   * prompt ("expiring soon"), and taking the max meant a student with one
+   * course lapsing in 2 days and another running 300 more was listed as
+   * "300 days left" — the exact opposite of the signal the screen exists for.
+   */
   daysLeft: number;
   /** True when required profile fields are missing — surfaced in Data Health. */
   incomplete: boolean;
@@ -73,7 +80,10 @@ function normalise(id: string, data: any): AdminUser {
     totalSpent: data.totalSpent || 0,
     entitlements,
     activeCount: entitlements.filter((e) => e.isActive).length,
-    daysLeft: entitlements.length ? Math.max(...entitlements.map((e) => e.daysLeft), 0) : 0,
+    daysLeft: (() => {
+      const active = entitlements.filter((e) => e.isActive);
+      return active.length ? Math.min(...active.map((e) => e.daysLeft)) : 0;
+    })(),
     incomplete: !data.email || !data.createdAt || !data.role,
   };
 }

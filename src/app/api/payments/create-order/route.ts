@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { PLAN_PRICING, GST_RATE } from '@/constants/pricing';
-import { FieldValue, Transaction } from 'firebase-admin/firestore';
+import { FieldValue } from 'firebase-admin/firestore';
 import { randomUUID } from 'crypto';
 import { grantEntitlementIdempotent } from '@/lib/payments/grantEntitlement';
 
@@ -57,32 +57,39 @@ export async function POST(req: Request) {
     let discountPercent = 0;
     let appliedCouponCode: string | null = null;
 
-    // Secure server-side coupon validation — read-check-increment happens in
-    // a single transaction so two concurrent checkouts can't both redeem the
-    // last remaining use of a maxUses-limited coupon.
+    // Server-side coupon validation. Deliberately a read only: the use is
+    // consumed by grantEntitlementIdempotent when the sale actually completes.
+    // Incrementing here meant every abandoned checkout burned a use, so a
+    // 50-use code could be exhausted with zero sales.
+    //
+    // The trade-off is that two people can hold the last use at the same
+    // moment and both complete, taking usedCount one past maxUses. One extra
+    // discounted sale is a far smaller problem than a code that silently stops
+    // working, and the increment itself is still transactional so no
+    // redemption is ever lost.
     if (couponCode && typeof couponCode === 'string') {
       const sanitizedCode = couponCode.trim().toUpperCase();
-      const couponRef = adminDb.collection('coupons').doc(sanitizedCode);
+      const couponDoc = await adminDb.collection('coupons').doc(sanitizedCode).get();
 
-      discountPercent = await adminDb.runTransaction(async (tx: Transaction) => {
-        const couponDoc = await tx.get(couponRef);
-        if (!couponDoc.exists) return 0;
+      if (couponDoc.exists) {
         const couponData = couponDoc.data()!;
-        if (!couponData.isActive) return 0;
-        if (couponData.maxUses && couponData.usedCount >= couponData.maxUses) return 0;
+        const withinUses = !couponData.maxUses || (couponData.usedCount || 0) < couponData.maxUses;
+
         // Expiry was previously not enforced anywhere — an expired coupon kept
         // working indefinitely at both this redemption path and /validate-coupon.
+        let unexpired = true;
         if (couponData.expiresAt) {
           const expiresAtMs = typeof couponData.expiresAt.toMillis === 'function'
             ? couponData.expiresAt.toMillis()
             : new Date(couponData.expiresAt).getTime();
-          if (Number.isFinite(expiresAtMs) && expiresAtMs <= Date.now()) return 0;
+          if (Number.isFinite(expiresAtMs) && expiresAtMs <= Date.now()) unexpired = false;
         }
 
-        tx.update(couponRef, { usedCount: FieldValue.increment(1) });
-        appliedCouponCode = sanitizedCode;
-        return couponData.discountPercent || 0;
-      });
+        if (couponData.isActive && withinUses && unexpired) {
+          appliedCouponCode = sanitizedCode;
+          discountPercent = couponData.discountPercent || 0;
+        }
+      }
     }
 
     // Secure server-side price calculation
@@ -107,15 +114,15 @@ export async function POST(req: Request) {
         orderId,
         amountPaid: 0,
         source: 'coupon',
+        couponCode: appliedCouponCode,
       });
 
-      // grantEntitlementIdempotent has no notion of coupons, so the code that
-      // produced this free enrolment was not being recorded anywhere — leaving
-      // 100%-discount redemptions with no audit trail.
+      // The code itself is recorded by the grant; this adds the discount that
+      // produced it, so a comped order can be explained without cross-
+      // referencing the coupon catalogue.
       await adminDb.collection('orders').doc(orderId).set({
-        couponCode: appliedCouponCode,
         discountPercent,
-      }, { merge: true }).catch((e: any) => console.error('Could not record coupon on order:', e));
+      }, { merge: true }).catch((e: any) => console.error('Could not record discount on order:', e));
 
       return NextResponse.json({
         success: true,

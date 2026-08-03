@@ -15,7 +15,7 @@ import toast from 'react-hot-toast';
 
 export default function AdminContentPage() {
   const router = useRouter();
-  const { content, loading } = useAdminContent();
+  const { content, loading, error } = useAdminContent();
 
   const [showCreate, setShowCreate] = useState(false);
   const [newTitle, setNewTitle] = useState('');
@@ -93,6 +93,20 @@ export default function AdminContentPage() {
               </div>
             </Card>
           ))
+        ) : error ? (
+          // Never invite someone to "create your first exam" because the read
+          // failed — that reads as data loss, and creating a duplicate course
+          // is exactly the wrong response.
+          <div className="col-span-full p-8 rounded-2xl border border-rose-500/20 bg-rose-500/10 text-center">
+            <p className="font-bold text-rose-600 dark:text-rose-400">Could not load your courses</p>
+            <p className="text-sm mt-1 text-rose-600/80 dark:text-rose-400/80">{error}</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="mt-4 px-4 py-2 rounded-xl bg-rose-500 hover:bg-rose-400 text-white text-sm font-bold transition-colors"
+            >
+              Retry
+            </button>
+          </div>
         ) : courses.length === 0 ? (
           <div className="col-span-full">
             <button

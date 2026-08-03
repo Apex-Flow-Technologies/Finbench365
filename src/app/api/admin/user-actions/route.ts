@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebase/admin';
-import { FieldValue } from 'firebase-admin/firestore';
+import { FieldValue, FieldPath } from 'firebase-admin/firestore';
 import { requireAdmin } from '@/lib/api/requireAdmin';
 import { recordAudit } from '@/lib/api/auditLog';
+import { rateLimit } from '@/lib/api/rateLimit';
 
 type Action = 'suspend' | 'activate' | 'revokeCourse' | 'setRole';
 
@@ -10,6 +11,23 @@ export async function POST(req: Request) {
   const check = await requireAdmin(req);
   if (!check.ok) {
     return NextResponse.json({ error: check.error }, { status: check.status });
+  }
+
+  // Every other privileged endpoint is rate limited; this one was not, and it
+  // is the most destructive of them — a loop here could revoke access for the
+  // entire customer base as fast as the network allows. Generous enough for
+  // real bulk admin work, low enough to bound the damage from a stolen token.
+  const limit = await rateLimit({
+    scope: 'admin-user-actions',
+    identifier: check.uid,
+    limit: 60,
+    windowMs: 60_000,
+  });
+  if (!limit.allowed) {
+    return NextResponse.json(
+      { error: `Too many admin actions. Try again in ${limit.retryAfterSeconds}s.` },
+      { status: 429, headers: { 'Retry-After': String(limit.retryAfterSeconds) } },
+    );
   }
 
   try {
@@ -51,12 +69,28 @@ export async function POST(req: Request) {
     }
 
     if (action === 'revokeCourse') {
-      if (!courseId) {
+      if (!courseId || typeof courseId !== 'string') {
         return NextResponse.json({ error: 'Missing courseId for revokeCourse' }, { status: 400 });
       }
-      await targetRef.update({
-        [`enrolledCourses.${courseId}`]: FieldValue.delete(),
-      });
+
+      // A dotted string in an update() key is a field PATH, not a field name.
+      // `enrolledCourses.a.b` addressed a nested field, and a crafted id could
+      // reach outside the map entirely. FieldPath treats each segment
+      // literally, so the id can only ever name one entitlement.
+      const entitlementPath = new FieldPath('enrolledCourses', courseId);
+
+      // Confirm the entitlement is really there before writing. update() on a
+      // non-existent path silently succeeds, so a typo'd id reported "access
+      // revoked" while the student kept every course they had.
+      const targetSnap = await targetRef.get();
+      if (!targetSnap.exists) {
+        return NextResponse.json({ error: 'User not found.' }, { status: 404 });
+      }
+      if (!(targetSnap.data()?.enrolledCourses || {})[courseId]) {
+        return NextResponse.json({ error: 'That user does not have access to this course.' }, { status: 400 });
+      }
+
+      await targetRef.update(entitlementPath, FieldValue.delete());
 
       // Best-effort: mark any matching order(s) as refunded for audit trail.
       const ordersSnap = await adminDb.collection('orders')

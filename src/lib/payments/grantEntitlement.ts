@@ -22,6 +22,12 @@ interface GrantParams {
   mode?: 'grant' | 'extend';
   /** Suppresses the invoice email — an admin grant is not a purchase. */
   skipInvoiceEmail?: boolean;
+  /**
+   * Coupon that produced this sale, if any. Falls back to the code stored on
+   * the order, so verify/webhook/reconcile do not need to know about coupons.
+   * Its usedCount is incremented here — see the note in the transaction.
+   */
+  couponCode?: string | null;
 }
 
 interface GrantResult {
@@ -39,7 +45,7 @@ interface GrantResult {
  */
 export async function grantEntitlementIdempotent(params: GrantParams): Promise<GrantResult> {
   const { userId, planId, courseId, paymentId, orderId, amountPaid, source,
-          mode = 'grant', skipInvoiceEmail = false } = params;
+          mode = 'grant', skipInvoiceEmail = false, couponCode = null } = params;
 
   const planData = PLAN_PRICING[planId];
   if (!planData) {
@@ -56,11 +62,34 @@ export async function grantEntitlementIdempotent(params: GrantParams): Promise<G
     // Firestore requires every read in a transaction to happen before any
     // write, so both reads are issued up front even though the user document
     // is only needed for 'extend'.
-    const [existing, userSnap] = await Promise.all([tx.get(orderRef), tx.get(userRef)]);
+    // Cast because tx.get() resolves to its Query overload against a plain
+    // DocumentReference under these firebase-admin typings, which made every
+    // .exists/.data() in this transaction a type error and buried real ones.
+    const [existing, userSnap] = await Promise.all([
+      tx.get(orderRef), tx.get(userRef),
+    ]) as unknown as [FirebaseFirestore.DocumentSnapshot, FirebaseFirestore.DocumentSnapshot];
 
     if (existing.exists && existing.data()?.status === 'success') {
       return true;
     }
+
+    // A coupon use is consumed when a sale completes, not when a checkout is
+    // opened. create-order used to increment on order creation, so every
+    // abandoned checkout permanently burned a use — a 50-use code could be
+    // exhausted without a single sale. Counting here means the number in the
+    // admin panel is the number of redemptions that actually happened.
+    //
+    // An admin grant is not a redemption, so it never touches the count.
+    const effectiveCoupon = source === 'admin'
+      ? null
+      : (couponCode ?? (existing.exists ? existing.data()?.couponCode : null) ?? null);
+    const couponRef = effectiveCoupon
+      ? adminDb.collection('coupons').doc(String(effectiveCoupon).toUpperCase())
+      : null;
+    // Still a read, and still before any write below.
+    const couponSnap = couponRef
+      ? (await tx.get(couponRef)) as unknown as FirebaseFirestore.DocumentSnapshot
+      : null;
 
     const days = planData.durationDays;
 
@@ -124,7 +153,15 @@ export async function grantEntitlementIdempotent(params: GrantParams): Promise<G
       // dropped from any admin query ordered by that field.
       ...(existing.exists ? {} : { createdAt: FieldValue.serverTimestamp() }),
       updatedAt: FieldValue.serverTimestamp(),
+      ...(effectiveCoupon ? { couponCode: effectiveCoupon } : {}),
     }, { merge: true });
+
+    if (couponRef && couponSnap?.exists) {
+      tx.update(couponRef, {
+        usedCount: FieldValue.increment(1),
+        lastRedeemedAt: FieldValue.serverTimestamp(),
+      });
+    }
 
     return false;
   });
@@ -143,7 +180,7 @@ export async function grantEntitlementIdempotent(params: GrantParams): Promise<G
     // must not undo a granted entitlement.
     if (userRecord.email) {
       orderRef.set({ userEmail: userRecord.email }, { merge: true })
-        .catch((e) => console.error('Could not denormalise userEmail on order:', e));
+        .catch((e: any) => console.error('Could not denormalise userEmail on order:', e));
     }
 
     if (userRecord.email && !skipInvoiceEmail) {

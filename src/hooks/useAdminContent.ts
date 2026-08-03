@@ -37,6 +37,9 @@ export interface ContentHealth {
 export function useAdminContent() {
   const [data, setData] = useState<ContentHealth | null>(null);
   const [loading, setLoading] = useState(true);
+  // A swallowed failure here rendered as "No exams yet" — indistinguishable
+  // from a genuinely empty catalogue, and alarming on a live product.
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -80,8 +83,9 @@ export function useAdminContent() {
           totalMaterials: courses.reduce((sum, c) => sum + c.materialCount, 0),
           orphanedTests,
         });
-      } catch (err) {
+      } catch (err: any) {
         console.error('Failed to load content health:', err);
+        if (!cancelled) setError(err?.message || 'Could not load courses.');
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -90,5 +94,5 @@ export function useAdminContent() {
     return () => { cancelled = true; };
   }, []);
 
-  return { content: data, loading };
+  return { content: data, loading, error };
 }

@@ -25,6 +25,7 @@ export default function AdminOrdersPage() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [reconciling, setReconciling] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const handleReconcile = async () => {
     if (!auth.currentUser) return;
@@ -94,8 +95,12 @@ export default function AdminOrdersPage() {
             : o?.createdAt ? new Date(o.createdAt).getTime()
             : 0;
         setOrders([...fetchedOrders].sort((a, b) => ms(b) - ms(a)));
-      } catch (error) {
+      } catch (error: any) {
+        // Previously swallowed, so a rules denial or network failure looked
+        // exactly like "no orders" — on the screen used to check whether
+        // customers' money arrived.
         console.error('Error fetching orders:', error);
+        setLoadError(error?.message || 'Could not load orders.');
       } finally {
         setLoading(false);
       }
@@ -133,12 +138,16 @@ export default function AdminOrdersPage() {
     URL.revokeObjectURL(url);
   };
 
-  const filteredOrders = orders.filter(order =>
-    order.orderId.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    order.paymentId.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (order.userEmail && order.userEmail.toLowerCase().includes(searchQuery.toLowerCase())) ||
-    order.courseId.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Every field here is optional in practice — historical orders, webhook-born
+  // orders and comped grants each omit a different one. Calling .toLowerCase()
+  // on any of them threw and took the whole page down with it.
+  const needle = searchQuery.trim().toLowerCase();
+  const filteredOrders = !needle
+    ? orders
+    : orders.filter((order) =>
+        [order.orderId, order.paymentId, order.userEmail, order.courseId, (order as any).couponCode]
+          .some((field) => String(field ?? '').toLowerCase().includes(needle)),
+      );
 
   return (
     <div className="space-y-6">
@@ -185,6 +194,12 @@ export default function AdminOrdersPage() {
         </div>
       </div>
 
+      {loadError && (
+        <div className="flex items-start gap-2.5 p-4 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 text-sm">
+          <span>Could not load orders: {loadError}. This list may be incomplete — do not treat it as a full record of payments until it loads cleanly.</span>
+        </div>
+      )}
+
       <div className="bg-white dark:bg-[#121419] border border-slate-200 dark:border-[#282C36] rounded-2xl overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
@@ -211,7 +226,7 @@ export default function AdminOrdersPage() {
               ) : filteredOrders.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="py-12 text-center text-slate-500 dark:text-slate-400">
-                    No orders found.
+                    {loadError ? 'Orders could not be loaded — see the error above.' : 'No orders found.'}
                   </td>
                 </tr>
               ) : (
@@ -261,8 +276,15 @@ export default function AdminOrdersPage() {
                         </div>
                       </td>
                       <td className="py-4 px-6">
+                        {/* `amount` is the ex-GST list price and is missing on
+                            orders written by the entitlement path; amountPaid is
+                            what was actually charged. Reading `.toFixed` off an
+                            absent `amount` also crashed the page outright. */}
                         <span className="text-sm font-mono font-medium text-slate-900 dark:text-white">
-                          ₹{order.amount.toFixed(2)}
+                          {(() => {
+                            const paid = (order as any).amountPaid ?? order.amount;
+                            return typeof paid === 'number' ? `₹${paid.toFixed(2)}` : '—';
+                          })()}
                         </span>
                       </td>
                       <td className="py-4 px-6">
