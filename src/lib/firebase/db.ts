@@ -333,6 +333,53 @@ export async function updateUserRole(userId: string, newRole: 'student' | 'admin
 }
 
 // Get all mock tests for a given exam
+/**
+ * Deletes a mock test along with its questions and solutions.
+ *
+ * There was no way to delete a test at all, so a mistyped or duplicated one
+ * stayed in the course forever. Firestore does not cascade, so the
+ * subcollections have to be enumerated — leaving them behind would keep the
+ * paid question content readable to anyone still entitled to the course.
+ *
+ * `unlinkFrom` clears the pointer on the owning course/chapter, otherwise the
+ * course keeps a mockTestId aimed at a document that no longer exists and the
+ * candidate gets an unexplained "exam not found".
+ */
+export async function deleteMockTest(
+  testId: string,
+  unlinkFrom?: { courseId?: string; chapterId?: string },
+) {
+  const [questionsSnap, solutionsSnap] = await Promise.all([
+    getDocs(collection(db, `mock_tests/${testId}/questions`)),
+    getDocs(collection(db, `mock_tests/${testId}/solutions`)),
+  ]);
+
+  const docsToDelete = [...questionsSnap.docs, ...solutionsSnap.docs];
+
+  // Firestore caps a batch at 500 writes; a 100-question test is 200 deletes
+  // plus the test itself, but chunking keeps this correct for any size.
+  const CHUNK = 400;
+  for (let i = 0; i < docsToDelete.length; i += CHUNK) {
+    const batch = writeBatch(db);
+    docsToDelete.slice(i, i + CHUNK).forEach((d) => batch.delete(d.ref));
+    await batch.commit();
+  }
+
+  await deleteDoc(doc(db, 'mock_tests', testId));
+
+  if (unlinkFrom?.chapterId) {
+    await updateDoc(doc(db, 'chapters', unlinkFrom.chapterId), { mockTestId: deleteField() });
+  }
+  if (unlinkFrom?.courseId) {
+    const courseRef = doc(db, 'courses', unlinkFrom.courseId);
+    const courseSnap = await getDoc(courseRef);
+    // Only clear the pointer if it actually points at the test being removed.
+    if (courseSnap.exists() && courseSnap.data()?.mockTestId === testId) {
+      await updateDoc(courseRef, { mockTestId: deleteField() });
+    }
+  }
+}
+
 export async function getCourseTests(courseId: string) {
   const q = query(
     collection(db, 'mock_tests'),
