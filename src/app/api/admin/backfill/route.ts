@@ -219,7 +219,9 @@ export async function POST(req: Request) {
     if (fullPass) {
       // Indexed rather than re-scanned per user: the previous .find() inside
       // this loop was quadratic.
-      const usersById = new Map(usersSnap.docs.map((d) => [d.id, d]));
+      const usersById = new Map<string, FirebaseFirestore.QueryDocumentSnapshot>(
+        usersSnap.docs.map((d: FirebaseFirestore.QueryDocumentSnapshot) => [d.id, d]),
+      );
       for (const [userId, total] of spendByUser) {
         const userDoc = usersById.get(userId);
         if (!userDoc) { orphanedOrders.push(userId); continue; }

@@ -21,7 +21,7 @@ async function main() {
   ]);
 
   console.log(`\n=== USERS (${users.size}) ===`);
-  users.docs.forEach((d) => {
+  users.docs.forEach((d: any) => {
     const u = d.data();
     const ents = Object.entries<any>(u.enrolledCourses || {}).map(([cid, e]) => {
       const ms = e?.expiresAt?.toMillis?.() ?? 0;
@@ -35,7 +35,7 @@ async function main() {
   });
 
   console.log(`\n=== ORDERS (${orders.size}) ===`);
-  orders.docs.forEach((d) => {
+  orders.docs.forEach((d: any) => {
     const o = d.data();
     console.log(
       `  ${String(o.orderId || d.id).padEnd(24)} ${String(o.status).padEnd(9)} ` +
@@ -45,7 +45,7 @@ async function main() {
   });
 
   console.log(`\n=== COUPONS (${coupons.size}) ===`);
-  coupons.docs.forEach((d) => {
+  coupons.docs.forEach((d: any) => {
     const c = d.data();
     console.log(
       `  ${d.id.padEnd(14)} ${c.discountPercent}% active=${c.isActive} ` +
@@ -54,10 +54,10 @@ async function main() {
   });
 
   console.log(`\n=== COURSES (${courses.size}) ===`);
-  courses.docs.forEach((d) => {
+  courses.docs.forEach((d: any) => {
     const c = d.data();
-    const mine = tests.docs.filter((t) => t.data().courseId === d.id);
-    const pub = mine.filter((t) => t.data().isPublished).length;
+    const mine = tests.docs.filter((t: any) => t.data().courseId === d.id);
+    const pub = mine.filter((t: any) => t.data().isPublished).length;
     const flag = c.isPublished && pub === 0 ? '  <-- LIVE WITH NOTHING TO SIT' : '';
     console.log(
       `  ${String(c.title || 'Untitled').slice(0, 34).padEnd(36)} ` +
@@ -66,23 +66,23 @@ async function main() {
     );
   });
 
-  const orphans = tests.docs.filter((t) => {
+  const orphans = tests.docs.filter((t: any) => {
     const cid = t.data().courseId;
-    return !cid || !courses.docs.some((c) => c.id === cid);
+    return !cid || !courses.docs.some((c: any) => c.id === cid);
   });
   console.log(`\n=== TESTS (${tests.size}), orphaned: ${orphans.length} ===`);
-  tests.docs.forEach((d) => {
+  tests.docs.forEach((d: any) => {
     const t = d.data();
     console.log(
       `  ${String(t.title || 'Untitled').slice(0, 30).padEnd(32)} ${String(t.type || '?').padEnd(8)} ` +
       `${t.isPublished ? 'PUBLISHED' : 'draft    '} qs=${t.totalQuestions ?? '?'} ${t.durationMinutes ?? '?'}min` +
-      `${orphans.some((o) => o.id === d.id) ? '  <-- ORPHANED' : ''}`,
+      `${orphans.some((o: any) => o.id === d.id) ? '  <-- ORPHANED' : ''}`,
     );
   });
 
-  const noStart = attempts.docs.filter((d) => !d.data().startedAt && !d.data().startTime).length;
+  const noStart = attempts.docs.filter((d: any) => !d.data().startedAt && !d.data().startTime).length;
   console.log(
-    `\n=== ATTEMPTS (${attempts.size}) === completed=${attempts.docs.filter((d) => d.data().status === 'completed').length} ` +
+    `\n=== ATTEMPTS (${attempts.size}) === completed=${attempts.docs.filter((d: any) => d.data().status === 'completed').length} ` +
     `missing-start=${noStart}`,
   );
 
