@@ -6,7 +6,7 @@ import { getCourse, updateCourse, getCourseTests, createMockTest } from '@/lib/f
 import { 
   ChevronLeft, Plus, Save, Settings, UploadCloud, FileText, 
   ClipboardList, Trash2, ExternalLink, CheckCircle2, Loader2,
-  GripVertical, BookMarked, ChevronUp, ChevronDown
+  GripVertical, BookMarked, ChevronUp, ChevronDown, AlertTriangle
 } from 'lucide-react';
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
@@ -414,7 +414,13 @@ export default function ExamBuilderPage({ params }: { params: Promise<{ id: stri
           <div className="bg-white dark:bg-[#121419] border border-slate-200 dark:border-[#282C36] rounded-2xl p-6 flex items-center justify-between transition-colors">
             <div>
               <h3 className="text-slate-900 dark:text-white font-bold text-base mb-1">Make this exam live</h3>
-              <p className="text-slate-500 dark:text-slate-400 text-sm">Turning this on makes the exam visible on the storefront immediately.</p>
+              {/* This used to claim the toggle took effect "immediately" — it
+                  does nothing until Save is pressed. */}
+              <p className="text-slate-500 dark:text-slate-400 text-sm">
+                {exam.isPublished
+                  ? 'Students will be able to see and buy this once you save.'
+                  : 'Hidden from the storefront. Turn on, then save, to go live.'}
+              </p>
             </div>
             <label className="relative inline-flex items-center cursor-pointer shrink-0 ml-6">
               <input
@@ -433,13 +439,26 @@ export default function ExamBuilderPage({ params }: { params: Promise<{ id: stri
             className="w-full flex justify-center items-center gap-2 py-4 rounded-2xl bg-amber-500 text-slate-900 hover:bg-amber-400 transition-all text-base font-black shadow-[0_0_20px_rgba(245,158,11,0.25)] disabled:opacity-50 active:scale-[0.99]"
           >
             {isSaving ? (
-              <><Loader2 className="w-5 h-5 animate-spin" /> Saving to Database...</>
+              <><Loader2 className="w-5 h-5 animate-spin" /> Saving...</>
             ) : saveSuccess ? (
-              <><CheckCircle2 className="w-5 h-5" /> Saved Successfully!</>
+              <><CheckCircle2 className="w-5 h-5" /> Saved</>
             ) : (
-              <><Save className="w-5 h-5" /> Save & Publish Exam</>
+              // Label the action actually about to happen. It previously read
+              // "Save & Publish" even with the toggle off.
+              <><Save className="w-5 h-5" /> {exam.isPublished ? 'Save & publish' : 'Save as draft'}</>
             )}
           </button>
+
+          {exam.isPublished && tests.filter((t: any) => t.isPublished).length === 0 && (
+            <div className="flex items-start gap-2.5 p-4 rounded-xl bg-amber-500/10 border border-amber-500/25 text-sm">
+              <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+              <span className="text-slate-700 dark:text-slate-300 leading-relaxed">
+                This exam has no <strong>published</strong> mock test. If you make it live,
+                students can buy it and find nothing inside. Publish at least one test first —
+                a test has its own publish toggle inside its editor.
+              </span>
+            </div>
+          )}
         </section>
 
       </div>

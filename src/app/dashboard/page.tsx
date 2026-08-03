@@ -10,18 +10,31 @@ import { LogOut, BookOpen, Clock, Award, Layers, Loader2, RefreshCw } from 'luci
 import { motion } from 'framer-motion';
 import { getUserEntitlements, getCourses, getUserAnalytics } from '@/lib/firebase/db';
 import { useRouter } from 'next-nprogress-bar';
+import { useSearchParams } from 'next/navigation';
 import { AdminPreviewBanner } from '@/components/AdminPreviewBanner';
 
 export default function DashboardPage() {
   const { user } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  // An admin's home is the admin panel. Landing them on the student dashboard
+  // showed a synthetic "you own every course" list that looks like purchases
+  // they never made, and forced an extra click to get where they were going.
+  // The admin sidebar's "Preview student portal" link passes ?preview=1 to
+  // reach this page deliberately.
+  const isPreviewing = searchParams?.get('preview') === '1';
+  const shouldRedirectToAdmin = user?.role === 'admin' && !isPreviewing;
+
+  useEffect(() => {
+    if (shouldRedirectToAdmin) router.replace('/admin');
+  }, [shouldRedirectToAdmin, router]);
   const [entitlements, setEntitlements] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [analytics, setAnalytics] = useState({ accuracy: 0, totalTimeMs: 0, attemptsCount: 0 });
 
   useEffect(() => {
-    if (!user) return;
+    if (!user || shouldRedirectToAdmin) return;
 
     if (user.role === 'admin') {
       // Admins get universal access to preview every course
@@ -58,7 +71,7 @@ export default function DashboardPage() {
       
       getUserAnalytics(user.uid).then(setAnalytics).catch(console.error);
     }
-  }, [user?.uid, user?.role]);
+  }, [user?.uid, user?.role, shouldRedirectToAdmin]);
 
   const handleLogout = async () => {
     try {
@@ -89,6 +102,14 @@ export default function DashboardPage() {
     setPendingCourseId(courseId);
     router.push(`/dashboard/courses/${courseId}`);
   };
+
+  if (shouldRedirectToAdmin) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-[#0B0C10]">
+        <Loader2 className="w-6 h-6 text-amber-500 animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <ProtectedRoute requiredRole="student">

@@ -78,7 +78,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                   product as a student sees it. */}
               <div className="pt-6 mt-6 border-t border-slate-200 dark:border-white/10">
                 <Link
-                  href="/dashboard"
+                  href="/dashboard?preview=1"
                   className="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-500 hover:text-slate-900 hover:bg-slate-50 dark:text-slate-400 dark:hover:text-white dark:hover:bg-white/5 transition-all"
                 >
                   <Home className="w-5 h-5" />
