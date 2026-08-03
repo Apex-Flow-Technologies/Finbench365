@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { collection, query, getDocs, orderBy, doc, getDoc } from 'firebase/firestore';
-import { db, auth } from '@/lib/firebase/config';
+import React, { useMemo, useState } from 'react';
+import { auth } from '@/lib/firebase/config';
+import { useAdminOrders } from '@/hooks/useAdminOrders';
+import { useAdminUsers } from '@/hooks/useAdminUsers';
 import { CreditCard, CheckCircle2, ShieldCheck, Download, Search, RefreshCw, RotateCcw, Clock } from 'lucide-react';
 import { PLAN_PRICING } from '@/constants/pricing';
 import toast from 'react-hot-toast';
@@ -21,11 +22,24 @@ interface Order {
 }
 
 export default function AdminOrdersPage() {
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [loading, setLoading] = useState(true);
+  // The fetch, sort and error handling used to be copy-pasted here from
+  // useAdminOrders — so a fix in one never reached the other. One source now.
+  const { orders: rawOrders, loading, error: loadError, reload } = useAdminOrders();
+  // Already a shared subscription, so resolving emails from it costs nothing.
+  // The page previously issued a per-row getDoc for every order missing a
+  // denormalised email — an N+1 on the busiest admin screen.
+  const { users } = useAdminUsers();
+
   const [searchQuery, setSearchQuery] = useState('');
   const [reconciling, setReconciling] = useState(false);
-  const [loadError, setLoadError] = useState<string | null>(null);
+
+  const orders: Order[] = useMemo(() => {
+    const emailById = new Map(users.map((u) => [u.id, u.email]));
+    return (rawOrders as any[]).map((o) => ({
+      ...o,
+      userEmail: o.userEmail || emailById.get(o.userId) || undefined,
+    })) as Order[];
+  }, [rawOrders, users]);
 
   const handleReconcile = async () => {
     if (!auth.currentUser) return;
@@ -40,6 +54,9 @@ export default function AdminOrdersPage() {
       if (!res.ok) throw new Error(data.error || 'Reconciliation failed');
       const healed = (data.results || []).filter((r: any) => r.outcome === 'healed-and-granted').length;
       toast.success(`Reconciliation complete: scanned ${data.scanned}, healed ${healed} stuck order(s).`);
+      // Refresh, otherwise the screen still shows the orders that were just
+      // healed as stuck and invites another pointless run.
+      if (healed > 0) await reload();
     } catch (err: any) {
       toast.error(err.message || 'Reconciliation failed');
     } finally {
@@ -47,67 +64,7 @@ export default function AdminOrdersPage() {
     }
   };
 
-  useEffect(() => {
-    async function fetchOrders() {
-      try {
-        // Unordered read + client sort: ordering in the query drops any order
-        // document missing createdAt, which previously hid coupon/webhook-born
-        // orders from this list entirely.
-        const q = query(collection(db, 'orders'));
-        const querySnapshot = await getDocs(q);
-        
-        const fetchedOrders: Order[] = [];
-        const userCache = new Map<string, string>(); // userId -> email
 
-        for (const document of querySnapshot.docs) {
-          const data = document.data() as Omit<Order, 'id'>;
-          
-          // Prefer the email denormalised onto the order at write time. The
-          // per-row lookup below is now only a fallback for historical orders
-          // written before that field existed, and its failure is logged
-          // rather than swallowed — previously a permissions error was
-          // indistinguishable from a genuinely missing user.
-          let userEmail: string | undefined = (data as any).userEmail || userCache.get(data.userId);
-          if (!userEmail && data.userId) {
-            try {
-              const userDoc = await getDoc(doc(db, 'users', data.userId));
-              const email = userDoc.exists() ? userDoc.data().email : null;
-              if (email) {
-                userEmail = email;
-                userCache.set(data.userId, email);
-              }
-            } catch (err) {
-              console.error(`Order ${document.id}: user lookup failed`, err);
-            }
-          }
-
-          fetchedOrders.push({
-            id: document.id,
-            ...data,
-            userEmail
-          });
-        }
-        
-        // Sorted here rather than in the query — see the note above. Orders
-        // with no createdAt sort last instead of vanishing from the list.
-        const ms = (o: any) =>
-          o?.createdAt?.toMillis ? o.createdAt.toMillis()
-            : o?.createdAt ? new Date(o.createdAt).getTime()
-            : 0;
-        setOrders([...fetchedOrders].sort((a, b) => ms(b) - ms(a)));
-      } catch (error: any) {
-        // Previously swallowed, so a rules denial or network failure looked
-        // exactly like "no orders" — on the screen used to check whether
-        // customers' money arrived.
-        console.error('Error fetching orders:', error);
-        setLoadError(error?.message || 'Could not load orders.');
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    fetchOrders();
-  }, []);
 
   /**
    * Exports what is currently on screen (so a search narrows the export too).
