@@ -109,6 +109,14 @@ export async function POST(req: Request) {
         source: 'coupon',
       });
 
+      // grantEntitlementIdempotent has no notion of coupons, so the code that
+      // produced this free enrolment was not being recorded anywhere — leaving
+      // 100%-discount redemptions with no audit trail.
+      await adminDb.collection('orders').doc(orderId).set({
+        couponCode: appliedCouponCode,
+        discountPercent,
+      }, { merge: true }).catch((e: any) => console.error('Could not record coupon on order:', e));
+
       return NextResponse.json({
         success: true,
         bypassed: true,

@@ -24,9 +24,15 @@ service cloud.firestore {
     // Single gate for paid exam content. Applies to practice tests as well as
     // certification exams — practice material is part of the paid course, and
     // exempting it left every published practice test readable by any account.
+    function isSuspended() {
+      return request.auth != null &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('suspended', false) == true;
+    }
+
     function canReadTestContent(testId) {
       return isAdmin() ||
-        (request.auth != null && isEnrolledInCourse(testDoc(testId).get('courseId', '')));
+        (request.auth != null && !isSuspended()
+          && isEnrolledInCourse(testDoc(testId).get('courseId', '')));
     }
 
     // Users Collection
@@ -98,11 +104,21 @@ service cloud.firestore {
       // Users can read and update their own attempts
       allow read: if request.auth != null && (resource.data.userId == request.auth.uid || isAdmin());
       
-      // Users can create an attempt for themselves
-      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      // An attempt may only be STARTED, never created already finished.
+      // Previously any field was accepted, so a signed-in user could write a
+      // completed attempt with any score — on a course they had never bought —
+      // and the update rule below then locked it as authentic.
+      allow create: if request.auth != null
+                    && request.resource.data.userId == request.auth.uid
+                    && request.resource.data.status == 'in_progress'
+                    && !request.resource.data.keys().hasAny(['score', 'submittedAt', 'totalQuestions']);
 
       // Users can update their own in-progress attempt, but once it's marked
       // completed it's locked — prevents post-submission score tampering.
+      // Certification exams are graded by the server (Admin SDK, which bypasses
+      // these rules); practice tests are graded in the browser by design, so
+      // `score` remains client-writable for those and practice results are
+      // informational rather than authoritative.
       allow update: if request.auth != null &&
                     ((resource.data.userId == request.auth.uid && resource.data.status != 'completed') || isAdmin());
 

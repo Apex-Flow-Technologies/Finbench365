@@ -86,8 +86,14 @@ export async function POST(req: Request) {
       let granted = false;
       if (paymentId && notes.userId && notes.planId && notes.courseId && PLAN_PRICING[notes.planId]) {
         const planData = PLAN_PRICING[notes.planId];
-        const gstAmount = Math.round((planData.price * GST_RATE) * 100) / 100;
-        const amountPaid = Math.round((planData.price + gstAmount) * 100) / 100;
+        // Use what was actually captured. Rebuilding from the plan catalogue
+        // ignores any discount, so a coupon order resolved through this path
+        // would overstate revenue and permanently inflate the user's
+        // totalSpent (it is incremented, not set).
+        const capturedPaise = capturedPayment?.amount ?? orderData.amount_paid;
+        const amountPaid = typeof capturedPaise === 'number'
+          ? Math.round(capturedPaise) / 100
+          : Math.round((planData.price * (1 + GST_RATE)) * 100) / 100;
 
         const result = await grantEntitlementIdempotent({
           userId: notes.userId,

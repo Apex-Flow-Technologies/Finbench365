@@ -81,8 +81,11 @@ export async function POST(req: Request) {
         }
 
         const planData = PLAN_PRICING[notes.planId];
-        const gstAmount = Math.round((planData.price * GST_RATE) * 100) / 100;
-        const amountPaid = Math.round((planData.price + gstAmount) * 100) / 100;
+        // The captured payment is authoritative; the plan catalogue does not
+        // know about discounts and would overstate a coupon order.
+        const amountPaid = typeof captured?.amount === 'number'
+          ? Math.round(captured.amount) / 100
+          : Math.round((planData.price * (1 + GST_RATE)) * 100) / 100;
 
         const grantResult = await grantEntitlementIdempotent({
           userId: notes.userId,
