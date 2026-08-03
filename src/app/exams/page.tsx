@@ -14,7 +14,7 @@ import {
   Layers,
   Loader2
 } from 'lucide-react';
-import { getCourses, getCourseTests, getUserEntitlements } from '@/lib/firebase/db';
+import { getCourses, getPublishedTestCountsByCourse, getUserEntitlements } from '@/lib/firebase/db';
 import { useAuth } from '@/context/AuthContext';
 
 interface CoursePackage {
@@ -77,19 +77,20 @@ export default function ExamsPage() {
         // Count what each course actually contains instead of reading the
         // mockCount/notesCount fields, which were never populated and so had
         // every course on the storefront advertising "0 Full Mocks".
-        const counts = await Promise.all(
-          published.map(async (course: any) => {
-            try {
-              const tests = await getCourseTests(course.id);
-              return {
-                mocks: (tests as any[]).filter((t) => t?.isPublished).length,
-                notes: Array.isArray(course.materials) ? course.materials.length : 0,
-              };
-            } catch {
-              return { mocks: 0, notes: 0 };
-            }
-          })
-        );
+        //
+        // One query for the whole catalogue, not one per course: this ran as an
+        // N+1 on every storefront load, for every visitor.
+        let testCounts: Record<string, number> = {};
+        try {
+          testCounts = await getPublishedTestCountsByCourse();
+        } catch (err) {
+          console.error('Could not load mock test counts:', err);
+        }
+
+        const counts = published.map((course: any) => ({
+          mocks: testCounts[course.id] || 0,
+          notes: Array.isArray(course.materials) ? course.materials.length : 0,
+        }));
 
         const mapped = published.map((course: any, i: number) => {
           let colorIndex = 0;

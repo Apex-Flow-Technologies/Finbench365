@@ -90,6 +90,13 @@ export async function startTestAttempt(userId: string, testId: string) {
   const newAttempt = {
     userId,
     testId,
+    // Written under BOTH names on purpose. The attempt was created with
+    // `startTime` while the submit endpoint and the stats aggregator both read
+    // `startedAt` — so the server-side time-limit check never ran at all, and
+    // every candidate's total time on test computed as zero. `startedAt` is
+    // canonical; `startTime` stays for the attempts already in Firestore and
+    // the screens that read them.
+    startedAt: serverTimestamp(),
     startTime: serverTimestamp(),
     status: 'in_progress',
     answers: {}
@@ -380,6 +387,26 @@ export async function deleteMockTest(
   }
 }
 
+/**
+ * Published mock-test counts for every course, as one query.
+ *
+ * The storefront was calling getCourseTests() once per published course — an
+ * N+1 that every anonymous visitor paid for on page load, growing with the
+ * catalogue. A single equality filter on isPublished returns exactly the
+ * documents needed (no composite index required) and they are grouped here.
+ */
+export async function getPublishedTestCountsByCourse(): Promise<Record<string, number>> {
+  const snapshot = await getDocs(
+    query(collection(db, 'mock_tests'), where('isPublished', '==', true)),
+  );
+  const counts: Record<string, number> = {};
+  snapshot.docs.forEach((d) => {
+    const courseId = (d.data() as any)?.courseId;
+    if (courseId) counts[courseId] = (counts[courseId] || 0) + 1;
+  });
+  return counts;
+}
+
 export async function getCourseTests(courseId: string) {
   const q = query(
     collection(db, 'mock_tests'),
@@ -470,8 +497,10 @@ export async function getUserAnalytics(userId: string) {
     totalScore += (data.score || 0);
     totalQuestions += attemptTotalQuestions;
     
-    if (data.startedAt && data.submittedAt) {
-      const start = data.startedAt.toDate();
+    // Historical attempts only have `startTime`; see startTestAttempt.
+    const startField = data.startedAt || data.startTime;
+    if (startField?.toDate && data.submittedAt?.toDate) {
+      const start = startField.toDate();
       const end = data.submittedAt.toDate();
       totalTimeMs += Math.max(0, end.getTime() - start.getTime());
     }

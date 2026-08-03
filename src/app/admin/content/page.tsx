@@ -3,10 +3,10 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next-nprogress-bar';
 import { motion } from 'framer-motion';
-import { createCourse, deleteCourse } from '@/lib/firebase/db';
+import { createCourse, deleteCourse, deleteMockTest } from '@/lib/firebase/db';
 import { useAdminContent, type AdminCourse } from '@/hooks/useAdminContent';
 import {
-  PageHeader, Card, Badge, Dialog, DialogActions, Button, ErrorNotice,
+  PageHeader, Card, Badge, Dialog, DialogActions, Button,
 } from '@/components/admin/primitives';
 import {
   Plus, ClipboardList, Loader2, BookOpen, Trash2, FileText, AlertTriangle, PenTool,
@@ -24,6 +24,8 @@ export default function AdminContentPage() {
   const [confirmDelete, setConfirmDelete] = useState<AdminCourse | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [localHidden, setLocalHidden] = useState<string[]>([]);
+  const [orphanToDelete, setOrphanToDelete] = useState<{ id: string; title: string } | null>(null);
+  const [hiddenOrphans, setHiddenOrphans] = useState<string[]>([]);
 
   const handleCreate = async () => {
     const title = newTitle.trim();
@@ -60,7 +62,24 @@ export default function AdminContentPage() {
     }
   };
 
+  const handleDeleteOrphan = async () => {
+    if (!orphanToDelete) return;
+    setIsDeleting(true);
+    try {
+      await deleteMockTest(orphanToDelete.id);
+      setHiddenOrphans((prev) => [...prev, orphanToDelete.id]);
+      toast.success(`"${orphanToDelete.title}" deleted.`);
+      setOrphanToDelete(null);
+    } catch (err) {
+      console.error(err);
+      toast.error('Could not delete that test.');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   const courses = (content?.courses ?? []).filter((c) => !localHidden.includes(c.id));
+  const orphans = (content?.orphanedTests ?? []).filter((t) => !hiddenOrphans.includes(t.id));
 
   return (
     <div className="space-y-6">
@@ -75,10 +94,37 @@ export default function AdminContentPage() {
         }
       />
 
-      {content && content.orphanedTests.length > 0 && (
-        <ErrorNotice
-          message={`${content.orphanedTests.length} mock test${content.orphanedTests.length === 1 ? ' is' : 's are'} not linked to an existing course. Access is resolved through the owning course, so ${content.orphanedTests.length === 1 ? 'it cannot' : 'they cannot'} be opened by any student — even if published.`}
-        />
+      {orphans.length > 0 && (
+        <Card className="border-rose-500/30">
+          <div className="flex items-start gap-2.5 mb-4">
+            <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-rose-500" />
+            <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
+              <strong>{orphans.length} mock test{orphans.length === 1 ? ' is' : 's are'} not linked to an existing course.</strong>{' '}
+              Access is resolved through the owning course, so {orphans.length === 1 ? 'it cannot' : 'they cannot'} be
+              opened by any student — even if published. They appear under no course, so this is the only place they can
+              be cleaned up.
+            </p>
+          </div>
+          <ul className="divide-y divide-slate-100 dark:divide-white/5 rounded-xl border border-slate-200 dark:border-white/10">
+            {orphans.map((t) => (
+              <li key={t.id} className="flex items-center justify-between gap-3 px-4 py-2.5">
+                <div className="min-w-0">
+                  <p className="text-sm text-slate-800 dark:text-slate-200 truncate">{t.title}</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 font-mono truncate">
+                    {t.courseId ? `course ${t.courseId} (missing)` : 'no course linked'}
+                  </p>
+                </div>
+                <button
+                  onClick={() => setOrphanToDelete({ id: t.id, title: t.title })}
+                  aria-label={`Delete ${t.title}`}
+                  className="shrink-0 p-2 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-500/10 transition-colors"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </li>
+            ))}
+          </ul>
+        </Card>
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -212,6 +258,22 @@ export default function AdminContentPage() {
             </Button>
           </DialogActions>
         </form>
+      </Dialog>
+
+      <Dialog
+        open={Boolean(orphanToDelete)}
+        title={`Delete "${orphanToDelete?.title ?? ''}"?`}
+        description="This test belongs to no course, so no student can reach it. Deleting removes it and its questions and answer keys permanently."
+        onClose={() => !isDeleting && setOrphanToDelete(null)}
+      >
+        <DialogActions>
+          <Button variant="danger" onClick={handleDeleteOrphan} disabled={isDeleting}>
+            {isDeleting ? 'Deleting…' : 'Delete test'}
+          </Button>
+          <Button variant="secondary" onClick={() => setOrphanToDelete(null)} disabled={isDeleting}>
+            Cancel
+          </Button>
+        </DialogActions>
       </Dialog>
 
       <Dialog

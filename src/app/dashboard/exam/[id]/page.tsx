@@ -223,28 +223,34 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
     loadTest();
   }, [testId, user]);
 
-  // LocalStorage Auto-Save & Disconnect Heartbeat Synchronization (every 10s)
+  // LocalStorage auto-save. Free, so it runs on every change — this is the
+  // backup that restores a candidate's answers after a crash or reload.
   useEffect(() => {
-    if (status === 'in_progress' && testId) {
-      const now = Date.now();
-      localStorage.setItem(`cbt_backup_${testId}`, JSON.stringify({ answers, markedForReview }));
-      localStorage.setItem(`cbt_last_active_${testId}`, now.toString());
+    if (status !== 'in_progress' || !testId) return;
+    localStorage.setItem(`cbt_backup_${testId}`, JSON.stringify({ answers, markedForReview }));
+    localStorage.setItem(`cbt_last_active_${testId}`, Date.now().toString());
+  }, [answers, markedForReview, status, testId]);
 
-      if (attemptId) {
-        updateAttemptHeartbeat(attemptId).catch(() => {});
-      }
+  // Firestore liveness heartbeat — deliberately separate from the auto-save
+  // above and depending only on the attempt.
+  //
+  // Both used to live in one effect keyed on `answers`, so every single answer
+  // selection tore down the interval, rebuilt it, and fired an immediate
+  // Firestore write — on top of one write every 10 seconds. A 3-hour exam cost
+  // roughly 1,200 writes per candidate to record a timestamp nothing reads
+  // synchronously. The disconnect rule it supports has a 15-minute window, so
+  // once a minute is ample resolution, and answer changes no longer write at
+  // all: ~180 writes for the same exam.
+  useEffect(() => {
+    if (status !== 'in_progress' || !attemptId) return;
 
-      const heartbeatTimer = setInterval(() => {
-        const timestamp = Date.now();
-        localStorage.setItem(`cbt_last_active_${testId}`, timestamp.toString());
-        if (attemptId) {
-          updateAttemptHeartbeat(attemptId).catch(() => {});
-        }
-      }, 10000);
+    updateAttemptHeartbeat(attemptId).catch(() => {});
+    const heartbeatTimer = setInterval(() => {
+      updateAttemptHeartbeat(attemptId).catch(() => {});
+    }, 60000);
 
-      return () => clearInterval(heartbeatTimer);
-    }
-  }, [answers, markedForReview, status, testId, attemptId]);
+    return () => clearInterval(heartbeatTimer);
+  }, [status, attemptId]);
 
   // Anti-Cheat Logic (3 Strikes + 15s Timer)
   // Certification exams only. Practice mode exists to be studied with — it

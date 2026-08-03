@@ -69,17 +69,23 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Attempt already submitted' }, { status: 400 });
     }
 
-    const startTime = attemptDoc.data()?.startedAt?.toDate();
+    // Older attempts stored this as `startTime`; new ones write both.
+    const attemptData = attemptDoc.data();
+    const startTime = (attemptData?.startedAt ?? attemptData?.startTime)?.toDate?.();
+
+    let overTime = false;
+    let elapsedMinutes: number | null = null;
     if (startTime) {
       // Get test duration to ensure they didn't take way too long
       const testDoc = await adminDb.collection('mock_tests').doc(testId).get();
       const durationMinutes = testDoc.data()?.durationMinutes || 60;
       const elapsedTimeMs = Date.now() - startTime.getTime();
-      
-      // Allow a 5 minute grace period for submission latency
+      elapsedMinutes = Math.round(elapsedTimeMs / 60000);
+
+      // Allow a 5 minute grace period for submission latency.
       if (elapsedTimeMs > (durationMinutes + 5) * 60 * 1000) {
-        // We still save the attempt, but we might want to flag it
         console.warn(`User ${uid} exceeded time limit for test ${testId}`);
+        overTime = true;
       }
     }
 
@@ -89,7 +95,13 @@ export async function POST(req: Request) {
       score,
       totalQuestions: solutionsSnapshot.size,
       status: 'completed',
-      submittedAt: FieldValue.serverTimestamp()
+      submittedAt: FieldValue.serverTimestamp(),
+      // The submission is always accepted — a candidate is not failed over
+      // latency or a reconnect. But the overrun is recorded rather than only
+      // logged to a console nobody reads, so a genuinely anomalous attempt is
+      // reviewable in the admin panel.
+      ...(elapsedMinutes !== null ? { elapsedMinutes } : {}),
+      ...(overTime ? { overTime: true } : {}),
     });
 
     return NextResponse.json({ success: true, score });

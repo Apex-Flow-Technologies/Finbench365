@@ -88,32 +88,73 @@ function normalise(id: string, data: any): AdminUser {
   };
 }
 
+/**
+ * One shared subscription for the whole app, reference-counted.
+ *
+ * Several admin screens call this hook, and the overview calls it alongside
+ * other widgets — each mount used to open its own listener over the entire
+ * users collection, so the same documents were streamed and billed two or
+ * three times over. Consumers now attach to a single listener that is opened
+ * on the first subscriber and closed after the last one leaves.
+ *
+ * Still a whole-collection read: fine at the current scale, and the eventual
+ * fix is a paginated /api/admin/students rather than more listeners.
+ */
+interface Snapshot {
+  users: AdminUser[];
+  loading: boolean;
+  error: string | null;
+}
+
+let shared: Snapshot = { users: [], loading: true, error: null };
+let unsubscribe: (() => void) | null = null;
+const subscribers = new Set<(s: Snapshot) => void>();
+
+function publish(next: Snapshot) {
+  shared = next;
+  subscribers.forEach((fn) => fn(next));
+}
+
+function ensureSubscription() {
+  if (unsubscribe) return;
+  unsubscribe = onSnapshot(
+    query(collection(db, 'users')),
+    (snap) => {
+      const list = snap.docs.map((d) => normalise(d.id, d.data()));
+      // Newest first. Undated records sort last rather than appearing as the
+      // most recent signup, which is what a `new Date()` fallback would do.
+      list.sort((a, b) => (b.createdAt?.getTime() ?? 0) - (a.createdAt?.getTime() ?? 0));
+      publish({ users: list, loading: false, error: null });
+    },
+    (err) => {
+      // The previous listeners had no error handler, so a rules denial left
+      // the page showing "Loading..." forever with no indication why.
+      console.error('useAdminUsers subscription failed:', err);
+      publish({ users: shared.users, loading: false, error: err.message });
+    },
+  );
+}
+
 export function useAdminUsers() {
-  const [users, setUsers] = useState<AdminUser[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [state, setState] = useState<Snapshot>(shared);
 
   useEffect(() => {
-    const unsub = onSnapshot(
-      query(collection(db, 'users')),
-      (snap) => {
-        const list = snap.docs.map((d) => normalise(d.id, d.data()));
-        // Newest first. Undated records sort last rather than appearing as the
-        // most recent signup, which is what a `new Date()` fallback would do.
-        list.sort((a, b) => (b.createdAt?.getTime() ?? 0) - (a.createdAt?.getTime() ?? 0));
-        setUsers(list);
-        setLoading(false);
-      },
-      (err) => {
-        // The previous listeners had no error handler, so a rules denial left
-        // the page showing "Loading..." forever with no indication why.
-        console.error('useAdminUsers subscription failed:', err);
-        setError(err.message);
-        setLoading(false);
-      },
-    );
-    return () => unsub();
+    subscribers.add(setState);
+    ensureSubscription();
+    // A late subscriber gets whatever the shared listener already has, rather
+    // than sitting on a stale "loading" from its initial render.
+    setState(shared);
+
+    return () => {
+      subscribers.delete(setState);
+      if (subscribers.size === 0) {
+        unsubscribe?.();
+        unsubscribe = null;
+        // Next mount must not show the previous session's data as settled.
+        shared = { users: [], loading: true, error: null };
+      }
+    };
   }, []);
 
-  return { users, loading, error };
+  return state;
 }

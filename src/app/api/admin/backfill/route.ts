@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
-import { FieldValue, Timestamp } from 'firebase-admin/firestore';
+import { FieldValue, Timestamp, FieldPath } from 'firebase-admin/firestore';
 import { requireAdmin } from '@/lib/api/requireAdmin';
 import { rateLimit } from '@/lib/api/rateLimit';
 import { PLAN_PRICING, GST_RATE } from '@/constants/pricing';
@@ -21,7 +21,20 @@ import { PLAN_PRICING, GST_RATE } from '@/constants/pricing';
  *    source — and only when it actually differs)
  *  - never touches enrolledCourses, which is what grants access
  *  - dryRun is the default, so the destructive path requires an explicit opt-in
+ *  - each run is bounded and resumable; see the note on PAGE_SIZE below
  */
+
+/**
+ * A run walks every user and every order, calling Firebase Auth per user and
+ * Razorpay per order. Unbounded, that eventually exceeds the function timeout
+ * and dies mid-pass — having already written some documents, with nothing to
+ * say where it stopped. So each invocation processes at most a page, stops
+ * early if it approaches the deadline, and returns cursors to continue from.
+ *
+ * Re-running is always safe: every write only fills fields that are absent.
+ */
+const PAGE_SIZE = 200;
+const TIME_BUDGET_MS = 45_000;
 /**
  * What the gateway actually captured for an order, in rupees. Returns null if
  * it cannot be determined — the caller must not fall back to a guess.
@@ -61,14 +74,31 @@ export async function POST(req: Request) {
   // Default to a dry run: the caller must ask explicitly to write.
   const dryRun = body?.dryRun !== false;
 
+  const startedAt = Date.now();
+  const outOfTime = () => Date.now() - startedAt > TIME_BUDGET_MS;
+
+  // Cursors from a previous truncated run, so a large tenant can be completed
+  // across several invocations instead of failing forever on the first.
+  const afterUser: string | null = typeof body?.afterUser === 'string' ? body.afterUser : null;
+  const afterOrder: string | null = typeof body?.afterOrder === 'string' ? body.afterOrder : null;
+
   try {
     const changes: any[] = [];
+    let truncated = false;
+    let lastUserId: string | null = null;
+    let lastOrderId: string | null = null;
 
     // ---------------------------------------------------------------- users
-    const usersSnap = await adminDb.collection('users').get();
+    let usersQuery = adminDb.collection('users')
+      .orderBy(FieldPath.documentId())
+      .limit(PAGE_SIZE);
+    if (afterUser) usersQuery = usersQuery.startAfter(afterUser);
+    const usersSnap = await usersQuery.get();
     const userEmailById = new Map<string, string>();
 
     for (const doc of usersSnap.docs) {
+      if (outOfTime()) { truncated = true; break; }
+      lastUserId = doc.id;
       const data = doc.data();
       const patch: Record<string, any> = {};
 
@@ -98,7 +128,11 @@ export async function POST(req: Request) {
     }
 
     // --------------------------------------------------------------- orders
-    const ordersSnap = await adminDb.collection('orders').get();
+    let ordersQuery = adminDb.collection('orders')
+      .orderBy(FieldPath.documentId())
+      .limit(PAGE_SIZE);
+    if (afterOrder) ordersQuery = ordersQuery.startAfter(afterOrder);
+    const ordersSnap = await ordersQuery.get();
     // userId -> total actually paid, recomputed from orders
     const spendByUser = new Map<string, number>();
     // Orders whose captured amount could not be established. Reported rather
@@ -114,6 +148,9 @@ export async function POST(req: Request) {
       : null;
 
     for (const doc of ordersSnap.docs) {
+      if (outOfTime()) { truncated = true; break; }
+      lastOrderId = doc.id;
+
       const data = doc.data();
       const patch: Record<string, any> = {};
       const plan = PLAN_PRICING[data.planId];
@@ -171,21 +208,45 @@ export async function POST(req: Request) {
     }
 
     // ----------------------------------------------------------- totalSpent
-    for (const [userId, total] of spendByUser) {
-      const userDoc = usersSnap.docs.find((d) => d.id === userId);
-      if (!userDoc) { orphanedOrders.push(userId); continue; }
-      const current = userDoc.data().totalSpent ?? 0;
-      const rounded = Math.round(total * 100) / 100;
-      if (Math.abs(current - rounded) > 0.01) {
-        changes.push({ type: 'totalSpent', id: userId, from: current, to: rounded });
-        if (!dryRun) await userDoc.ref.set({ totalSpent: rounded }, { merge: true });
+    // Only safe on a complete pass. totalSpent is a SUM over every one of a
+    // user's orders, so recomputing it from a partial scan would write a
+    // number that is simply too low — turning a paging artefact into wrong
+    // revenue on the student's record.
+    const fullPass = !truncated
+      && !afterUser && !afterOrder
+      && usersSnap.size < PAGE_SIZE && ordersSnap.size < PAGE_SIZE;
+
+    if (fullPass) {
+      // Indexed rather than re-scanned per user: the previous .find() inside
+      // this loop was quadratic.
+      const usersById = new Map(usersSnap.docs.map((d) => [d.id, d]));
+      for (const [userId, total] of spendByUser) {
+        const userDoc = usersById.get(userId);
+        if (!userDoc) { orphanedOrders.push(userId); continue; }
+        const current = userDoc.data().totalSpent ?? 0;
+        const rounded = Math.round(total * 100) / 100;
+        if (Math.abs(current - rounded) > 0.01) {
+          changes.push({ type: 'totalSpent', id: userId, from: current, to: rounded });
+          if (!dryRun) await userDoc.ref.set({ totalSpent: rounded }, { merge: true });
+        }
       }
     }
+
+    // More to do if we stopped early, or if either page came back full.
+    const moreUsers = truncated || usersSnap.size === PAGE_SIZE;
+    const moreOrders = truncated || ordersSnap.size === PAGE_SIZE;
 
     return NextResponse.json({
       dryRun,
       usersScanned: usersSnap.size,
       ordersScanned: ordersSnap.size,
+      // When these are present the pass is INCOMPLETE — send them back as
+      // afterUser/afterOrder to continue. totalSpent is skipped on a partial
+      // pass and is only recomputed once everything fits in one run.
+      ...(moreUsers && lastUserId ? { afterUser: lastUserId } : {}),
+      ...(moreOrders && lastOrderId ? { afterOrder: lastOrderId } : {}),
+      complete: !moreUsers && !moreOrders,
+      totalSpentRecomputed: fullPass,
       changeCount: changes.length,
       // Surfaced, not silently ignored: these need a human decision.
       unresolvedAmounts,

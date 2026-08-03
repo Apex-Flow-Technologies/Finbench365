@@ -64,7 +64,7 @@ export default function StudentDetailPage({ params }: { params: Promise<{ uid: s
         setOrders(orderList);
 
         const attemptList = attemptSnap.docs.map((d) => ({ id: d.id, ...(d.data() as any) }));
-        attemptList.sort((a, b) => toMillis(b.submittedAt ?? b.startTime) - toMillis(a.submittedAt ?? a.startTime));
+        attemptList.sort((a, b) => toMillis(b.submittedAt ?? b.startedAt ?? b.startTime) - toMillis(a.submittedAt ?? a.startedAt ?? a.startTime));
         setAttempts(attemptList);
 
         // Resolve test names for the attempts actually shown, rather than
@@ -322,8 +322,8 @@ export default function StudentDetailPage({ params }: { params: Promise<{ uid: s
                     : '—'}
                 </Td>
                 <Td className="whitespace-nowrap text-slate-500 dark:text-slate-400">
-                  {toMillis(a.submittedAt ?? a.startTime)
-                    ? new Date(toMillis(a.submittedAt ?? a.startTime)).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+                  {toMillis(a.submittedAt ?? a.startedAt ?? a.startTime)
+                    ? new Date(toMillis(a.submittedAt ?? a.startedAt ?? a.startTime)).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
                     : '—'}
                 </Td>
                 <Td className="text-right">
