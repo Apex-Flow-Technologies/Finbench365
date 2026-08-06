@@ -3,6 +3,7 @@
 import React, { useState, useEffect, use } from 'react';
 import { useRouter } from 'next-nprogress-bar';
 import { getCourse, updateCourse, getCourseTests, createMockTest } from '@/lib/firebase/db';
+import { IN_SCOPE_PATTERNS, findExamPattern } from '@/constants/examPatterns';
 import { 
   ChevronLeft, Plus, Save, Settings, UploadCloud, FileText, 
   ClipboardList, Trash2, ExternalLink, CheckCircle2, Loader2,
@@ -62,6 +63,9 @@ export default function ExamBuilderPage({ params }: { params: Promise<{ id: stri
         title: exam.title || 'Untitled Exam',
         description: exam.description || '',
         isPublished: exam.isPublished || false,
+        // Links this course to an official NISM series, which is where the
+        // storefront gets its duration, marks, pass mark and negative marking.
+        nismSeries: exam.nismSeries || null,
         materials: materials,
       });
       setSaveSuccess(true);
@@ -112,6 +116,9 @@ export default function ExamBuilderPage({ params }: { params: Promise<{ id: stri
         title: exam.title || 'Untitled Exam',
         description: exam.description || '',
         isPublished: exam.isPublished || false,
+        // Links this course to an official NISM series, which is where the
+        // storefront gets its duration, marks, pass mark and negative marking.
+        nismSeries: exam.nismSeries || null,
         materials: materials,
       });
       router.push(targetUrl);
@@ -132,6 +139,9 @@ export default function ExamBuilderPage({ params }: { params: Promise<{ id: stri
         title: exam.title || 'Untitled Exam',
         description: exam.description || '',
         isPublished: exam.isPublished || false,
+        // Links this course to an official NISM series, which is where the
+        // storefront gets its duration, marks, pass mark and negative marking.
+        nismSeries: exam.nismSeries || null,
         materials: materials,
       });
 
@@ -238,6 +248,46 @@ export default function ExamBuilderPage({ params }: { params: Promise<{ id: stri
 
             <div className="space-y-2">
               <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                NISM Series
+              </label>
+              <select
+                value={exam.nismSeries || ''}
+                onChange={(e) => {
+                  const p = findExamPattern(e.target.value);
+                  setExam({
+                    ...exam,
+                    nismSeries: e.target.value || null,
+                    // Only fill an empty description — never overwrite copy
+                    // someone has already written for this exam.
+                    description: exam.description?.trim() ? exam.description : (p?.description ?? ''),
+                  });
+                }}
+                className="w-full bg-slate-50 dark:bg-[#0B0C10] border border-slate-200 dark:border-[#282C36] rounded-xl px-4 py-3 text-slate-900 dark:text-white focus:outline-none focus:border-amber-500 text-sm transition-colors"
+              >
+                <option value="">Not linked to a NISM series</option>
+                {IN_SCOPE_PATTERNS.map((p) => (
+                  <option key={p.series} value={p.series}>{p.series} — {p.name}</option>
+                ))}
+              </select>
+              {(() => {
+                const p = findExamPattern(exam.nismSeries);
+                return p ? (
+                  <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                    Storefront will show: {p.durationMinutes} minutes · {p.maxMarks} marks · pass {p.passPercent}%
+                    {p.negativeMarkPercent > 0
+                      ? ` · negative marking ${p.negativeMarkPercent}%`
+                      : ' · no negative marking'}
+                  </p>
+                ) : (
+                  <p className="text-xs text-amber-600 dark:text-amber-500 leading-relaxed">
+                    Without a series, the storefront card cannot show duration, marks or pass mark.
+                  </p>
+                );
+              })()}
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                 Description
               </label>
               <textarea
@@ -250,12 +300,12 @@ export default function ExamBuilderPage({ params }: { params: Promise<{ id: stri
           </div>
         </section>
 
-        {/* ── Section 2: Study Materials ── */}
+        {/* ── Section 2: Study Notes ── */}
         <section className="space-y-5">
           <div className="flex items-center justify-between border-b border-slate-200 dark:border-[#282C36] pb-3">
             <div className="flex items-center gap-2 text-lg font-bold text-slate-900 dark:text-white">
               <BookMarked className="w-5 h-5 text-amber-500" />
-              2. Study Materials
+              2. Study Notes
             </div>
             <button
               onClick={addMaterial}

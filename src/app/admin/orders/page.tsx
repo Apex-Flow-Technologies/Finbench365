@@ -1,21 +1,35 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { collection, query, getDocs, orderBy, doc, getDoc } from 'firebase/firestore';
+import React, { useEffect, useMemo, useState } from 'react';
+import { collection, query, getDocs, doc, getDoc } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase/config';
 import { CreditCard, CheckCircle2, ShieldCheck, Download, Search, RefreshCw, RotateCcw, Clock } from 'lucide-react';
 import { PLAN_PRICING } from '@/constants/pricing';
+import { formatInr, summariseRevenue } from '@/lib/admin/revenue';
 import toast from 'react-hot-toast';
 
+/**
+ * Optionality here is deliberate and load-bearing — it mirrors what is actually
+ * in Firestore. An order in 'created' has no `paymentId`; orders written before
+ * the money fields were split have no `amountPaid`/`amountBase`/`gstAmount`.
+ * Typing them as required is what let the search crash ship.
+ */
 interface Order {
   id: string;
   userId: string;
   userEmail?: string;
-  courseId: string;
+  courseId?: string;
   planId: string;
-  paymentId: string;
+  paymentId?: string;
   orderId: string;
-  amount: number;
+  /** Legacy field: the ex-GST list price. Kept for older documents only. */
+  amount?: number;
+  /** Ex-GST, post-discount. */
+  amountBase?: number;
+  gstAmount?: number;
+  /** Incl-GST — what the gateway actually captured. The figure that matters. */
+  amountPaid?: number;
+  couponCode?: string | null;
   status: string;
   createdAt: any;
 }
@@ -133,12 +147,29 @@ export default function AdminOrdersPage() {
     URL.revokeObjectURL(url);
   };
 
-  const filteredOrders = orders.filter(order =>
-    order.orderId.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    order.paymentId.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (order.userEmail && order.userEmail.toLowerCase().includes(searchQuery.toLowerCase())) ||
-    order.courseId.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  /**
+   * Every searchable field here is optional in practice: an order that was
+   * created but never paid has no `paymentId`, and older rows can be missing
+   * `courseId` or the denormalised `userEmail`. Reading `.toLowerCase()`
+   * straight off them threw and blanked the entire page — masked until now
+   * because an empty query short-circuits on `orderId.includes('')`, so the
+   * crash only appeared once someone actually typed. Unpaid orders are exactly
+   * what the "Reconcile Stuck Orders" button next to this box is for.
+   */
+  const filteredOrders = useMemo(() => {
+    const needle = searchQuery.trim().toLowerCase();
+    if (!needle) return orders;
+    return orders.filter((order) =>
+      [order.orderId, order.paymentId, order.userEmail, order.courseId, order.userId]
+        .some((field) => String(field ?? '').toLowerCase().includes(needle)),
+    );
+  }, [orders, searchQuery]);
+
+  // Revenue belongs on the page that holds the ledger it is derived from —
+  // the Overview's "money collected" tile had no way to show its working, and
+  // reconciling it against a Razorpay settlement report meant switching pages.
+  // Reuses the same summariser the Overview does, so the two cannot disagree.
+  const revenue = useMemo(() => summariseRevenue(filteredOrders), [filteredOrders]);
 
   return (
     <div className="space-y-6">
@@ -185,6 +216,47 @@ export default function AdminOrdersPage() {
         </div>
       </div>
 
+      {/* Revenue for whatever is currently on screen — narrowing the search
+          narrows these figures too, which is what makes them useful for
+          reconciling a date range or a single candidate against Razorpay. */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {[
+          {
+            label: 'Collected',
+            value: formatInr(revenue.collected, { decimals: true }),
+            sub: `${revenue.paidCount} paid order${revenue.paidCount === 1 ? '' : 's'} · incl. GST`,
+            tone: 'text-emerald-600 dark:text-emerald-400',
+          },
+          {
+            label: 'GST payable',
+            value: formatInr(revenue.gstPayable, { decimals: true }),
+            sub: 'Collected on your behalf — must be remitted',
+            tone: 'text-amber-600 dark:text-amber-400',
+          },
+          {
+            label: 'Net revenue',
+            value: formatInr(revenue.netAfterFees, { decimals: true }),
+            sub: 'Ex-GST, less gateway fees — indicative',
+            tone: 'text-slate-900 dark:text-white',
+          },
+          {
+            label: 'Not counted',
+            value: `${revenue.compedCount + revenue.unknownAmountCount}`,
+            sub: `${revenue.compedCount} comped · ${revenue.unknownAmountCount} unverifiable · ${revenue.unpaidCount} unpaid`,
+            tone: 'text-slate-900 dark:text-white',
+          },
+        ].map((s) => (
+          <div
+            key={s.label}
+            className="bg-white dark:bg-[#121419] border border-slate-200 dark:border-[#282C36] rounded-2xl p-4"
+          >
+            <div className="text-xs font-medium text-slate-500 dark:text-slate-400">{s.label}</div>
+            <div className={`text-xl font-bold tabular-nums mt-1 ${s.tone}`}>{s.value}</div>
+            <div className="text-[11px] text-slate-400 dark:text-slate-500 mt-1 leading-snug">{s.sub}</div>
+          </div>
+        ))}
+      </div>
+
       <div className="bg-white dark:bg-[#121419] border border-slate-200 dark:border-[#282C36] rounded-2xl overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
@@ -193,7 +265,7 @@ export default function AdminOrdersPage() {
                 <th className="py-4 px-6 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Order ID</th>
                 <th className="py-4 px-6 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Candidate</th>
                 <th className="py-4 px-6 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Plan / Course</th>
-                <th className="py-4 px-6 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Amount</th>
+                <th className="py-4 px-6 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Paid (incl. GST)</th>
                 <th className="py-4 px-6 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Status</th>
                 <th className="py-4 px-6 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Date</th>
               </tr>
@@ -261,9 +333,32 @@ export default function AdminOrdersPage() {
                         </div>
                       </td>
                       <td className="py-4 px-6">
-                        <span className="text-sm font-mono font-medium text-slate-900 dark:text-white">
-                          ₹{order.amount.toFixed(2)}
-                        </span>
+                        {/* What actually changed hands, incl. GST — the same
+                            basis the overview and the CSV export use. This
+                            column used to render `amount`, the ex-GST list
+                            price, so a discounted order reported the full
+                            ticket price and no two screens agreed. */}
+                        {typeof order.amountPaid === 'number' ? (
+                          <div className="flex flex-col">
+                            <span className="text-sm font-medium tabular-nums text-slate-900 dark:text-white">
+                              {formatInr(order.amountPaid, { decimals: true })}
+                            </span>
+                            {typeof order.amountBase === 'number' && typeof order.gstAmount === 'number' && (
+                              <span className="text-xs tabular-nums text-slate-500 dark:text-slate-400 mt-0.5">
+                                {formatInr(order.amountBase, { decimals: true })} + {formatInr(order.gstAmount, { decimals: true })} GST
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          // Absent, not zero. Rendering ₹0.00 here would look
+                          // like a comped order rather than a missing figure.
+                          <span
+                            className="text-sm text-slate-400 dark:text-slate-500 italic"
+                            title="No captured amount recorded — usually an order created under different gateway keys. Run the backfill to resolve it."
+                          >
+                            unknown
+                          </span>
+                        )}
                       </td>
                       <td className="py-4 px-6">
                         {(() => {

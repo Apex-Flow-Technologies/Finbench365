@@ -6,7 +6,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useRouter, usePathname } from 'next/navigation';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { motion } from 'framer-motion';
-import { LayoutDashboard, BookOpen, Users, Settings, LogOut, ChevronLeft, Menu, Home, ExternalLink, ShieldCheck } from 'lucide-react';
+import { LayoutDashboard, LogOut, Menu, Home, ExternalLink, ShieldCheck } from 'lucide-react';
 import { signOut } from 'firebase/auth';
 import { auth } from '@/lib/firebase/config';
 
@@ -24,14 +24,18 @@ export default function EditorLayout({ children }: { children: React.ReactNode }
 
   const isEditorPath = pathname.startsWith('/editor');
 
+  // /editor/settings used to sit here. It was a third copy of the user
+  // directory, alongside a wall of feature-flag, pricing and "security engine"
+  // controls that were local React state and persisted nowhere — toggling one
+  // did nothing while looking as though it had — plus an audit log of invented
+  // events. User management now lives only at /admin/users.
   const navItems = [
-    { label: 'Dashboard', icon: LayoutDashboard, href: '/editor' },
-    ...(user?.role === 'admin' ? [{ label: 'Admin Panel', icon: ShieldCheck, href: '/admin' }] : []),
-    { label: 'Settings', icon: Settings, href: '/editor/settings' },
+    { label: 'Content', icon: LayoutDashboard, href: '/editor' },
+    { label: 'Admin Panel', icon: ShieldCheck, href: '/admin' },
   ];
 
   return (
-    <ProtectedRoute requiredRole="editor">
+    <ProtectedRoute requiredRole="admin">
       <div className="min-h-screen bg-slate-50 dark:bg-[#0B0C10] flex flex-col md:flex-row font-sans text-slate-900 dark:text-[#FBFBF9] transition-colors duration-300">
         
         {/* Mobile Header */}

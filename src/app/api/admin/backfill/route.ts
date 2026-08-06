@@ -172,7 +172,9 @@ export async function POST(req: Request) {
 
     // ----------------------------------------------------------- totalSpent
     for (const [userId, total] of spendByUser) {
-      const userDoc = usersSnap.docs.find((d) => d.id === userId);
+      const userDoc = usersSnap.docs.find(
+        (d: FirebaseFirestore.QueryDocumentSnapshot) => d.id === userId,
+      );
       if (!userDoc) { orphanedOrders.push(userId); continue; }
       const current = userDoc.data().totalSpent ?? 0;
       const rounded = Math.round(total * 100) / 100;

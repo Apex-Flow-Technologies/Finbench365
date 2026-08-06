@@ -38,7 +38,7 @@ export default function StudentExamPage({ params }: { params: Promise<{ id: stri
   const examId = unwrappedParams.id;
   const router = useRouter();
   const { user } = useAuth();
-  const isAdminOrEditor = user?.role === 'admin' || user?.role === 'editor';
+  const isAdmin = user?.role === 'admin';
 
   const [exam, setExam] = useState<any>(null);
   const [tests, setTests] = useState<any[]>([]);
@@ -57,7 +57,7 @@ export default function StudentExamPage({ params }: { params: Promise<{ id: stri
 
       try {
         // 1. Check if Admin/Editor override applies
-        if (user.role === 'admin' || user.role === 'editor') {
+        if (user.role === 'admin') {
           setHasAccess(true);
           setDaysLeft(999);
         } else {
@@ -94,7 +94,7 @@ export default function StudentExamPage({ params }: { params: Promise<{ id: stri
         setExam(examData);
 
         // Filter to published tests (admins see all tests)
-        const publishedTests = user.role === 'admin' || user.role === 'editor'
+        const publishedTests = user.role === 'admin'
           ? testsData
           : testsData.filter((t: any) => t.isPublished !== false);
         setTests(publishedTests);
@@ -192,7 +192,7 @@ export default function StudentExamPage({ params }: { params: Promise<{ id: stri
                   <p className="text-[#334155] dark:text-[#94A3B8] text-sm max-w-2xl leading-relaxed">{exam?.description}</p>
                 </div>
                 <div className="shrink-0 flex flex-col items-end gap-1">
-                  {isAdminOrEditor ? (
+                  {isAdmin ? (
                     <span className="text-xs tabular-nums text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 px-3.5 py-1.5 rounded-full font-bold uppercase tracking-wider">
                       ● ADMIN ACCESS
                     </span>
@@ -208,7 +208,7 @@ export default function StudentExamPage({ params }: { params: Promise<{ id: stri
               <div className="flex flex-wrap items-center gap-3 mt-6 pt-5 border-t border-slate-100 dark:border-[#282C36]/60">
                 <div className="flex items-center gap-2 text-xs font-medium text-[#334155] dark:text-[#E2E8F0] bg-slate-100 dark:bg-[#181A1F] px-3.5 py-1.5 rounded-xl border border-slate-200 dark:border-[#282C36]">
                   <span>📚</span>
-                  <span className="font-bold text-[#111B35] dark:text-white">{materials.length}</span> Study Material{materials.length !== 1 ? 's' : ''}
+                  <span className="font-bold text-[#111B35] dark:text-white">{materials.length}</span> Study Note{materials.length !== 1 ? 's' : ''}
                 </div>
                 <div className="flex items-center gap-2 text-xs font-medium text-[#334155] dark:text-[#E2E8F0] bg-slate-100 dark:bg-[#181A1F] px-3.5 py-1.5 rounded-xl border border-slate-200 dark:border-[#282C36]">
                   <span>📝</span>
@@ -229,7 +229,7 @@ export default function StudentExamPage({ params }: { params: Promise<{ id: stri
               }`}
             >
               <BookMarked className="w-4 h-4" />
-              <span>Materials</span>
+              <span>Study Notes</span>
               {materials.length > 0 && (
                 <span className={`text-[10px] tabular-nums px-1.5 py-0.5 rounded-full ${activeTab === 'materials' ? 'bg-slate-950/20 text-slate-950 font-black' : 'bg-slate-100 dark:bg-[#272B33]'}`}>
                   {materials.length}
@@ -268,11 +268,11 @@ export default function StudentExamPage({ params }: { params: Promise<{ id: stri
                 {materials.length === 0 ? (
                   <div className="text-center py-16 bg-white dark:bg-[#121419] border border-dashed border-slate-300 dark:border-[#282C36] rounded-2xl text-[#475569] dark:text-[#94A3B8] transition-colors">
                     <BookOpen className="w-8 h-8 mx-auto mb-3 opacity-50" />
-                    <p className="text-sm">No study materials have been uploaded yet.</p>
+                    <p className="text-sm">No study notes have been uploaded yet.</p>
                     <p className="text-xs mt-1">Check back soon!</p>
                   </div>
                 ) : (
-                  materials.map((mat, idx) => (
+                  materials.map((mat: any, idx: number) => (
                     <motion.div
                       key={idx}
                       initial={{ opacity: 0, x: -8 }}
@@ -286,7 +286,7 @@ export default function StudentExamPage({ params }: { params: Promise<{ id: stri
                         </div>
                         <div>
                           <div className="font-bold text-[#111B35] dark:text-white text-sm">{mat.name}</div>
-                          <div className="text-xs text-[#475569] dark:text-[#94A3B8] tabular-nums mt-0.5 truncate max-w-xs">PDF Study Material</div>
+                          <div className="text-xs text-[#475569] dark:text-[#94A3B8] tabular-nums mt-0.5 truncate max-w-xs">PDF Study Note</div>
                         </div>
                       </div>
                       <a
@@ -323,7 +323,7 @@ export default function StudentExamPage({ params }: { params: Promise<{ id: stri
                   tests.map((test, idx) => {
                     const attempts = attemptCounts[test.id] || 0;
                     const maxAttempts = 10;
-                    const isExhausted = !isAdminOrEditor && attempts >= maxAttempts;
+                    const isExhausted = !isAdmin && attempts >= maxAttempts;
                     const progressPct = Math.min((attempts / maxAttempts) * 100, 100);
                     const isStarting = startingTestId === test.id;
 
@@ -350,7 +350,7 @@ export default function StudentExamPage({ params }: { params: Promise<{ id: stri
                                 <span>{test.totalQuestions} Questions</span>
                                 <span>·</span>
                                 <span className={isExhausted ? 'text-red-500' : 'text-amber-600 dark:text-amber-500'}>
-                                  {isAdminOrEditor ? 'Unlimited Attempts' : `${attempts}/${maxAttempts} attempts`}
+                                  {isAdmin ? 'Unlimited Attempts' : `${attempts}/${maxAttempts} attempts`}
                                 </span>
                               </div>
                             </div>
@@ -378,7 +378,7 @@ export default function StudentExamPage({ params }: { params: Promise<{ id: stri
                         </div>
 
                         {/* Attempt progress bar */}
-                        {!isAdminOrEditor && (
+                        {!isAdmin && (
                           <div className="h-1 bg-slate-100 dark:bg-[#282C36]">
                             <div
                               className={`h-full transition-all duration-500 ${isExhausted ? 'bg-red-400' : 'bg-amber-500'}`}

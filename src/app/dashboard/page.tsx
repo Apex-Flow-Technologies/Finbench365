@@ -11,6 +11,7 @@ import { motion } from 'framer-motion';
 import { getUserEntitlements, getCourses, getUserAnalytics } from '@/lib/firebase/db';
 import { useRouter } from 'next-nprogress-bar';
 import { AdminPreviewBanner } from '@/components/AdminPreviewBanner';
+import { EASE_OUT_EXPO } from '@/lib/motion';
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -23,8 +24,8 @@ export default function DashboardPage() {
   useEffect(() => {
     if (!user) return;
 
-    if (user.role === 'admin' || user.role === 'editor') {
-      // Admins/editors get universal access to preview ALL courses
+    if (user.role === 'admin') {
+      // Admins get universal access to preview ALL courses
       getCourses().then(allCourses => {
         const previewEntitlements = allCourses.map(course => ({
           courseId: course.id,
@@ -80,7 +81,7 @@ export default function DashboardPage() {
 
   const itemVariants = {
     hidden: { opacity: 0, y: 16 },
-    show: { opacity: 1, y: 0, transition: { duration: 0.28, ease: [0.22, 1, 0.36, 1] } }
+    show: { opacity: 1, y: 0, transition: { duration: 0.28, ease: EASE_OUT_EXPO } }
   };
 
   const [pendingCourseId, setPendingCourseId] = useState<string | null>(null);
@@ -128,8 +129,8 @@ export default function DashboardPage() {
           <div className="lg:col-span-2 space-y-8">
             <section>
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-bold text-[#111B35] dark:text-white">Your Enrolled Tracks</h2>
-                {(user?.role === 'admin' || user?.role === 'editor') && (
+                <h2 className="text-xl font-bold text-[#111B35] dark:text-white">Your Enrolled Exams</h2>
+                {(user?.role === 'admin') && (
                   <span className="px-3 py-1 bg-amber-500/10 text-amber-600 dark:text-amber-500 border border-amber-500/20 rounded-full text-xs tabular-nums font-bold uppercase tracking-wider">
                     ● Admin Universal Access
                   </span>
@@ -223,9 +224,9 @@ export default function DashboardPage() {
                           <h3 className="font-bold text-xl mb-1 text-[#111B35] dark:text-white">{entitlement.course.title}</h3>
                           <p className="text-sm mb-6 text-[#475569] dark:text-[#94A3B8]">
                             {entitlement.isAdminPreview ? (
-                              `${entitlement.course.tier || 'Foundation'} Tier • Unlimited Admin Preview`
+                              'Unlimited Admin Preview'
                             ) : (
-                              `${entitlement.course.tier || 'Foundation'} Tier • ${entitlement.durationDays} Days Access`
+                              `${entitlement.durationDays} days access`
                             )}
                           </p>
                             

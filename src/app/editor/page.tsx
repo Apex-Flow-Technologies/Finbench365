@@ -89,7 +89,7 @@ export default function EditorDashboard() {
         <div>
           <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">Exam Manager</h1>
           <p className="text-slate-500 dark:text-slate-400 text-sm">
-            Create and manage mock exam packages, study materials, and tests.
+            Create and manage exam packages, study notes, and mock tests.
           </p>
         </div>
         <button

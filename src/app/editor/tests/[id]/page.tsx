@@ -2,9 +2,11 @@
 
 import React, { useState, useEffect, useRef, use, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { getMockTest, getTestQuestions, saveQuestionsBatch, createMockTest, updateChapter, updateCourse, updateMockTest } from '@/lib/firebase/db';
-import { ParsedQuestion, parseDocxText } from '@/lib/parser';
+import { getMockTest, getTestQuestions, saveQuestionsBatch, createMockTest, updateChapter, updateCourse, updateMockTest, deleteAllQuestions } from '@/lib/firebase/db';
+import { parseDocxText } from '@/lib/parser';
 import { UploadCloud, CheckCircle2, AlertCircle, Save, Plus, ChevronDown, ChevronUp, Trash2, ArrowLeft, Loader2 } from 'lucide-react';
+import toast from 'react-hot-toast';
+import { IN_SCOPE_PATTERNS, findExamPattern } from '@/constants/examPatterns';
 
 export default function TestBuilderPage({ params }: { params: Promise<{ id: string }> }) {
   return (
@@ -30,6 +32,60 @@ function TestBuilderContent({ params }: { params: Promise<{ id: string }> }) {
   const [activeQuestion, setActiveQuestion] = useState<number | null>(0);
   const [showBulkImportModal, setShowBulkImportModal] = useState(false);
   const [jsonImportText, setJsonImportText] = useState('');
+  // Per-question problems from the last .docx import, listed in the UI so they
+  // can actually be acted on rather than only counted in a toast.
+  const [importWarnings, setImportWarnings] = useState<string[]>([]);
+  const [showDeleteAll, setShowDeleteAll] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [isDeletingAll, setIsDeletingAll] = useState(false);
+
+  /** Numeric field coercion. An empty input is '' — writing that as a mark value
+   *  would make every score NaN, so anything unparseable falls back. */
+  const num = (v: any, fallback: number) => {
+    const n = typeof v === 'string' ? parseFloat(v) : v;
+    return typeof n === 'number' && Number.isFinite(n) ? n : fallback;
+  };
+
+  /**
+   * Clears the whole question bank for this test.
+   *
+   * Gated behind typing the word DELETE rather than a one-click confirm: it
+   * removes every question AND its answer key, cannot be undone, and sits next
+   * to the import button someone has just used by mistake.
+   */
+  const handleDeleteAllQuestions = async () => {
+    if (testId === 'new') { setQuestions([]); setShowDeleteAll(false); return; }
+    setIsDeletingAll(true);
+    try {
+      const removed = await deleteAllQuestions(testId);
+      setQuestions([]);
+      setActiveQuestion(null);
+      setImportWarnings([]);
+      setShowDeleteAll(false);
+      setDeleteConfirmText('');
+      toast.success(`Deleted ${removed} question${removed === 1 ? '' : 's'}. You can import a fresh document now.`);
+    } catch (err: any) {
+      console.error('Bulk delete failed:', err);
+      toast.error(err?.message || 'Could not delete the questions.');
+    } finally {
+      setIsDeletingAll(false);
+    }
+  };
+
+  /** Applies an official NISM pattern to this test in one click. */
+  const applyPattern = (series: string) => {
+    const p = findExamPattern(series);
+    if (!p) { setTest({ ...test, nismSeries: '' }); return; }
+    setTest({
+      ...test,
+      nismSeries: p.series,
+      durationMinutes: p.durationMinutes,
+      passPercent: p.passPercent,
+      negativeMarkPercent: p.negativeMarkPercent,
+      marksPerQuestion: 1, // 1 mark per question across every series in scope
+    });
+    toast.success(`Applied the official ${p.series} pattern. Save to keep it.`);
+  };
 
   const handleJsonImportSubmit = () => {
     try {
@@ -84,15 +140,49 @@ function TestBuilderContent({ params }: { params: Promise<{ id: string }> }) {
         const result = await mammoth.extractRawText({ arrayBuffer });
         const text = result.value;
         
-        // Pass to our smart parser
-        const parsed = parseDocxText(text);
-        
-        if (parsed.length > 0) {
-          // Merge with existing
-          setQuestions(prev => [...prev, ...parsed]);
-          alert(`Successfully parsed ${parsed.length} questions!`);
+        const { questions: parsed, cases, meta, warnings } = parseDocxText(text);
+        setImportWarnings(warnings);
+
+        if (parsed.length === 0) {
+          toast.error('No questions found. The document must use the "Q1." / "(a)" / "Explanation:" format.');
+          return;
+        }
+
+        setQuestions(prev => [...prev, ...parsed]);
+
+        // The paper states its own duration, pass mark and negative marking in
+        // its header. Applying them means an import configures the test
+        // correctly by itself, instead of relying on someone to retype four
+        // numbers that are already written down.
+        const applied: string[] = [];
+        setTest((t: any) => {
+          const next = { ...t };
+          if (meta.durationMinutes) { next.durationMinutes = meta.durationMinutes; applied.push(`${meta.durationMinutes} min`); }
+          if (meta.passPercent !== undefined) { next.passPercent = meta.passPercent; applied.push(`pass ${meta.passPercent}%`); }
+          if (meta.negativeMarkPercent !== undefined) {
+            next.negativeMarkPercent = meta.negativeMarkPercent;
+            applied.push(meta.negativeMarkPercent > 0 ? `−${meta.negativeMarkPercent}% wrong` : 'no negative marking');
+          }
+          return next;
+        });
+
+        const caseNote = cases.length ? ` and ${cases.length} case${cases.length === 1 ? '' : 's'}` : '';
+        const unresolved = parsed.filter((q) => q.answerUnresolved).length;
+
+        if (unresolved > 0) {
+          // Deliberately not a success message. An unresolved answer defaults to
+          // option A, which is silently wrong on content that decides whether a
+          // candidate passes, so it has to be corrected before saving.
+          toast.error(
+            `Imported ${parsed.length} questions${caseNote}, but ${unresolved} had no option marked "Correct" and defaulted to A. Fix those before saving.`,
+            { duration: 12000 },
+          );
         } else {
-          alert("Could not find any standard questions in this document. Please ensure it follows the format.");
+          toast.success(
+            `Imported ${parsed.length} questions${caseNote}.` +
+            (applied.length ? ` Applied from the document: ${applied.join(' · ')}.` : ''),
+            { duration: 8000 },
+          );
         }
       };
       reader.readAsArrayBuffer(file);
@@ -176,10 +266,21 @@ function TestBuilderContent({ params }: { params: Promise<{ id: string }> }) {
 
       await updateMockTest(currentTestId, {
         title: test?.title || 'Mock Test',
-        durationMinutes: test?.durationMinutes || 120,
+        durationMinutes: num(test?.durationMinutes, 120),
         totalQuestions: questions.length,
         isPublished: test?.isPublished || false,
         type: test?.type || 'practice',
+        // The marking scheme. Grading reads these off the test document (see
+        // resolveExamPattern), so they must be persisted or the exam silently
+        // falls back to no negative marking.
+        nismSeries: test?.nismSeries || null,
+        marksPerQuestion: num(test?.marksPerQuestion, 1),
+        negativeMarkPercent: num(test?.negativeMarkPercent, 0),
+        passPercent: num(test?.passPercent, 60),
+        // Recommended on by the content spec, to reduce answer-sharing between
+        // attempts. Undefined counts as ON for new tests; an admin can turn it
+        // off explicitly.
+        randomiseQuestions: test?.randomiseQuestions !== false,
         // Heal legacy rows that predate courseId being required, when we can
         // infer the owning course from how the editor was opened.
         ...(effectiveCourseId ? { courseId: effectiveCourseId } : {}),
@@ -329,6 +430,16 @@ function TestBuilderContent({ params }: { params: Promise<{ id: string }> }) {
           </button>
           
           <button
+            onClick={() => { setDeleteConfirmText(''); setShowDeleteAll(true); }}
+            disabled={isSaving || questions.length === 0}
+            title="Remove every question in this test — for when the wrong document was imported"
+            className="flex items-center justify-center gap-2 h-10 px-4 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/30 transition-colors text-xs font-bold shrink-0 whitespace-nowrap disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            <Trash2 className="w-4 h-4" />
+            <span>Delete All</span>
+          </button>
+
+          <button
             onClick={handleSaveInPlace}
             disabled={isSaving}
             className="flex items-center justify-center gap-2 h-10 px-4 rounded-xl bg-slate-200 dark:bg-[#272B33] hover:bg-slate-300 dark:hover:bg-[#323842] text-slate-800 dark:text-slate-200 transition-colors text-xs font-bold shrink-0 whitespace-nowrap disabled:opacity-50"
@@ -348,6 +459,148 @@ function TestBuilderContent({ params }: { params: Promise<{ id: string }> }) {
           </button>
         </div>
       </header>
+
+      {showDeleteAll && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/60 backdrop-blur-sm"
+          onClick={() => !isDeletingAll && setShowDeleteAll(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-md rounded-2xl bg-white dark:bg-[#181A1F] border border-slate-200 dark:border-white/10 p-6 shadow-2xl"
+          >
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white">
+              Delete all {questions.length} question{questions.length === 1 ? '' : 's'}?
+            </h3>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-2 leading-relaxed">
+              This removes every question in <strong>{test?.title || 'this test'}</strong> and its
+              answer key. It cannot be undone — you would need to import the document again.
+            </p>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-3 leading-relaxed">
+              Attempts candidates have already submitted keep their recorded scores; only the
+              question bank is cleared.
+            </p>
+
+            <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mt-5 mb-1.5">
+              Type DELETE to confirm
+            </label>
+            <input
+              autoFocus
+              value={deleteConfirmText}
+              onChange={(e) => setDeleteConfirmText(e.target.value)}
+              placeholder="DELETE"
+              className="w-full bg-slate-50 dark:bg-[#0B0C10] border border-slate-200 dark:border-[#282C36] rounded-xl px-4 py-2.5 text-slate-900 dark:text-white focus:outline-none focus:border-rose-500 text-sm"
+            />
+
+            <div className="flex flex-col-reverse sm:flex-row gap-2.5 mt-6">
+              <button
+                onClick={() => setShowDeleteAll(false)}
+                disabled={isDeletingAll}
+                className="flex-1 px-4 py-2.5 rounded-xl font-bold text-sm bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-white/10 dark:hover:bg-white/20 dark:text-white transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteAllQuestions}
+                disabled={isDeletingAll || deleteConfirmText.trim().toUpperCase() !== 'DELETE'}
+                className="flex-1 px-4 py-2.5 rounded-xl font-bold text-sm bg-rose-500 hover:bg-rose-400 text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {isDeletingAll ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                {isDeletingAll ? 'Deleting…' : 'Delete all questions'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Marking scheme. Read at grading time off this test's document, so a
+          change here changes how future attempts are scored — attempts already
+          submitted keep the scheme they were graded under. */}
+      <div className="shrink-0 border-b border-slate-200 dark:border-[#282C36] bg-slate-50 dark:bg-[#121419] px-6 py-3">
+        <div className="flex flex-wrap items-end gap-4">
+          <div className="flex flex-col gap-1">
+            <label className="text-[10px] uppercase font-bold text-slate-500">NISM Pattern</label>
+            <select
+              value={test?.nismSeries || ''}
+              onChange={(e) => applyPattern(e.target.value)}
+              title="Fills duration, pass mark and negative marking from the official NISM pattern"
+              className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs font-bold rounded px-2 h-8 border border-slate-200 dark:border-slate-700 outline-none cursor-pointer min-w-[220px]"
+            >
+              <option value="">Custom (set manually)</option>
+              {IN_SCOPE_PATTERNS.map((p) => (
+                <option key={p.series} value={p.series}>{p.series} — {p.name}</option>
+              ))}
+            </select>
+          </div>
+
+          {([
+            ['durationMinutes', 'Duration (min)', 1, 600],
+            ['marksPerQuestion', 'Marks / question', 0, 100],
+            ['negativeMarkPercent', 'Negative mark %', 0, 100],
+            ['passPercent', 'Pass %', 0, 100],
+          ] as const).map(([field, labelText, min, max]) => (
+            <div key={field} className="flex flex-col gap-1">
+              <label className="text-[10px] uppercase font-bold text-slate-500">{labelText}</label>
+              <input
+                type="number"
+                min={min}
+                max={max}
+                step="any"
+                value={test?.[field] ?? ''}
+                onChange={(e) => setTest({ ...test, [field]: e.target.value })}
+                className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs font-bold rounded px-2 h-8 w-28 border border-slate-200 dark:border-slate-700 outline-none"
+              />
+            </div>
+          ))}
+
+          <div className="flex flex-col gap-1">
+            <label className="text-[10px] uppercase font-bold text-slate-500">Question order</label>
+            <button
+              type="button"
+              onClick={() => setTest({ ...test, randomiseQuestions: !(test?.randomiseQuestions !== false) })}
+              title="Shuffles the paper per attempt so candidates cannot memorise positions. The order stays fixed within a single attempt."
+              className={`h-8 px-3 rounded text-xs font-bold border transition-colors ${
+                test?.randomiseQuestions !== false
+                  ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
+                  : 'bg-slate-100 dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700'
+              }`}
+            >
+              {test?.randomiseQuestions !== false ? 'Randomised' : 'Fixed order'}
+            </button>
+          </div>
+
+          <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-snug max-w-xs">
+            {num(test?.negativeMarkPercent, 0) > 0
+              ? `A wrong answer costs ${(num(test?.marksPerQuestion, 1) * num(test?.negativeMarkPercent, 0) / 100).toFixed(2)} marks. Unanswered questions are never penalised.`
+              : 'No negative marking — wrong answers score zero, not a penalty.'}
+          </p>
+        </div>
+      </div>
+
+      {/* Problems from the last .docx import. Listed rather than only counted,
+          because "3 questions defaulted to option A" is not actionable unless
+          you know which three. */}
+      {importWarnings.length > 0 && (
+        <div className="shrink-0 border-b border-amber-500/25 bg-amber-500/10 px-6 py-3">
+          <div className="flex items-start gap-2.5">
+            <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-amber-600 dark:text-amber-400" />
+            <div className="flex-1 min-w-0">
+              <div className="text-xs font-bold text-amber-700 dark:text-amber-300">
+                {importWarnings.length} issue{importWarnings.length === 1 ? '' : 's'} in the imported document
+              </div>
+              <ul className="mt-1.5 space-y-0.5 max-h-28 overflow-y-auto text-xs text-amber-800/90 dark:text-amber-200/80">
+                {importWarnings.map((w, i) => <li key={i}>· {w}</li>)}
+              </ul>
+            </div>
+            <button
+              onClick={() => setImportWarnings([])}
+              className="shrink-0 text-xs font-bold text-amber-700 dark:text-amber-300 hover:underline"
+            >
+              Dismiss
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Main Builder Content */}
       <div className="flex-1 flex overflow-hidden">

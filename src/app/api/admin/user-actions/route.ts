@@ -3,7 +3,7 @@ import { adminDb } from '@/lib/firebase/admin';
 import { FieldValue } from 'firebase-admin/firestore';
 import { requireAdmin } from '@/lib/api/requireAdmin';
 
-type Action = 'suspend' | 'activate' | 'revokeCourse';
+type Action = 'suspend' | 'activate' | 'revokeCourse' | 'demote';
 
 export async function POST(req: Request) {
   const check = await requireAdmin(req);
@@ -23,6 +23,28 @@ export async function POST(req: Request) {
     }
 
     const targetRef = adminDb.collection('users').doc(targetUserId);
+
+    // Suspending or demoting yourself is always a mistake, and if you are the
+    // last admin it is an unrecoverable one — no remaining account could undo
+    // it, and role is not writable by the account itself under the rules.
+    if ((action === 'suspend' || action === 'demote') && targetUserId === check.uid) {
+      return NextResponse.json(
+        { error: 'You cannot suspend or remove admin access from your own account.' },
+        { status: 400 },
+      );
+    }
+
+    if (action === 'demote') {
+      // Demotion only. There is deliberately no promotion path here: granting
+      // admin stays a considered action taken in the Firebase console, so a
+      // compromised admin session cannot mint further admins.
+      await targetRef.set({
+        role: 'student',
+        roleChangedAt: FieldValue.serverTimestamp(),
+        roleChangedBy: check.uid,
+      }, { merge: true });
+      return NextResponse.json({ success: true });
+    }
 
     if (action === 'suspend') {
       await targetRef.set({ suspended: true, suspendedAt: FieldValue.serverTimestamp(), suspendedBy: check.uid }, { merge: true });

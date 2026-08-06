@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { collection, onSnapshot, query } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 import { toMillis } from '@/lib/admin/revenue';
+import type { UserRole } from '@/context/AuthContext';
 
 /**
  * Single source for the admin user list.
@@ -29,7 +30,7 @@ export interface AdminUser {
   id: string;
   name: string;
   email: string;
-  role: 'student' | 'editor' | 'admin';
+  role: UserRole;
   suspended: boolean;
   createdAt: Date | null;
   totalSpent: number;

@@ -20,8 +20,8 @@ const STUCK_ORDER_MINUTES = 15;
 
 export default function AdminOverviewPage() {
   const { users, loading: usersLoading, error: usersError } = useAdminUsers();
-  const { orders, loading: ordersLoading } = useAdminOrders();
-  const { content, loading: contentLoading } = useAdminContent();
+  const { orders, loading: ordersLoading, error: ordersError } = useAdminOrders();
+  const { content, loading: contentLoading, error: contentError } = useAdminContent();
 
   const revenue = useMemo(() => summariseRevenue(orders), [orders]);
 
@@ -112,7 +112,14 @@ export default function AdminOverviewPage() {
         icon={TrendingUp}
       />
 
-      {usersError && <ErrorNotice message={`Could not load users: ${usersError}`} />}
+      {/* Every loader reports its own failure. Only the users error was shown
+          before, so a denied read of `orders` (or of the catalogue) left this
+          page rendering a confident ₹0 / 0 students / 0 courses with nothing to
+          explain it — the reported "admin dashboard shows no activity". An empty
+          panel and a broken panel must not look the same. */}
+      {usersError && <ErrorNotice message={`Could not load students: ${usersError}`} />}
+      {ordersError && <ErrorNotice message={`Could not load orders — every money figure below is incomplete: ${ordersError}`} />}
+      {contentError && <ErrorNotice message={`Could not load courses and tests: ${contentError}`} />}
 
       {/* ------------------------------------------------------------ money */}
       <section>
@@ -194,7 +201,7 @@ export default function AdminOverviewPage() {
             loading={contentLoading}
           />
           <StatCard
-            label="Study materials"
+            label="Study notes"
             value={content?.totalMaterials ?? 0}
             icon={BookOpen}
             tone="neutral"

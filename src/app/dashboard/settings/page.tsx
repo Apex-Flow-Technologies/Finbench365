@@ -6,23 +6,17 @@ import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next-nprogress-bar';
 import { auth, db } from '@/lib/firebase/config';
 import { updateProfile } from 'firebase/auth';
-import { doc, updateDoc, serverTimestamp, collection, onSnapshot, query, orderBy } from 'firebase/firestore';
-import { updateUserRole } from '@/lib/firebase/db';
+import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import toast from 'react-hot-toast';
-import { 
-  User, ShieldCheck, CreditCard, Lock, Phone, CheckCircle2, 
-  Download, ArrowRight, Loader2, KeyRound, Sliders, Search, 
-  Clock, FileText, DollarSign, UserCheck, UserX, AlertTriangle, 
-  ShieldAlert, Sparkles, Layers, Check, RefreshCw
+import {
+  User, CreditCard, Phone, CheckCircle2,
+  Download, ArrowRight, Loader2, Clock, Check,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function SettingsPage() {
   const { user } = useAuth();
   const router = useRouter();
-
-  // Active Tab State
-  const [activeTab, setActiveTab] = useState<'user' | 'admin'>('user');
 
   // Top Roof Progress Bar State (YouTube / NProgress style)
   const [topLoading, setTopLoading] = useState(false);
@@ -40,14 +34,8 @@ export default function SettingsPage() {
     }, 850);
   };
 
-  const handleTabSwitch = (tab: 'user' | 'admin') => {
-    if (tab === activeTab) return;
-    triggerTopProgress();
-    setActiveTab(tab);
-  };
-
   // ----------------------------------------------------
-  // TAB 1: USER SETTINGS STATE
+  // USER SETTINGS STATE
   // ----------------------------------------------------
   const [profile, setProfile] = useState({
     fullName: '',
@@ -109,74 +97,9 @@ export default function SettingsPage() {
     });
   };
 
-  // ----------------------------------------------------
-  // TAB 2: ADMIN CONTROLS STATE
-  // ----------------------------------------------------
-  // User Management — load real users from Firestore
-  const [userSearch, setUserSearch] = useState('');
-  const [managedUsers, setManagedUsers] = useState<any[]>([]);
-  const [togglingUserId, setTogglingUserId] = useState<string | null>(null);
-
-  const isAdminUser = user?.role === 'admin' || user?.role === 'editor';
-
-  useEffect(() => {
-    if (!isAdminUser) return;
-    // Deliberately NOT ordered by createdAt in the query. Firestore silently
-    // omits documents that lack the ordered field, which hid every user whose
-    // profile predated the createdAt write. Read unordered and sort client-side
-    // so an incomplete document is still visible (and fixable) in the admin UI.
-    const q = query(collection(db, 'users'));
-    const unsub = onSnapshot(q, (snap) => {
-      setManagedUsers(snap.docs.map(d => {
-        const enrolled = d.data().enrolledCourses || {};
-        const now = Date.now();
-        const daysLeftValues = Object.values(enrolled).map((c: any) => {
-          const exp = c?.expiresAt?.toDate ? c.expiresAt.toDate() : new Date(c?.expiresAt);
-          return Math.max(0, Math.ceil((exp.getTime() - now) / (1000 * 60 * 60 * 24)));
-        });
-        const daysLeft = daysLeftValues.length ? Math.max(...daysLeftValues) : 0;
-
-        return {
-          id: d.id,
-          name: d.data().name || 'Unknown',
-          email: d.data().email || '',
-          role: d.data().role || 'student',
-          status: d.data().suspended ? 'Suspended' : 'Active',
-          enrolledCourses: enrolled,
-          daysLeft,
-        };
-      }));
-    });
-    return () => unsub();
-  }, [isAdminUser]);
-
-  // Suspend/activate go through the server-side admin API (not a direct
-  // client Firestore write) — `suspended` is a rules-protected field now,
-  // and this keeps the audit trail (who suspended whom) server-authoritative.
-  const handleToggleUserStatus = async (id: string, currentlySuspended: boolean) => {
-    if (!auth.currentUser) return;
-    setTogglingUserId(id);
-    try {
-      const token = await auth.currentUser.getIdToken();
-      const res = await fetch('/api/admin/user-actions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ action: currentlySuspended ? 'activate' : 'suspend', targetUserId: id }),
-      });
-      if (!res.ok) throw new Error((await res.json().catch(() => ({})))?.error || 'Request failed');
-      toast.success(`User ${currentlySuspended ? 'reactivated' : 'suspended'} successfully.`);
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to update user status.');
-    } finally {
-      setTogglingUserId(null);
-    }
-  };
-
-  const filteredUsers = managedUsers.filter(u =>
-    u.name.toLowerCase().includes(userSearch.toLowerCase()) ||
-    u.email.toLowerCase().includes(userSearch.toLowerCase())
-  );
-
+  // Admin user management used to live here as a second tab. It now lives at
+  // /admin/users, on the shared useAdminUsers hook — see the note at the top of
+  // that file for why three copies of it was a problem.
 
 
   return (
@@ -202,57 +125,21 @@ export default function SettingsPage() {
 
         <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-28 py-8 space-y-8 relative z-10">
 
-          {/* Page Header */}
+          {/* Page Header. This is a candidate's own account page and nothing
+              else — the "Admin Controls" tab that used to sit alongside it has
+              moved to /admin/users. */}
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-white/10 pb-6">
             <div>
               <h1 className="text-3xl font-extrabold tracking-tight text-white flex items-center gap-3">
                 <User className="w-8 h-8 text-amber-500" />
-                {isAdminUser && activeTab === 'admin' ? 'Admin Platform Controls' : 'Account & User Settings'}
+                Account &amp; User Settings
               </h1>
               <p className="text-[#475569] text-sm mt-1">
-                {isAdminUser && activeTab === 'admin'
-                  ? 'Manage candidate entitlements, feature flags, tier pricing, and anti-tampering rules.'
-                  : 'Manage your personal candidate profile, target exam series, and subscription entitlements.'}
+                Manage your personal candidate profile, target exam series, and subscription entitlements.
               </p>
             </div>
-
-            {/* Tab Switcher - Only visible if user has Admin or Editor role */}
-            {isAdminUser && (
-              <div className="flex p-1.5 bg-zinc-900/90 border border-white/10 rounded-2xl backdrop-blur-md shadow-lg">
-                <button
-                  onClick={() => handleTabSwitch('user')}
-                  className={`flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all duration-200 ${
-                    activeTab === 'user'
-                      ? 'bg-indigo-600 text-white shadow-[0_0_20px_rgba(99,102,241,0.4)]'
-                      : 'text-[#475569] hover:text-white'
-                  }`}
-                >
-                  <User className="w-4 h-4" />
-                  <span>User Settings</span>
-                </button>
-
-                <button
-                  onClick={() => handleTabSwitch('admin')}
-                  className={`flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all duration-200 ${
-                    activeTab === 'admin'
-                      ? 'bg-indigo-600 text-white shadow-[0_0_20px_rgba(99,102,241,0.4)]'
-                      : 'text-[#475569] hover:text-white'
-                  }`}
-                >
-                  <Sliders className="w-4 h-4" />
-                  <span>Admin Controls</span>
-                  <span className="ml-1 px-2 py-0.5 bg-amber-500 text-slate-950 text-[10px] font-black uppercase tabular-nums rounded">
-                    SUPER
-                  </span>
-                </button>
-              </div>
-            )}
           </div>
 
-          {/* ========================================================================= */}
-          {/* TAB 1: USER SETTINGS CONTAINER */}
-          {/* ========================================================================= */}
-          {activeTab === 'user' && (
             <motion.div
               key="user-tab"
               initial={{ opacity: 0, y: 10 }}
@@ -486,109 +373,7 @@ export default function SettingsPage() {
                 </p>
               </footer>
             </motion.div>
-          )}
 
-          {/* ========================================================================= */}
-          {/* TAB 2: ADMIN CONTROLS CONTAINER */}
-          {/* ========================================================================= */}
-          {activeTab === 'admin' && (
-            <motion.div
-              key="admin-tab"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.2 }}
-              className="space-y-8"
-            >
-              {/* Feature-flag and pricing-matrix panels were removed: they wrote
-                  to Firestore but nothing in the application ever read those
-                  values back, so toggling them changed nothing while appearing
-                  to work. Plan pricing is defined in src/constants/pricing.ts and
-                  applied server-side at order creation and payment verification. */}
-
-              {/* 2. Candidate User Search & Entitlement Actions */}
-              <div className="backdrop-blur-md bg-zinc-900/80 border border-white/10 rounded-2xl p-6 sm:p-8 space-y-6 shadow-xl">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/10 pb-4">
-                  <div className="flex items-center gap-2.5 font-bold text-lg text-white">
-                    <UserCheck className="w-5 h-5 text-amber-500" />
-                    3. Candidate Search & User Entitlement Actions
-                  </div>
-                  <div className="relative">
-                    <Search className="w-4 h-4 text-[#475569] absolute left-3 top-3" />
-                    <input
-                      type="text"
-                      placeholder="Search name or email..."
-                      value={userSearch}
-                      onChange={(e) => setUserSearch(e.target.value)}
-                      className="bg-slate-900/90 border border-white/10 rounded-xl pl-9 pr-4 py-2 text-xs text-white focus:outline-none focus:border-amber-500 w-full sm:w-64"
-                    />
-                  </div>
-                </div>
-
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-sm">
-                    <thead>
-                      <tr className="border-b border-white/10 text-xs tabular-nums text-[#475569] uppercase">
-                        <th className="pb-3 px-4">Candidate</th>
-                        <th className="pb-3 px-4">Role</th>
-                        <th className="pb-3 px-4">Days Left</th>
-                        <th className="pb-3 px-4">Status</th>
-                        <th className="pb-3 px-4 text-right">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-white/10">
-                      {filteredUsers.map((usr) => (
-                        <tr key={usr.id} className="hover:bg-white/5 transition-colors">
-                          <td className="py-4 px-4">
-                            <div>
-                              <div className="font-bold text-white text-sm">{usr.name}</div>
-                              <div className="text-xs text-[#475569] tabular-nums">{usr.email}</div>
-                            </div>
-                          </td>
-                          <td className="py-4 px-4 tabular-nums text-xs font-bold text-indigo-400">{usr.role}</td>
-                          <td className="py-4 px-4 tabular-nums text-xs text-amber-400 font-bold">{usr.daysLeft} days</td>
-                          <td className="py-4 px-4">
-                            <span className={`px-2.5 py-0.5 rounded-full text-[10px] tabular-nums font-bold ${
-                              usr.status === 'Active'
-                                ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                                : 'bg-red-500/10 text-red-400 border border-red-500/20'
-                            }`}>
-                              {usr.status}
-                            </span>
-                          </td>
-                          <td className="py-4 px-4 text-right">
-                            <div className="flex items-center justify-end gap-2">
-                              {/* Granting days needs a target course, which this
-                                  view doesn't carry — send the admin to the page
-                                  that can actually do it instead of offering
-                                  buttons that only raise a toast. */}
-                              <button
-                                onClick={() => router.push('/admin/users')}
-                                className="px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-lg text-xs font-bold transition-all"
-                              >
-                                Manage Access
-                              </button>
-                              <button
-                                disabled={togglingUserId === usr.id}
-                                onClick={() => handleToggleUserStatus(usr.id, usr.status === 'Suspended')}
-                                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                                  usr.status === 'Active'
-                                    ? 'bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30'
-                                    : 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                                }`}
-                              >
-                                {usr.status === 'Active' ? 'Suspend' : 'Activate'}
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </motion.div>
-          )}
 
         </div>
       </div>

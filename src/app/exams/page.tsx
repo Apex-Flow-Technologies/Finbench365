@@ -14,7 +14,9 @@ import {
   Layers,
   Loader2
 } from 'lucide-react';
-import { getCourses, getCourseTests, getUserEntitlements } from '@/lib/firebase/db';
+import { getCourses, getCourseTests } from '@/lib/firebase/db';
+import { useEntitlements } from '@/hooks/useEntitlements';
+import { findExamPattern } from '@/constants/examPatterns';
 import { useAuth } from '@/context/AuthContext';
 
 interface CoursePackage {
@@ -49,7 +51,6 @@ export default function ExamsPage() {
   const [purchasingId, setPurchasingId] = useState<string | null>(null);
   
   const [coursesData, setCoursesData] = useState<CoursePackage[]>([]);
-  const [entitlements, setEntitlements] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Debounce the search input by 300ms to avoid filtering on every keystroke
@@ -58,15 +59,10 @@ export default function ExamsPage() {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  useEffect(() => {
-    if (user?.uid) {
-      getUserEntitlements(user.uid).then(data => {
-        setEntitlements(data);
-      }).catch(err => console.error(err));
-    } else {
-      setEntitlements([]);
-    }
-  }, [user?.uid]);
+  // Live, so an exam bought moments ago stops showing "Buy Now" without a
+  // reload — the grant is written server-side after Razorpay confirms, which a
+  // one-shot fetch on mount can never observe.
+  const { entitlements } = useEntitlements(user?.uid);
 
   useEffect(() => {
     async function load() {
@@ -98,19 +94,35 @@ export default function ExamsPage() {
           else if (course.track === 'Track D') colorIndex = 3;
           
           const color = COLORS[colorIndex];
+          // Set on the course in the editor. When present it supplies the
+          // official duration/marks/pass-mark and the standard description, so
+          // those facts come from one place rather than being retyped per course.
+          const pattern = findExamPattern(course.nismSeries);
+
           return {
             id: course.id,
             title: course.title || 'Untitled Course',
-            description: course.description || '',
-            trackBadge: `${course.track || 'Track A'} • ${course.tier || 'Foundation Tier'}`,
+            description: course.description || pattern?.description || '',
+            // The series code, which is how candidates actually identify a NISM
+            // exam. "Track A • Foundation Tier" was invented taxonomy.
+            trackBadge: pattern ? `NISM Series ${pattern.series}` : '',
             category: course.tier || 'Foundation',
             mockCount: `${counts[i].mocks} Full Mock${counts[i].mocks === 1 ? '' : 's'}`,
             notesCount: `${counts[i].notes} PDF Note${counts[i].notes === 1 ? '' : 's'}`,
-            features: [
-              'Exact CBT terminal simulation with flag & review',
-              'Step-by-step matrix derivation walkthroughs',
-              'Instant diagnostic score tracking & item analysis'
-            ],
+            // The exam's own facts, from the official NISM pattern — not the
+            // three hardcoded marketing lines that used to appear identically
+            // on every card ("Step-by-step matrix derivation walkthroughs"
+            // described nothing in this product). Empty when the course has no
+            // series set yet, so nothing is invented.
+            features: pattern
+              ? [
+                  `${pattern.durationMinutes} minutes · ${pattern.maxMarks} marks`,
+                  `Pass mark ${pattern.passPercent}%`,
+                  pattern.negativeMarkPercent > 0
+                    ? `Negative marking ${pattern.negativeMarkPercent}% per wrong answer`
+                    : 'No negative marking',
+                ]
+              : [],
             ...color
           } as CoursePackage;
         });
@@ -171,31 +183,30 @@ export default function ExamsPage() {
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-[#121419] text-[#111B35] dark:text-[#FBFBF9] pt-20 transition-colors duration-300">
-      {/* Dark Institutional Hero Banner - We keep this somewhat dark in light mode too, or make it light. Let's make it responsive. */}
-      <section className="relative py-16 md:py-24 bg-white border-b border-slate-200 dark:bg-[#181A1F] dark:border-[#282C36] overflow-hidden px-6 md:px-8 transition-colors duration-300">
+      {/* Hero. Deliberately plain: a catalogue page's job is to get someone to
+          the right exam, and the previous banner spent the space on claims
+          ("algorithmic question banks", "Institutional CBT fidelity") that did
+          not describe the NISM preparation actually being sold. */}
+      <section className="relative border-b border-slate-200 dark:border-[#282C36] bg-white dark:bg-[#181A1F] transition-colors duration-300 overflow-hidden">
         <div
-          className="absolute inset-0 opacity-[0.03] dark:opacity-[0.03] pointer-events-none"
+          aria-hidden="true"
+          className="absolute inset-0 opacity-[0.035] pointer-events-none text-slate-900 dark:text-white"
           style={{
             backgroundImage: `
               linear-gradient(to right, currentColor 1px, transparent 1px),
               linear-gradient(to bottom, currentColor 1px, transparent 1px)
             `,
-            backgroundSize: '40px 40px'
+            backgroundSize: '40px 40px',
           }}
         />
-
-        <div className="max-w-[1240px] mx-auto relative z-10">
-          <div className="max-w-3xl space-y-4">
-            <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight text-[#111B35] dark:text-white leading-[1.12] font-sans">
-              Explore Examination Curricula & <br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-600 via-slate-600 to-slate-900 dark:from-amber-200 dark:via-slate-100 dark:to-slate-400">
-                Algorithmic Study Tracks.
-              </span>
-            </h1>
-            <p className="text-[#334155] dark:text-[#E2E8F0] text-base sm:text-lg leading-relaxed max-w-2xl">
-              Select your targeted certification track below. Every package includes full-length CBT mock exams, comprehensive topic-wise notes, and dynamic algorithmic question banks engineered for high-stakes candidates.
-            </p>
-          </div>
+        <div className="relative max-w-[1240px] mx-auto px-6 md:px-8 py-12 md:py-16">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight text-[#111B35] dark:text-white leading-[1.12]">
+            NISM Certification Exams
+          </h1>
+          <p className="text-[#334155] dark:text-[#E2E8F0] text-base sm:text-lg leading-relaxed mt-4 max-w-2xl">
+            Choose the exam you are preparing for. Each one includes full-length mock tests
+            that follow the official pattern, and complete study notes.
+          </p>
         </div>
       </section>
 
@@ -210,7 +221,7 @@ export default function ExamsPage() {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search tracks, modules, notes..."
+                placeholder="Search exam title or series..."
                 className="w-full pl-9 pr-4 py-2 bg-slate-50 text-[#111B35] placeholder-slate-500 border border-slate-200 focus:border-amber-500 dark:bg-[#121419] dark:text-white dark:border-[#282C36] dark:focus:border-amber-400 text-xs sm:text-sm rounded-lg focus:outline-none transition-colors font-sans"
               />
               {searchQuery && (
@@ -263,9 +274,9 @@ export default function ExamsPage() {
             className="text-center py-20 bg-white border border-slate-200 dark:bg-[#181A1F] dark:border-[#282C36] rounded-2xl p-8 max-w-xl mx-auto space-y-4 shadow-sm transition-colors duration-300"
           >
             <Layers className="w-12 h-12 text-[#475569] dark:text-[#94A3B8] mx-auto" />
-            <h3 className="text-xl font-semibold text-[#111B35] dark:text-white">No Examination Tracks Found</h3>
+            <h3 className="text-xl font-semibold text-[#111B35] dark:text-white">No exams found</h3>
             <p className="text-[#475569] dark:text-[#94A3B8] text-sm">
-              No curricula matched your search query &quot;{searchQuery}&quot;. Try clearing your filter or searching for &quot;Quantitative&quot;, &quot;Level&quot;, or &quot;Risk&quot;.
+              Nothing matched &quot;{searchQuery}&quot;. Try the exam name (for example &quot;Mutual Fund&quot;) or its series code (for example &quot;V-A&quot;).
             </p>
             <button
               onClick={() => { setSearchQuery(''); setSelectedCategory('All'); }}
@@ -337,8 +348,8 @@ export default function ExamsPage() {
 
                     {/* Bottom Action Button */}
                     {(() => {
-                      // Admins/editors cannot buy — redirect to editor
-                      if (user?.role === 'admin' || user?.role === 'editor') {
+                      // Admins do not buy courses — send them to the content editor instead
+                      if (user?.role === 'admin') {
                         return (
                           <button
                             onClick={() => router.push('/editor')}
@@ -431,8 +442,8 @@ export default function ExamsPage() {
                       {/* Right: Action Button */}
                       <div className="w-full lg:w-auto flex-shrink-0">
                         {(() => {
-                          // Admins/editors cannot buy — redirect to editor
-                          if (user?.role === 'admin' || user?.role === 'editor') {
+                          // Admins do not buy courses — send them to the content editor instead
+                          if (user?.role === 'admin') {
                             return (
                               <button
                                 onClick={() => router.push('/editor')}
