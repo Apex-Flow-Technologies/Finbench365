@@ -1,54 +1,73 @@
 import { NextResponse } from 'next/server';
-import { adminDb } from '@/lib/firebase/admin';
+import { adminAuth, adminDb } from '@/lib/firebase/admin';
+import { rateLimit, clientIp } from '@/lib/api/rateLimit';
+import {
+  evaluateCoupon, normaliseCouponCode, couponRejectionMessage,
+} from '@/lib/payments/coupons';
 
-// Server-side coupon validation — never expose coupon logic client-side
+/**
+ * Checks whether a coupon can be applied, for the checkout order summary.
+ *
+ * Authenticated and durably rate-limited. This endpoint used to be open to
+ * anyone with no token and only the in-memory middleware limiter in front of it
+ * — which the limiter's own comments describe as per-instance and reset on cold
+ * start, so it was no obstacle to a script. That made this a free oracle over
+ * the whole coupon namespace, and a 100%-off code is free course access.
+ *
+ * Note this endpoint is advisory only: nothing here grants a discount. The
+ * authoritative evaluation happens again inside create-order, against the same
+ * shared rules in lib/payments/coupons.ts.
+ */
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
-    const { code } = body;
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      return NextResponse.json({ valid: false, message: 'Please sign in to apply a coupon.' }, { status: 401 });
+    }
+
+    let decodedToken;
+    try {
+      decodedToken = await adminAuth.verifyIdToken(authHeader.split('Bearer ')[1]);
+    } catch {
+      return NextResponse.json({ valid: false, message: 'Please sign in to apply a coupon.' }, { status: 401 });
+    }
+
+    // Per-account and per-IP. The account limit is the one that bites a
+    // scripted sweep; the IP limit stops one client cycling through throwaway
+    // accounts to reset it. Both survive cold starts, unlike the middleware.
+    const [byUid, byIp] = await Promise.all([
+      rateLimit({ scope: 'coupon-validate:uid', identifier: decodedToken.uid, limit: 20, windowMs: 60 * 60 * 1000 }),
+      rateLimit({ scope: 'coupon-validate:ip', identifier: clientIp(req), limit: 60, windowMs: 60 * 60 * 1000 }),
+    ]);
+    const blocked = !byUid.allowed ? byUid : !byIp.allowed ? byIp : null;
+    if (blocked) {
+      return NextResponse.json(
+        { valid: false, message: 'Too many coupon attempts. Please try again later.' },
+        { status: 429, headers: { 'Retry-After': String(blocked.retryAfterSeconds) } },
+      );
+    }
+
+    const { code } = await req.json().catch(() => ({ code: null }));
 
     if (!code || typeof code !== 'string') {
       return NextResponse.json({ valid: false, message: 'Invalid coupon code format.' }, { status: 400 });
     }
 
-    const sanitizedCode = code.trim().toUpperCase();
+    const sanitizedCode = normaliseCouponCode(code);
+    const couponSnap = await adminDb.collection('coupons').doc(sanitizedCode).get();
+    const evaluation = evaluateCoupon(couponSnap.exists ? couponSnap.data()! : null);
 
-    // Look up coupon in Firestore
-    const couponRef = adminDb.collection('coupons').doc(sanitizedCode);
-    const couponDoc = await couponRef.get();
-
-    if (!couponDoc.exists) {
-      return NextResponse.json({ valid: false, message: 'Coupon code not found.' }, { status: 200 });
-    }
-
-    const couponData = couponDoc.data()!;
-
-    // Check if coupon is active
-    if (!couponData.isActive) {
-      return NextResponse.json({ valid: false, message: 'This coupon has expired or been deactivated.' }, { status: 200 });
-    }
-
-    // Check usage limit
-    if (couponData.maxUses && couponData.usedCount >= couponData.maxUses) {
-      return NextResponse.json({ valid: false, message: 'This coupon has reached its maximum usage limit.' }, { status: 200 });
-    }
-
-    // Expiry. Must mirror the check in create-order exactly — if this said
-    // "valid" for an expired code the candidate would see a discount applied
-    // in the summary and then be charged full price at the gateway.
-    if (couponData.expiresAt) {
-      const expiresAtMs = typeof couponData.expiresAt.toMillis === 'function'
-        ? couponData.expiresAt.toMillis()
-        : new Date(couponData.expiresAt).getTime();
-      if (Number.isFinite(expiresAtMs) && expiresAtMs <= Date.now()) {
-        return NextResponse.json({ valid: false, message: 'This coupon has expired.' }, { status: 200 });
-      }
+    if (!evaluation.valid) {
+      return NextResponse.json(
+        { valid: false, message: couponRejectionMessage(evaluation.reason!) },
+        { status: 200 },
+      );
     }
 
     return NextResponse.json({
       valid: true,
-      discountPercent: couponData.discountPercent || 0,
-      message: `Coupon applied! ${couponData.discountPercent || 0}% discount activated.`
+      discountPercent: evaluation.discountPercent,
+      message: `Coupon applied! ${evaluation.discountPercent}% discount activated.`,
     });
 
   } catch (error: any) {

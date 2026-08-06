@@ -11,6 +11,12 @@ interface GrantParams {
   orderId: string;
   amountPaid: number; // rupees, final amount actually paid (incl. GST)
   source: 'verify' | 'webhook' | 'reconcile' | 'coupon';
+  /**
+   * Only needed for grants where no order document exists yet — i.e. a fully
+   * discounted enrolment, which never round-trips through the gateway. For every
+   * paid order the code is read back off the order written by create-order.
+   */
+  couponCode?: string | null;
 }
 
 interface GrantResult {
@@ -37,14 +43,34 @@ export async function grantEntitlementIdempotent(params: GrantParams): Promise<G
     throw new Error('Missing required fields for entitlement grant');
   }
 
-  const orderRef = adminDb.collection('orders').doc(orderId);
-  const userRef = adminDb.collection('users').doc(userId);
+  // Explicitly typed. `adminDb` is `any` (see lib/firebase/admin.ts), so an
+  // untyped ref makes tx.get() resolve to the Query overload and every
+  // `.exists` / `.data()` below becomes a type error.
+  const orderRef: FirebaseFirestore.DocumentReference =
+    adminDb.collection('orders').doc(orderId);
+  const userRef: FirebaseFirestore.DocumentReference =
+    adminDb.collection('users').doc(userId);
 
   const alreadyProcessed = await adminDb.runTransaction(async (tx: Transaction) => {
     const existing = await tx.get(orderRef);
     if (existing.exists && existing.data()?.status === 'success') {
       return true;
     }
+
+    // A coupon is spent when an order is actually paid for, not when a checkout
+    // is opened. create-order used to increment `usedCount` during validation,
+    // before Razorpay was even called, so every abandoned checkout permanently
+    // consumed a use — a launch coupon could be exhausted entirely by people who
+    // never paid. Doing it here ties the increment to the same transaction that
+    // transitions the order, so it happens exactly once per real redemption.
+    //
+    // Both reads must happen before any write in a Firestore transaction, so
+    // this is resolved up front.
+    const code: string | null =
+      params.couponCode ?? existing.data()?.couponCode ?? null;
+    const couponRef: FirebaseFirestore.DocumentReference | null =
+      code ? adminDb.collection('coupons').doc(code) : null;
+    const couponSnap = couponRef ? await tx.get(couponRef) : null;
 
     const days = planData.durationDays;
     const expiresAt = new Date();
@@ -89,6 +115,22 @@ export async function grantEntitlementIdempotent(params: GrantParams): Promise<G
       ...(existing.exists ? {} : { createdAt: FieldValue.serverTimestamp() }),
       updatedAt: FieldValue.serverTimestamp(),
     }, { merge: true });
+
+    if (couponRef && couponSnap?.exists) {
+      tx.update(couponRef, { usedCount: FieldValue.increment(1) });
+
+      // The money has already changed hands by the time we get here, so an
+      // over-limit redemption is reported rather than refused — refusing would
+      // mean taking payment and withholding access. This can only happen when
+      // several candidates pass validation and pay in the same instant, and it
+      // is worth knowing about.
+      const data = couponSnap.data()!;
+      if (data.maxUses && (data.usedCount ?? 0) >= data.maxUses) {
+        console.warn(
+          `Coupon ${code} redeemed beyond maxUses (${data.usedCount}/${data.maxUses}) on order ${orderId} — concurrent checkouts.`,
+        );
+      }
+    }
 
     return false;
   });

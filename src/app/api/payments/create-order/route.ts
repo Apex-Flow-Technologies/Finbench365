@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { PLAN_PRICING, GST_RATE } from '@/constants/pricing';
-import { FieldValue, Transaction } from 'firebase-admin/firestore';
+import { FieldValue } from 'firebase-admin/firestore';
 import { randomUUID } from 'crypto';
 import { grantEntitlementIdempotent } from '@/lib/payments/grantEntitlement';
+import { evaluateCoupon, normaliseCouponCode } from '@/lib/payments/coupons';
 
 // How long a just-created Razorpay order is considered "still in progress" —
 // past this, create-order will start a fresh order instead of trying to reuse it.
@@ -53,36 +54,27 @@ export async function POST(req: Request) {
     }
 
     const planData = PLAN_PRICING[planId];
-    let basePrice = planData.price;
+    const basePrice = planData.price;
     let discountPercent = 0;
     let appliedCouponCode: string | null = null;
 
-    // Secure server-side coupon validation — read-check-increment happens in
-    // a single transaction so two concurrent checkouts can't both redeem the
-    // last remaining use of a maxUses-limited coupon.
+    // Server-side coupon validation. This only READS — `usedCount` is
+    // incremented in grantEntitlementIdempotent, when the order actually
+    // transitions to paid. Incrementing here meant every abandoned checkout
+    // burned a use of a maxUses-limited coupon.
+    //
+    // The rules live in lib/payments/coupons.ts, shared with /validate-coupon,
+    // so what the candidate is told in the order summary and what they are
+    // charged at the gateway cannot drift apart.
     if (couponCode && typeof couponCode === 'string') {
-      const sanitizedCode = couponCode.trim().toUpperCase();
-      const couponRef = adminDb.collection('coupons').doc(sanitizedCode);
+      const sanitizedCode = normaliseCouponCode(couponCode);
+      const couponSnap = await adminDb.collection('coupons').doc(sanitizedCode).get();
+      const evaluation = evaluateCoupon(couponSnap.exists ? couponSnap.data()! : null);
 
-      discountPercent = await adminDb.runTransaction(async (tx: Transaction) => {
-        const couponDoc = await tx.get(couponRef);
-        if (!couponDoc.exists) return 0;
-        const couponData = couponDoc.data()!;
-        if (!couponData.isActive) return 0;
-        if (couponData.maxUses && couponData.usedCount >= couponData.maxUses) return 0;
-        // Expiry was previously not enforced anywhere — an expired coupon kept
-        // working indefinitely at both this redemption path and /validate-coupon.
-        if (couponData.expiresAt) {
-          const expiresAtMs = typeof couponData.expiresAt.toMillis === 'function'
-            ? couponData.expiresAt.toMillis()
-            : new Date(couponData.expiresAt).getTime();
-          if (Number.isFinite(expiresAtMs) && expiresAtMs <= Date.now()) return 0;
-        }
-
-        tx.update(couponRef, { usedCount: FieldValue.increment(1) });
+      if (evaluation.valid) {
+        discountPercent = evaluation.discountPercent;
         appliedCouponCode = sanitizedCode;
-        return couponData.discountPercent || 0;
-      });
+      }
     }
 
     // Secure server-side price calculation
@@ -107,6 +99,9 @@ export async function POST(req: Request) {
         orderId,
         amountPaid: 0,
         source: 'coupon',
+        // No order document exists for a bypass, so the code cannot be read
+        // back off one — it has to be handed over for the usage increment.
+        couponCode: appliedCouponCode,
       });
 
       return NextResponse.json({
@@ -131,10 +126,24 @@ export async function POST(req: Request) {
     // recent, unresolved order for this course, reuse it instead of opening
     // a second live Razorpay order (avoids doubling checkout.js's polling
     // load and avoids the user racking up multiple abandoned orders).
+    //
+    // The reuse test must include the PRICE, not just the course. Matching on
+    // courseId alone meant this sequence charged the wrong amount:
+    //   1. open checkout, click Pay with no coupon  -> order created at Rs 706.82
+    //   2. close the Razorpay popup (order stays 'created'/'attempted')
+    //   3. apply a coupon, click Pay again
+    //   4. the coupon validates, a discounted total is computed... and then this
+    //      branch returned the ORIGINAL Rs 706.82 order, so Razorpay showed the
+    //      undiscounted amount and the discount was silently thrown away.
+    // The same fault in reverse would honour a coupon the candidate had removed.
+    const amountPaise = Math.round(finalTotal * 100);
     const pending = userData?.pendingOrder;
     if (
       pending &&
       pending.courseId === courseId &&
+      pending.planId === planId &&
+      pending.amountPaise === amountPaise &&
+      (pending.couponCode ?? null) === (appliedCouponCode ?? null) &&
       pending.createdAtMs &&
       Date.now() - pending.createdAtMs < PENDING_ORDER_TTL_MS
     ) {
@@ -159,7 +168,7 @@ export async function POST(req: Request) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        amount: Math.round(finalTotal * 100), // paise
+        amount: amountPaise,
         currency: 'INR',
         receipt: `rcpt_${userId}_${Date.now()}`.slice(0, 40),
         notes: {
@@ -184,6 +193,10 @@ export async function POST(req: Request) {
         orderId: order.id,
         courseId,
         planId,
+        // Recorded so the reuse test above can tell "same checkout, retried"
+        // apart from "same course, different price after a coupon changed".
+        amountPaise,
+        couponCode: appliedCouponCode ?? null,
         createdAtMs: Date.now(),
       },
     }, { merge: true });

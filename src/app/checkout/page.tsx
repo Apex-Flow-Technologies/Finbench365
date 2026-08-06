@@ -174,12 +174,23 @@ function CheckoutContent() {
     e.preventDefault();
     setCouponError('');
     if (!coupon.trim()) return;
-    
+
+    // Coupon validation is authenticated now, so an anonymous visitor gets a
+    // useful prompt rather than a bare 401 rendered as "could not validate".
+    if (!user) {
+      setCouponError('Please sign in to apply a coupon.');
+      return;
+    }
+
     setIsApplyingCoupon(true);
     try {
+      const token = await user.getIdToken();
       const res = await fetch('/api/payments/validate-coupon', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
         body: JSON.stringify({ code: coupon.trim().toUpperCase() })
       });
       const data = await res.json();
@@ -351,6 +362,10 @@ function CheckoutContent() {
               setOrderCompleted(true);
               setPendingConfirmation(false);
               setIsProcessing(false);
+              // Land the candidate in the course they just bought. The delay is
+              // long enough to read the order id and confirmation before the
+              // page moves; the button below goes there immediately.
+              setTimeout(() => router.push(`/dashboard/courses/${courseId}`), 5000);
               return;
             }
             const errData = await verifyRes.json().catch(() => ({}));
@@ -422,11 +437,11 @@ function CheckoutContent() {
 
   if (orderCompleted) {
     return (
-      <div className="min-h-screen pt-28 pb-20 px-6 flex items-center justify-center bg-[#121419] text-[#FBFBF9]">
+      <div className="min-h-screen pt-28 pb-20 px-6 flex items-center justify-center bg-slate-50 dark:bg-[#0B0C10] text-[#111B35] dark:text-[#111B35] dark:text-[#FBFBF9] transition-colors duration-300">
         <motion.div 
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="max-w-xl w-full rounded-3xl p-8 sm:p-10 text-center space-y-6 shadow-2xl bg-[#181A1F] border border-[#282C36]"
+          className="max-w-xl w-full rounded-3xl p-8 sm:p-10 text-center space-y-6 shadow-2xl bg-white dark:bg-[#181A1F] border border-slate-200 dark:border-[#282C36]"
         >
           <div className="w-16 h-16 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mx-auto text-emerald-500">
             <CheckCircle2 className="w-8 h-8" />
@@ -436,47 +451,51 @@ function CheckoutContent() {
             <span className="px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 tabular-nums text-xs font-bold uppercase tracking-wider">
               Razorpay Verified • Order #{completedOrderId || `FB-${Math.floor(100000 + Math.random() * 900000)}`}
             </span>
-            <h2 className="text-2xl sm:text-3xl font-bold font-sans text-white">
+            <h2 className="text-2xl sm:text-3xl font-bold font-sans text-slate-900 dark:text-white">
               Enrollment Successful!
             </h2>
-            <p className="text-sm leading-relaxed text-slate-300">
+            <p className="text-sm leading-relaxed text-[#334155] dark:text-slate-300">
               Welcome aboard, <span className="font-semibold">{name}</span>. Your {planDays} package for <span className="text-amber-500 font-semibold">{course?.title || 'Certification Track'}</span> is now active.
             </p>
           </div>
 
-          <div className="p-5 rounded-2xl bg-[#121419] border border-[#282C36] text-left space-y-3 tabular-nums text-xs text-slate-300">
-            <div className="flex justify-between border-b border-[#282C36] pb-2">
-              <span className="text-[#475569]">Candidate Email:</span>
+          <div className="p-5 rounded-2xl bg-slate-50 dark:bg-[#121419] border border-slate-200 dark:border-[#282C36] text-left space-y-3 tabular-nums text-xs text-[#334155] dark:text-slate-300">
+            <div className="flex justify-between border-b border-slate-200 dark:border-[#282C36] pb-2">
+              <span className="text-[#475569] dark:text-[#94A3B8]">Candidate Email:</span>
               <span className="font-semibold">{email}</span>
             </div>
-            <div className="flex justify-between border-b border-[#282C36] pb-2">
-              <span className="text-[#475569]">Plan Duration:</span>
+            <div className="flex justify-between border-b border-slate-200 dark:border-[#282C36] pb-2">
+              <span className="text-[#475569] dark:text-[#94A3B8]">Plan Duration:</span>
               <span className="text-amber-500 font-semibold">{planName} ({planDays})</span>
             </div>
-            <div className="flex justify-between border-b border-[#282C36] pb-2">
-              <span className="text-[#475569]">Total Paid (with 18% GST):</span>
+            <div className="flex justify-between border-b border-slate-200 dark:border-[#282C36] pb-2">
+              <span className="text-[#475569] dark:text-[#94A3B8]">Total Paid (with 18% GST):</span>
               <span className="text-emerald-500 font-bold">₹{finalTotal.toFixed(2)}</span>
             </div>
             <div className="flex justify-between pt-1">
-              <span className="text-[#475569]">GST Invoice status:</span>
+              <span className="text-[#475569] dark:text-[#94A3B8]">GST Invoice status:</span>
               <span className="text-emerald-500 font-semibold">Dispatched via Email</span>
             </div>
           </div>
 
           <div className="flex flex-col sm:flex-row gap-3 pt-2">
             <button
-              onClick={() => router.push('/exams')}
+              onClick={() => router.push(`/dashboard/courses/${courseId}`)}
               className="flex-1 py-3.5 px-6 rounded-xl bg-amber-500 hover:bg-amber-400 text-[#121419] font-bold text-sm tracking-wide shadow-md transition-all duration-200 active:scale-[0.98]"
             >
-              Enter CBT Examination Terminal
+              Go to My Course
             </button>
             <button
-              onClick={() => router.push('/')}
-              className="flex-1 py-3.5 px-6 rounded-xl font-semibold text-sm transition-colors bg-[#272B33] hover:bg-[#343942] text-white"
+              onClick={() => router.push('/dashboard')}
+              className="flex-1 py-3.5 px-6 rounded-xl font-semibold text-sm transition-colors bg-slate-100 dark:bg-[#272B33] hover:bg-slate-200 dark:hover:bg-[#343942] text-slate-900 dark:text-white"
             >
-              Return to Homepage
+              Go to Dashboard
             </button>
           </div>
+
+          <p className="text-[11px] text-[#475569] dark:text-[#94A3B8]">
+            Taking you to your course in a few seconds…
+          </p>
         </motion.div>
       </div>
     );
@@ -484,21 +503,21 @@ function CheckoutContent() {
 
   if (pendingConfirmation) {
     return (
-      <div className="min-h-screen pt-28 pb-20 px-6 flex items-center justify-center bg-[#121419] text-[#FBFBF9]">
+      <div className="min-h-screen pt-28 pb-20 px-6 flex items-center justify-center bg-slate-50 dark:bg-[#0B0C10] text-[#111B35] dark:text-[#111B35] dark:text-[#FBFBF9] transition-colors duration-300">
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="max-w-xl w-full rounded-3xl p-8 sm:p-10 text-center space-y-6 shadow-2xl bg-[#181A1F] border border-[#282C36]"
+          className="max-w-xl w-full rounded-3xl p-8 sm:p-10 text-center space-y-6 shadow-2xl bg-white dark:bg-[#181A1F] border border-slate-200 dark:border-[#282C36]"
         >
           <div className="w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center mx-auto text-amber-500">
             <AlertCircle className="w-8 h-8" />
           </div>
 
           <div className="space-y-2">
-            <h2 className="text-2xl sm:text-3xl font-bold font-sans text-white">
+            <h2 className="text-2xl sm:text-3xl font-bold font-sans text-slate-900 dark:text-white">
               Confirming Your Payment
             </h2>
-            <p className="text-sm leading-relaxed text-slate-300">
+            <p className="text-sm leading-relaxed text-[#334155] dark:text-slate-300">
               Razorpay reported an issue completing this checkout in your browser, but if money left your account, your access will still be granted automatically — this can take a few minutes.
             </p>
             <p className="text-sm leading-relaxed text-amber-400 font-semibold">
@@ -523,12 +542,12 @@ function CheckoutContent() {
             </button>
             <button
               onClick={() => router.push('/dashboard')}
-              className="flex-1 py-3.5 px-6 rounded-xl font-semibold text-sm transition-colors bg-[#272B33] hover:bg-[#343942] text-white"
+              className="flex-1 py-3.5 px-6 rounded-xl font-semibold text-sm transition-colors bg-slate-100 dark:bg-[#272B33] hover:bg-slate-200 dark:hover:bg-[#343942] text-slate-900 dark:text-white"
             >
               Go to Dashboard
             </button>
           </div>
-          <p className="text-[11px] text-[#475569] leading-relaxed">
+          <p className="text-[11px] text-[#475569] dark:text-[#94A3B8] leading-relaxed">
             If this doesn&apos;t resolve within 15–20 minutes, contact support with your registered email — do not attempt payment a second time.
           </p>
         </motion.div>
@@ -538,20 +557,20 @@ function CheckoutContent() {
 
 
   return (
-    <div className="min-h-screen pt-24 pb-24 px-6 md:px-8 bg-[#121419] text-[#FBFBF9]">
+    <div className="min-h-screen pt-24 pb-24 px-6 md:px-8 bg-slate-50 dark:bg-[#0B0C10] text-[#111B35] dark:text-[#111B35] dark:text-[#FBFBF9] transition-colors duration-300">
 
       <div className="max-w-[1200px] mx-auto space-y-8">
         {/* Top Back Navigation */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-[#282C36] pb-6">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-200 dark:border-[#282C36] pb-6">
           <div className="space-y-1">
             <button
               onClick={() => router.back()}
-              className="inline-flex items-center gap-2 text-xs tabular-nums text-[#475569] hover:text-white transition-colors mb-2"
+              className="inline-flex items-center gap-2 text-xs tabular-nums text-[#475569] dark:text-[#94A3B8] hover:text-slate-900 dark:text-white transition-colors mb-2"
             >
               <ArrowLeft className="w-3.5 h-3.5" />
               <span>Back to Plan Selection</span>
             </button>
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight font-sans text-white flex items-center gap-3">
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight font-sans text-slate-900 dark:text-white flex items-center gap-3">
               <span>Candidate Enrollment & Checkout</span>
             </h1>
           </div>
@@ -563,14 +582,14 @@ function CheckoutContent() {
           {/* Left Column: Form & Gateway (7 cols) */}
           <div className="lg:col-span-7 space-y-8">
             {/* Step 1: Candidate Enrollment Form */}
-            <div className="bg-[#181A1F] border border-[#282C36] rounded-3xl p-6 sm:p-8 space-y-6">
-              <div className="flex items-center gap-3 border-b border-[#282C36] pb-4">
+            <div className="bg-white dark:bg-[#181A1F] border border-slate-200 dark:border-[#282C36] rounded-3xl p-6 sm:p-8 space-y-6">
+              <div className="flex items-center gap-3 border-b border-slate-200 dark:border-[#282C36] pb-4">
                 <div className="w-8 h-8 rounded-lg bg-amber-500 text-[#121419] tabular-nums font-bold flex items-center justify-center text-sm">
                   1
                 </div>
                 <div>
-                  <h2 className="text-lg font-bold text-white">Candidate Details</h2>
-                  <p className="text-xs text-[#475569]">
+                  <h2 className="text-lg font-bold text-slate-900 dark:text-white">Candidate Details</h2>
+                  <p className="text-xs text-[#475569] dark:text-[#94A3B8]">
                     Required for CBT terminal license linking and official tax invoicing
                   </p>
                 </div>
@@ -578,7 +597,7 @@ function CheckoutContent() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div className="space-y-2">
-                  <label htmlFor="checkout-name" className="text-xs tabular-nums text-slate-300 flex items-center gap-1.5">
+                  <label htmlFor="checkout-name" className="text-xs tabular-nums text-[#334155] dark:text-slate-300 flex items-center gap-1.5">
                     <User className="w-3.5 h-3.5 text-amber-500" />
                     <span>Full Candidate Name *</span>
                   </label>
@@ -589,12 +608,12 @@ function CheckoutContent() {
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     placeholder="e.g. Siddharth Ramanathan"
-                    className="w-full px-4 py-3 rounded-xl bg-[#121419] border border-[#282C36] text-white placeholder-slate-500 text-sm focus:border-amber-500 focus:outline-none transition-colors"
+                    className="w-full px-4 py-3 rounded-xl bg-slate-50 dark:bg-[#121419] border border-slate-200 dark:border-[#282C36] text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 text-sm focus:border-amber-500 focus:outline-none transition-colors"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <label htmlFor="checkout-email" className="text-xs tabular-nums text-slate-300 flex items-center gap-1.5">
+                  <label htmlFor="checkout-email" className="text-xs tabular-nums text-[#334155] dark:text-slate-300 flex items-center gap-1.5">
                     <Mail className="w-3.5 h-3.5 text-amber-500" />
                     <span>Email Address *</span>
                   </label>
@@ -605,12 +624,12 @@ function CheckoutContent() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="candidate@university.edu"
-                    className="w-full px-4 py-3 rounded-xl bg-[#121419] border border-[#282C36] text-white placeholder-slate-500 text-sm focus:border-amber-500 focus:outline-none transition-colors"
+                    className="w-full px-4 py-3 rounded-xl bg-slate-50 dark:bg-[#121419] border border-slate-200 dark:border-[#282C36] text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 text-sm focus:border-amber-500 focus:outline-none transition-colors"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <label htmlFor="checkout-phone" className="text-xs tabular-nums text-slate-300 flex items-center gap-1.5">
+                  <label htmlFor="checkout-phone" className="text-xs tabular-nums text-[#334155] dark:text-slate-300 flex items-center gap-1.5">
                     <Phone className="w-3.5 h-3.5 text-amber-500" />
                     <span>Mobile Number *</span>
                   </label>
@@ -621,13 +640,13 @@ function CheckoutContent() {
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
                     placeholder="+91 98765 43210"
-                    className="w-full px-4 py-3 rounded-xl bg-[#121419] border border-[#282C36] text-white placeholder-slate-500 text-sm focus:border-amber-500 focus:outline-none transition-colors"
+                    className="w-full px-4 py-3 rounded-xl bg-slate-50 dark:bg-[#121419] border border-slate-200 dark:border-[#282C36] text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 text-sm focus:border-amber-500 focus:outline-none transition-colors"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <label htmlFor="checkout-org" className="text-xs tabular-nums text-slate-300 flex items-center gap-1.5">
-                    <Building2 className="w-3.5 h-3.5 text-[#475569]" />
+                  <label htmlFor="checkout-org" className="text-xs tabular-nums text-[#334155] dark:text-slate-300 flex items-center gap-1.5">
+                    <Building2 className="w-3.5 h-3.5 text-[#475569] dark:text-[#94A3B8]" />
                     <span>Institution / University (Optional)</span>
                   </label>
                   <input
@@ -636,40 +655,40 @@ function CheckoutContent() {
                     value={org}
                     onChange={(e) => setOrg(e.target.value)}
                     placeholder="e.g. Global Financial Institute"
-                    className="w-full px-4 py-3 rounded-xl bg-[#121419] border border-[#282C36] text-white placeholder-slate-500 text-sm focus:border-amber-500 focus:outline-none transition-colors"
+                    className="w-full px-4 py-3 rounded-xl bg-slate-50 dark:bg-[#121419] border border-slate-200 dark:border-[#282C36] text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 text-sm focus:border-amber-500 focus:outline-none transition-colors"
                   />
                 </div>
               </div>
             </div>
 
             {/* Step 2: Razorpay Provisioning & Gateway Information */}
-            <div className="bg-[#181A1F] border border-[#282C36] rounded-3xl p-6 sm:p-8 space-y-6">
-              <div className="flex items-center gap-3 border-b border-[#282C36] pb-4">
+            <div className="bg-white dark:bg-[#181A1F] border border-slate-200 dark:border-[#282C36] rounded-3xl p-6 sm:p-8 space-y-6">
+              <div className="flex items-center gap-3 border-b border-slate-200 dark:border-[#282C36] pb-4">
                 <div className="w-8 h-8 rounded-lg bg-amber-500 text-[#121419] tabular-nums font-bold flex items-center justify-center text-sm">
                   2
                 </div>
                 <div>
-                  <h2 className="text-lg font-bold text-white">Payment Gateway (Razorpay)</h2>
-                  <p className="text-xs text-[#475569]">
+                  <h2 className="text-lg font-bold text-slate-900 dark:text-white">Payment Gateway (Razorpay)</h2>
+                  <p className="text-xs text-[#475569] dark:text-[#94A3B8]">
                     UPI, Cards, and Net Banking are automatically handled via Razorpay secure popup
                   </p>
                 </div>
               </div>
 
               {/* Razorpay Provision Box */}
-              <div className="p-6 rounded-2xl bg-[#121419] border border-[#282C36] space-y-4 text-center sm:text-left flex flex-col sm:flex-row items-center justify-between gap-6">
+              <div className="p-6 rounded-2xl bg-slate-50 dark:bg-[#121419] border border-slate-200 dark:border-[#282C36] space-y-4 text-center sm:text-left flex flex-col sm:flex-row items-center justify-between gap-6">
                 <div className="space-y-2">
                   <div className="flex items-center justify-center sm:justify-start gap-2 text-sm font-bold text-blue-500">
                     <ShieldCheck className="w-5 h-5" />
                     <span>Razorpay Live Gateway Provision</span>
                   </div>
-                  <p className="text-xs max-w-md leading-relaxed text-slate-300">
+                  <p className="text-xs max-w-md leading-relaxed text-[#334155] dark:text-slate-300">
                     When you click the checkout button below, Razorpay will display its secure popup overlay allowing you to complete payment via <span className="font-semibold text-amber-500">UPI (GPay/PhonePe)</span>, <span className="font-semibold">Credit/Debit Cards</span>, or <span className="font-semibold">Net Banking</span> without leaving the page.
                   </p>
                 </div>
 
                 <div className="flex-shrink-0">
-                  <div className="px-4 py-2.5 rounded-xl bg-[#181A1F] border border-[#282C36] tabular-nums text-xs text-center space-y-1 text-emerald-400">
+                  <div className="px-4 py-2.5 rounded-xl bg-white dark:bg-[#181A1F] border border-slate-200 dark:border-[#282C36] tabular-nums text-xs text-center space-y-1 text-emerald-400">
                     <div className="font-bold">Gateway Status</div>
                     <div className="flex items-center gap-1.5 justify-center text-[11px]">
                       <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
@@ -683,35 +702,35 @@ function CheckoutContent() {
 
           {/* Right Column: Order Summary & 18% GST Breakdown (5 cols) */}
           <div className="lg:col-span-5 space-y-6 sticky top-28">
-            <div className="bg-[#181A1F] border border-[#282C36] rounded-3xl p-6 sm:p-8 space-y-6 shadow-xl">
-              <h2 className="text-lg font-bold text-white border-b border-[#282C36] pb-4 flex items-center justify-between">
+            <div className="bg-white dark:bg-[#181A1F] border border-slate-200 dark:border-[#282C36] rounded-3xl p-6 sm:p-8 space-y-6 shadow-xl">
+              <h2 className="text-lg font-bold text-slate-900 dark:text-white border-b border-slate-200 dark:border-[#282C36] pb-4 flex items-center justify-between">
                 <span>Order Summary</span>
                 <span className="text-xs tabular-nums text-amber-500">#CBT-ORDER</span>
               </h2>
 
               {/* Selected Track & Plan Box */}
-              <div className="p-4 rounded-2xl bg-[#121419] border border-[#282C36] space-y-3">
+              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-[#121419] border border-slate-200 dark:border-[#282C36] space-y-3">
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <span className="text-[10px] tabular-nums font-bold uppercase tracking-wider text-amber-500 block mb-1">
                       Target Curriculum
                     </span>
-                    <h3 className="font-bold text-base leading-snug text-white">
+                    <h3 className="font-bold text-base leading-snug text-slate-900 dark:text-white">
                       {course ? course.title : 'Loading Course Details...'}
                     </h3>
                   </div>
                 </div>
 
-                <div className="pt-2 border-t border-[#282C36] flex items-center justify-between text-xs tabular-nums">
-                  <span className="text-[#475569]">Selected Plan:</span>
-                  <span className="font-semibold px-2.5 py-1 rounded-md text-white bg-slate-800 border border-slate-700">
+                <div className="pt-2 border-t border-slate-200 dark:border-[#282C36] flex items-center justify-between text-xs tabular-nums">
+                  <span className="text-[#475569] dark:text-[#94A3B8]">Selected Plan:</span>
+                  <span className="font-semibold px-2.5 py-1 rounded-md text-slate-900 dark:text-white bg-slate-800 border border-slate-700">
                     {planName} ({planDays})
                   </span>
                 </div>
               </div>
 
               {/* Inclusions Checkmarks */}
-              <div className="space-y-2.5 text-xs text-slate-300">
+              <div className="space-y-2.5 text-xs text-[#334155] dark:text-slate-300">
                 {contents === null ? (
                   // Still counting — placeholder rows rather than a premature "0".
                   <>
@@ -724,7 +743,7 @@ function CheckoutContent() {
                       <div className="flex items-center gap-2">
                         <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0" />
                         <span>
-                          <span className="font-semibold text-white tabular-nums">{contents.mocks}</span>{' '}
+                          <span className="font-semibold text-slate-900 dark:text-white tabular-nums">{contents.mocks}</span>{' '}
                           Full-length CBT mock exam{contents.mocks === 1 ? '' : 's'}
                         </span>
                       </div>
@@ -733,8 +752,8 @@ function CheckoutContent() {
                       <div className="flex items-center gap-2">
                         <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0" />
                         <span>
-                          <span className="font-semibold text-white tabular-nums">{contents.materials}</span>{' '}
-                          PDF study material{contents.materials === 1 ? '' : 's'}
+                          <span className="font-semibold text-slate-900 dark:text-white tabular-nums">{contents.materials}</span>{' '}
+                          PDF study note{contents.materials === 1 ? '' : 's'}
                         </span>
                       </div>
                     )}
@@ -753,19 +772,19 @@ function CheckoutContent() {
               {/* Coupon Form */}
               <form onSubmit={handleApplyCoupon} className="flex items-center gap-2 pt-2">
                 <div className="relative flex-1">
-                  <Tag className="w-3.5 h-3.5 text-[#475569] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  <Tag className="w-3.5 h-3.5 text-[#475569] dark:text-[#94A3B8] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                   <input
                     type="text"
                     value={coupon}
                     onChange={(e) => setCoupon(e.target.value)}
                     placeholder="Voucher (e.g. FINBENCH10)"
-                    className="w-full pl-8 pr-3 py-2 rounded-xl bg-[#121419] border border-[#282C36] text-white placeholder-slate-500 text-xs uppercase focus:border-amber-500 focus:outline-none tabular-nums"
+                    className="w-full pl-8 pr-3 py-2 rounded-xl bg-slate-50 dark:bg-[#121419] border border-slate-200 dark:border-[#282C36] text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 text-xs uppercase focus:border-amber-500 focus:outline-none tabular-nums"
                   />
                 </div>
                 <button
                   type="submit"
                   disabled={isApplyingCoupon}
-                  className="px-4 py-2 rounded-xl text-xs font-bold bg-[#272B33] hover:bg-[#343942] disabled:opacity-50 disabled:cursor-wait text-white transition-colors flex items-center justify-center min-w-[70px]"
+                  className="px-4 py-2 rounded-xl text-xs font-bold bg-slate-100 dark:bg-[#272B33] hover:bg-slate-200 dark:hover:bg-[#343942] disabled:opacity-50 disabled:cursor-wait text-slate-900 dark:text-white transition-colors flex items-center justify-center min-w-[70px]"
                 >
                   {isApplyingCoupon ? (
                     <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -783,8 +802,8 @@ function CheckoutContent() {
               )}
 
               {/* Price Breakdown with exact 18% GST */}
-              <div className="space-y-3 pt-4 border-t border-[#282C36] tabular-nums text-sm">
-                <div className="flex items-center justify-between text-slate-300">
+              <div className="space-y-3 pt-4 border-t border-slate-200 dark:border-[#282C36] tabular-nums text-sm">
+                <div className="flex items-center justify-between text-[#334155] dark:text-slate-300">
                   <span>Base Plan Price ({planName})</span>
                   <span>₹{basePrice.toFixed(2)}</span>
                 </div>
@@ -796,17 +815,17 @@ function CheckoutContent() {
                   </div>
                 )}
 
-                <div className="flex items-center justify-between border-b border-[#282C36] pb-3 text-slate-300">
+                <div className="flex items-center justify-between border-b border-slate-200 dark:border-[#282C36] pb-3 text-[#334155] dark:text-slate-300">
                   <span className="flex items-center gap-1.5">
                     <span>18% GST (Tax Invoice)</span>
                     <span title="Standard 18% Goods & Services Tax on Digital Educational Software" className="cursor-help inline-flex">
-                      <HelpCircle className="w-3.5 h-3.5 text-[#475569]" />
+                      <HelpCircle className="w-3.5 h-3.5 text-[#475569] dark:text-[#94A3B8]" />
                     </span>
                   </span>
                   <span className="text-amber-500 font-semibold">+₹{gstAmount.toFixed(2)}</span>
                 </div>
 
-                <div className="flex items-center justify-between pt-1 text-base font-bold text-white">
+                <div className="flex items-center justify-between pt-1 text-base font-bold text-slate-900 dark:text-white">
                   <span className="font-sans">Total Amount Payable</span>
                   <span className="text-emerald-500 text-xl tabular-nums">₹{finalTotal.toFixed(2)}</span>
                 </div>
@@ -818,9 +837,9 @@ function CheckoutContent() {
                   id="checkout-legal"
                   checked={agreeLegal}
                   onChange={(e) => setAgreeLegal(e.target.checked)}
-                  className="mt-1 w-4 h-4 rounded border-[#282C36] bg-[#121419] checked:bg-amber-500 checked:border-amber-500 focus:ring-amber-500 focus:ring-offset-0 transition-colors shrink-0"
+                  className="mt-1 w-4 h-4 rounded border-slate-200 dark:border-[#282C36] bg-slate-50 dark:bg-[#121419] checked:bg-amber-500 checked:border-amber-500 focus:ring-amber-500 focus:ring-offset-0 transition-colors shrink-0"
                 />
-                <label htmlFor="checkout-legal" className="text-xs text-[#475569] leading-relaxed">
+                <label htmlFor="checkout-legal" className="text-xs text-[#475569] dark:text-[#94A3B8] leading-relaxed">
                   I agree to the <Link href="/terms" className="text-amber-500 hover:underline">Terms of Service</Link> and the <Link href="/refunds" className="text-amber-500 hover:underline">Refund & Cancellation Policy</Link>. I understand that sales are final and access activates immediately upon payment.
                 </label>
               </div>
@@ -846,7 +865,7 @@ function CheckoutContent() {
                       <button
                         type="button"
                         onClick={() => setRecentAttemptNotice(false)}
-                        className="shrink-0 text-blue-300/70 hover:text-white transition-colors"
+                        className="shrink-0 text-blue-300/70 hover:text-slate-900 dark:text-white transition-colors"
                         aria-label="Dismiss"
                       >
                         <X className="w-3.5 h-3.5" />
@@ -901,7 +920,7 @@ function CheckoutContent() {
                       animate={{ opacity: 1 }}
                       exit={{ opacity: 0 }}
                       transition={{ duration: 0.18 }}
-                      className="text-[#475569]"
+                      className="text-[#475569] dark:text-[#94A3B8]"
                     >
                       Razorpay gateway will securely handle UPI QR scan, card authentication, or Net Banking on the next popup screen.
                     </motion.span>
@@ -922,7 +941,7 @@ function CheckoutContent() {
             </div>
 
             {/* Extra Security Trust Card */}
-            <div className="p-4 rounded-2xl bg-[#181A1F] border border-[#282C36] text-[#475569] flex items-center gap-3 text-xs">
+            <div className="p-4 rounded-2xl bg-white dark:bg-[#181A1F] border border-slate-200 dark:border-[#282C36] text-[#475569] dark:text-[#94A3B8] flex items-center gap-3 text-xs">
               <ShieldCheck className="w-6 h-6 text-emerald-500 flex-shrink-0" />
               <span>
                 All candidate transactions are protected with institutional SSL encryption and processed via RBI-compliant Razorpay gateway.
@@ -937,7 +956,7 @@ function CheckoutContent() {
 
 export default function CheckoutPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-[#121419] pt-32 text-center text-[#475569]">Loading secure checkout gateway...</div>}>
+    <Suspense fallback={<div className="min-h-screen bg-slate-50 dark:bg-[#121419] pt-32 text-center text-[#475569] dark:text-[#94A3B8]">Loading secure checkout gateway...</div>}>
       <CheckoutContent />
     </Suspense>
   );
