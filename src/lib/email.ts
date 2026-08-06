@@ -10,6 +10,63 @@ const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
 const FROM_NAME = process.env.RESEND_FROM_NAME || 'MyExams365';
 const SUPPORT_EMAIL = process.env.SUPPORT_EMAIL || 'support@myexams365.com';
 
+/**
+ * True when we are falling back to Resend's shared sandbox sender.
+ *
+ * That address only delivers to the mailbox that owns the Resend account, so
+ * with it configured every mail to a real candidate is rejected. This is the
+ * single most common cause of "the verification code never arrived", and the
+ * rejection Resend returns says nothing about the sender being the reason —
+ * which is why failures are re-thrown below with that context attached.
+ */
+const SENDER_IS_SANDBOX = FROM_EMAIL === 'onboarding@resend.dev';
+
+/** Raised when a send failed because of OUR configuration, not the recipient. */
+export class EmailSenderNotConfiguredError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'EmailSenderNotConfiguredError';
+  }
+}
+
+/**
+ * Turns a Resend rejection into an error that names the most likely cause.
+ *
+ * Deliberately leads with what Resend actually said, and only then offers a
+ * likely cause. An earlier version asserted "RESEND_FROM_EMAIL is not set" for
+ * every failure that happened while the sandbox sender was active — so a
+ * rejected API key was reported as a sender problem, and the real fault (a 401)
+ * stayed hidden behind a confident, wrong explanation.
+ */
+function sendFailure(detail: string): Error {
+  const text = detail.toLowerCase();
+  const isAuth =
+    text.includes('api key') || text.includes('api_key') ||
+    text.includes('unauthorized') || text.includes('invalid token') ||
+    text.includes('restricted');
+
+  if (isAuth) {
+    return new EmailSenderNotConfiguredError(
+      `Resend rejected our credentials: ${detail}\n` +
+      `RESEND_API_KEY is missing, revoked or from another account. Create a fresh key ` +
+      `in Resend (API Keys -> Create API Key) and update it in the environment.`,
+    );
+  }
+
+  if (SENDER_IS_SANDBOX) {
+    return new EmailSenderNotConfiguredError(
+      `Resend rejected the message: ${detail}\n` +
+      `RESEND_FROM_EMAIL is not set, so the shared sandbox sender ` +
+      `(onboarding@resend.dev) was used — Resend only delivers that to the account ` +
+      `owner's own address. Verify a domain in Resend (Domains -> Add Domain) and set ` +
+      `RESEND_FROM_EMAIL to an address on it.`,
+    );
+  }
+
+  // A genuine per-message failure: bad recipient, blocked content, quota.
+  return new Error(`Resend: ${detail}`);
+}
+
 // Optional legal-entity details. An Indian tax invoice must carry the seller's
 // registered name and GSTIN to be claimable by the buyer, so they are rendered
 // when configured and omitted rather than faked when not.
@@ -89,7 +146,7 @@ export async function sendOtpEmail({ email, code, minutes }: {
 
   if (error) {
     console.error('Resend rejected the OTP email:', error);
-    throw new Error(`Resend: ${error.message ?? 'send failed'}`);
+    throw sendFailure(error.message ?? 'send failed');
   }
   return data;
 }
@@ -159,7 +216,7 @@ export async function sendPasswordResetMail({ email, link }: { email: string; li
 
   if (error) {
     console.error('Resend rejected the password reset email:', error);
-    throw new Error(`Resend: ${error.message ?? 'send failed'}`);
+    throw sendFailure(error.message ?? 'send failed');
   }
   return data;
 }
@@ -306,7 +363,7 @@ export async function sendInvoiceEmail(params: InvoiceEmailParams) {
     // Surfaced to the caller, which logs it without failing the entitlement
     // grant — a delivery problem must never cost someone the access they paid for.
     console.error('Resend rejected the invoice email:', error);
-    throw new Error(`Resend: ${error.message ?? 'send failed'}`);
+    throw sendFailure(error.message ?? 'send failed');
   }
 
   console.log(`Invoice email queued (${data?.id}) for order ${orderId}`);

@@ -1,6 +1,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
+import { PRODUCT, LEGAL_ENTITY, SUPPORT_EMAIL } from '@/constants/brand';
 
 export default function RefundsPage() {
   return (
@@ -20,14 +21,14 @@ export default function RefundsPage() {
           <section>
             <h2 className="text-2xl font-bold text-[#111B35] dark:text-white mb-4">5.1 Nature of the Product</h2>
             <p className="mb-4">
-              FinExamsEdge plans are digital content with immediate access: your plan activates on successful payment (or manual activation) and its time-limited validity begins the same day. Before purchasing, you can evaluate the platform through the free demo test, and the features, price and validity of each tier are clearly displayed on the Pricing page. Please choose your plan carefully.
+              {PRODUCT} plans are digital content with immediate access: your plan activates on successful payment (or manual activation) and its time-limited validity begins the same day. Before purchasing, you can evaluate the platform through the free demo test, and the features, price and validity of each tier are clearly displayed on the Pricing page. Please choose your plan carefully.
             </p>
           </section>
 
           <section>
             <h2 className="text-2xl font-bold text-[#111B35] dark:text-white mb-4">5.2 All Sales Are Final — No Refunds</h2>
             <p className="mb-4">
-              Except as stated in Section 5.3, all purchases on FinExamsEdge are final, non-refundable and non-transferable. In particular, no refund, credit or exchange is available for:
+              Except as stated in Section 5.3, all purchases on {PRODUCT} are final, non-refundable and non-transferable. In particular, no refund, credit or exchange is available for:
             </p>
             <ol className="list-decimal pl-6 space-y-2 mb-4">
               <li>change of mind, wrong plan selected, or dissatisfaction with the content or your mock-test scores;</li>
@@ -56,7 +57,7 @@ export default function RefundsPage() {
           <section>
             <h2 className="text-2xl font-bold text-[#111B35] dark:text-white mb-4">5.5 Questions</h2>
             <p className="mb-4">
-              For payment issues (failed activation, duplicate charge) email <strong>support@finexamsedge.com</strong> from your registered email with your payment ID. We respond within 48 hours.
+              For payment issues (failed activation, duplicate charge) email <strong>{SUPPORT_EMAIL}</strong> from your registered email with your payment ID. We respond within 48 hours.
             </p>
           </section>
         </div>

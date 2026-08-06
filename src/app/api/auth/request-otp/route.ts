@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 import { rateLimit, clientIp } from '@/lib/api/rateLimit';
-import { sendOtpEmail } from '@/lib/email';
+import { sendOtpEmail, EmailSenderNotConfiguredError } from '@/lib/email';
 import {
   generateOtp, newSalt, hashOtp, emailKey, normalizeEmail, isValidEmail,
   OTP_TTL_MS, OTP_RESEND_COOLDOWN_MS, OTP_MAX_SENDS_PER_WINDOW, OTP_SEND_WINDOW_MS,
@@ -98,9 +98,25 @@ export async function POST(req: Request) {
       // Drop the code we just stored — a user who never received it must not be
       // left facing a code entry screen with no way forward.
       await ref.delete().catch(() => {});
+
+      // Do not blame the recipient for our own misconfiguration. The previous
+      // copy said "check the address and try again" for every failure, which
+      // sends a candidate with a perfectly good address round in circles while
+      // the actual fault — an unset RESEND_FROM_EMAIL — goes unmentioned.
+      const isOurFault = sendErr instanceof EmailSenderNotConfiguredError;
+      if (isOurFault) {
+        console.error(
+          '\n*** EMAIL IS NOT CONFIGURED — no candidate can sign up until this is fixed. ***\n' +
+          (sendErr as Error).message + '\n',
+        );
+      }
       return NextResponse.json(
-        { error: 'We could not send the verification email. Please check the address and try again.' },
-        { status: 502 },
+        {
+          error: isOurFault
+            ? 'We are unable to send verification emails at the moment. This is a problem on our side, not with your address — please contact support.'
+            : 'We could not send the verification email. Please check the address and try again.',
+        },
+        { status: isOurFault ? 503 : 502 },
       );
     }
 

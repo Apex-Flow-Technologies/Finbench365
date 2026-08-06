@@ -1,6 +1,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
+import { PRODUCT, LEGAL_ENTITY, SUPPORT_EMAIL, PRIVACY_EMAIL, GRIEVANCE_EMAIL } from '@/constants/brand';
 
 export default function PrivacyPage() {
   return (
@@ -20,7 +21,7 @@ export default function PrivacyPage() {
           <section>
             <h2 className="text-2xl font-bold text-[#111B35] dark:text-white mb-4">4.1 Who We Are</h2>
             <p className="mb-4">
-              This Privacy Policy explains how FinExamsEdge EdTech Private Limited ("FinExamsEdge", "we"), the Data Fiduciary for the purposes of the Digital Personal Data Protection Act, 2023 ("DPDP Act"), collects, uses, stores, shares and protects your personal data when you use FinExamsEdge.com and related services.
+              This Privacy Policy explains how {LEGAL_ENTITY} ("{PRODUCT}", "we"), the Data Fiduciary for the purposes of the Digital Personal Data Protection Act, 2023 ("DPDP Act"), collects, uses, stores, shares and protects your personal data when you use {PRODUCT} and related services.
             </p>
           </section>
 
@@ -38,28 +39,28 @@ export default function PrivacyPage() {
           <section>
             <h2 className="text-2xl font-bold text-[#111B35] dark:text-white mb-4">4.3 Purposes and Legal Basis</h2>
             <p className="mb-4">
-              We process your personal data on the basis of your consent, given when you tick the consent box at signup, and for the following specified purposes only: (a) creating and operating your account; (b) delivering mock tests, saving your progress, and generating performance reports; (c) processing payments and issuing invoices; (d) providing customer support and resolving grievances; (e) sending service messages such as OTPs, receipts, expiry reminders and material policy updates; (f) sending promotional messages about FinExamsEdge only if you have opted in, with an unsubscribe option in every such message; and (g) securing the platform, preventing fraud and abuse, and complying with law. We do not use your data for any purpose incompatible with these.
+              We process your personal data on the basis of your consent, given when you tick the consent box at signup, and for the following specified purposes only: (a) creating and operating your account; (b) delivering mock tests, saving your progress, and generating performance reports; (c) processing payments and issuing invoices; (d) providing customer support and resolving grievances; (e) sending service messages such as OTPs, receipts, expiry reminders and material policy updates; (f) sending promotional messages about {PRODUCT} only if you have opted in, with an unsubscribe option in every such message; and (g) securing the platform, preventing fraud and abuse, and complying with law. We do not use your data for any purpose incompatible with these.
             </p>
           </section>
 
           <section>
             <h2 className="text-2xl font-bold text-[#111B35] dark:text-white mb-4">4.4 Consent and Withdrawal</h2>
             <p className="mb-4">
-              Your consent is free, specific, informed and unambiguous, and you may withdraw it at any time by writing to privacy@finexamsedge.com or using your account settings. Withdrawal is as easy as giving consent. On withdrawal we will stop the related processing; note that some processing (e.g., retaining invoices) may continue where required by law, and withdrawal of consent essential to the service may mean we can no longer provide it.
+              Your consent is free, specific, informed and unambiguous, and you may withdraw it at any time by writing to {PRIVACY_EMAIL} or using your account settings. Withdrawal is as easy as giving consent. On withdrawal we will stop the related processing; note that some processing (e.g., retaining invoices) may continue where required by law, and withdrawal of consent essential to the service may mean we can no longer provide it.
             </p>
           </section>
 
           <section>
             <h2 className="text-2xl font-bold text-[#111B35] dark:text-white mb-4">4.5 Sharing of Personal Data</h2>
             <p className="mb-4">
-              We do not sell, rent or lease your personal data. We share it only with: (a) our payment gateway, to process your payment; (b) service providers (Data Processors) who host our infrastructure, deliver email/SMS, or provide analytics, each bound by contract to process data only on our instructions with appropriate safeguards; and (c) government or judicial authorities where disclosure is required by law. If FinExamsEdge’s business is transferred or merged, your data may be transferred as part of that transaction subject to this Policy.
+              We do not sell, rent or lease your personal data. We share it only with: (a) our payment gateway, to process your payment; (b) service providers (Data Processors) who host our infrastructure, deliver email/SMS, or provide analytics, each bound by contract to process data only on our instructions with appropriate safeguards; and (c) government or judicial authorities where disclosure is required by law. If {PRODUCT}’s business is transferred or merged, your data may be transferred as part of that transaction subject to this Policy.
             </p>
           </section>
 
           <section>
             <h2 className="text-2xl font-bold text-[#111B35] dark:text-white mb-4">4.6 No Cookies</h2>
             <p className="mb-4">
-              FinExamsEdge does not use cookies. We do not place analytics, advertising, tracking or any other cookies on your device, and we do not use third-party trackers or behavioural profiling. Keeping you logged in and preserving your test session (including timer state on disconnection) is handled through secure server-side sessions and authentication tokens rather than cookies. Because no cookies are used, no cookie banner or cookie consent is required. If we ever introduce cookies in future, we will update this Policy, display a consent notice before any non-essential cookie is set, and seek fresh consent where the law requires it.
+              {PRODUCT} does not use cookies. We do not place analytics, advertising, tracking or any other cookies on your device, and we do not use third-party trackers or behavioural profiling. Keeping you logged in and preserving your test session (including timer state on disconnection) is handled through secure server-side sessions and authentication tokens rather than cookies. Because no cookies are used, no cookie banner or cookie consent is required. If we ever introduce cookies in future, we will update this Policy, display a consent notice before any non-essential cookie is set, and seek fresh consent where the law requires it.
             </p>
           </section>
 
@@ -93,7 +94,7 @@ export default function PrivacyPage() {
           <section>
             <h2 className="text-2xl font-bold text-[#111B35] dark:text-white mb-4">4.10 Children</h2>
             <p className="mb-4">
-              FinExamsEdge is directed at adults preparing for professional examinations. Users under 18 may use the platform only with verifiable parental consent as required by the DPDP Act, and we do not knowingly process children’s data for tracking, behavioural monitoring or targeted advertising.
+              {PRODUCT} is directed at adults preparing for professional examinations. Users under 18 may use the platform only with verifiable parental consent as required by the DPDP Act, and we do not knowingly process children’s data for tracking, behavioural monitoring or targeted advertising.
             </p>
           </section>
 
@@ -101,7 +102,7 @@ export default function PrivacyPage() {
             <h2 className="text-2xl font-bold text-[#111B35] dark:text-white mb-4">4.11 Grievance Officer</h2>
             <p className="mb-4">
               <strong>Grievance Officer:</strong> [Name]<br />
-              <strong>Email:</strong> grievance@finexamsedge.com<br />
+              <strong>Email:</strong> {GRIEVANCE_EMAIL}<br />
               <strong>Phone:</strong> [Number]<br />
               <strong>Address:</strong> [Registered Address, Chennai, Tamil Nadu]<br />
               We acknowledge privacy grievances within 48 hours and resolve them within 30 days.

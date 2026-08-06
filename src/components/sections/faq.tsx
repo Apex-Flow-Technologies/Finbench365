@@ -10,37 +10,56 @@ interface FaqItem {
   category: string;
 }
 
+/**
+ * FAQ copy, supplied by the client (MyExams365_FAQ_Content_Final).
+ *
+ * What was here before described a different product entirely — CFA and FRM
+ * exams, an "Item-Response Theory diagnostic engine", a "Two-Parameter Logistic
+ * model", an algorithmic question bank that randomised par values and yields,
+ * and a pass guarantee. None of that exists. This platform sells NISM mock
+ * tests and study notes, and the answers below say so.
+ */
 const FAQ_ITEMS: FaqItem[] = [
   {
-    category: 'Institutional CBT Fidelity',
-    question: 'How does MyExams365 replicate the exact CBT (Computer-Based Testing) interface for CFA® and FRM® exams?',
-    answer: 'Our frontend terminal exactly mirrors official examination center station constraints: pixel-accurate split-screen layouts, dual-pane formula sheets, item highlighting, right-click strikethrough for eliminating decoy distractors, and precise sub-second latency behavior. Sitting for our full-length mock exams builds muscle memory so exam day feels like just another practice session.'
+    category: 'CBT Exam Simulation',
+    question: 'How does MyExams365 replicate the actual NISM CBT exam experience?',
+    answer: "MyExams365 closely mirrors the real NISM exam — the exact exam duration, the actual CBT interface, and the same look and feel you'll see on exam day. Questions are conceptualized to match the real exam pattern, and every mock comes with a key metrics tracker so you can measure your performance for each exam.",
   },
   {
-    category: 'Algorithmic Question Bank',
-    question: 'What makes your quantitative algorithmic question bank different from standard static question banks?',
-    answer: 'Conventional question banks use fixed numbers. If you attempt a question twice, you end up memorizing the answer rather than the underlying mathematical derivation. MyExams365’s algorithmic engine dynamically randomizes par values, yields, volatilities, asset weights, and tax rates every time a question is launched, generating thousands of unique quantitative variations from our core learning outcome statements.'
+    category: 'Exam Coverage',
+    question: 'Which exams does MyExams365 currently support?',
+    answer: "Right now, MyExams365 offers mock tests and study material for Mutual Fund Distributors (V-A), Mutual Fund Foundation (V-B), Mutual Fund – Specialized Investment Fund Distributors (V-D), Research Analyst (XV), Securities Markets Foundation (XII), and Equity Derivatives (VIII). We're actively expanding to cover more NISM certifications, as well as other non-NISM finance exams in India.",
   },
   {
-    category: 'IRT Diagnostic Engine',
-    question: 'How does the Item-Response Theory (IRT) diagnostic engine calculate my true probability of passing?',
-    answer: 'Instead of raw percentage scores (which fail to differentiate between a simple definition and a complex 3-step bond duration problem), our engine uses a Two-Parameter Logistic (2PL) IRT model. It calibrates every question by item difficulty and discrimination index, continuously mapping your ability parameter (θ) against the historically observed minimum passing score (MPS) of actual charterholders.'
+    category: 'Exam Blueprint Accuracy',
+    question: 'How closely do the mocks follow the real NISM exam pattern?',
+    answer: 'Every mock test is built on the actual NISM exam blueprint — matching the chapter-wise and topic-wise weightage of the real exam. This helps you get familiar with the exam GUI in advance, so you walk in on exam day without anxiety or surprises.',
   },
   {
-    category: 'Curriculum Synchronization',
-    question: 'Are all curriculum learning outcomes (LOS) fully updated for the 2026–2027 examination cycle?',
-    answer: 'Yes. Our quantitative analysts and CFA charterholders synchronize our item matrix with official curriculum releases within 72 hours of publication. Any deprecated learning outcome statements or altered syllabus weights are automatically flagged across your personal study dashboard.'
+    category: 'Validity & Access',
+    question: 'How long will I have access to my study material and mock tests after purchase?',
+    answer: "MyExams365 offers three plans to choose from — a 10-day plan, a 30-day plan, and a 60-day plan. Once you reach your plan's validity period, access automatically expires.",
   },
   {
-    category: 'Device & Platform Access',
-    question: 'Can I use MyExams365 across mobile, tablet, and desktop workstations simultaneously?',
-    answer: 'Absolutely. While we recommend taking full-length timed CBT mock exams on a desktop or laptop to replicate official examination conditions, our responsive architecture allows you to practice individual algorithmic question sets, review formula derivations, and check performance analytics seamlessly on iPad and smartphone.'
+    category: 'Reattempt Policy',
+    question: 'Can I retake a mock test multiple times, or is each attempt final?',
+    answer: 'Every mock test comes with 10 attempts, across all three plans.',
   },
   {
-    category: 'Pass Guarantee & Institutional Policy',
-    question: 'What is your institutional academic pass guarantee and refund policy?',
-    answer: 'We stand by the institutional rigor of our simulator. If you complete at least 8 full-length Institutional CBT mock examinations within our sandbox and achieve an average IRT confidence percentile above the 75th mark, but fail to pass your official CFA® or FRM® examination, we provide a 100% full tuition refund or complimentary access extension for your next testing window.'
-  }
+    category: 'Study Material',
+    question: "What's included in the study material, and is it enough on its own?",
+    answer: 'We recommend pairing the NISM study workbook with our study notes for deeper conceptual and applicative understanding — especially if your goal is to pass with flying colours, not just clear the exam. Our study material includes 400+ updated questions with full explanations, along with complete syllabus notes. The 60-day plan additionally includes an Excel-based Formula & Metrics Tracker for every exam.',
+  },
+  {
+    category: 'Device Compatibility',
+    question: 'Can I attempt mock tests on mobile and tablet, or is a laptop required?',
+    answer: 'Yes. You can log in from your mobile, laptop, or tablet — with a one-device login limit at a time.',
+  },
+  {
+    category: 'Refund & Cancellation',
+    question: "Is there a refund if I don't end up using all my mock tests?",
+    answer: 'No. MyExams365 follows a strict no-refund policy — once an exam plan is purchased, it cannot be refunded.',
+  },
 ];
 
 export function Faq() {

@@ -1,0 +1,34 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Unit tests
+        run: npm test
+
+      # Deliberately not running `npm run build` here. The build prerenders
+      # pages that initialise the Firebase client SDK, so it needs real
+      # NEXT_PUBLIC_FIREBASE_* values and would fail on a fork or Dependabot PR
+      # that cannot read secrets. Lint and typecheck already cover the same
+      # compile surface; Vercel builds the real thing on deploy.

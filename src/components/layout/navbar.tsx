@@ -10,6 +10,7 @@ import { useAuth } from '@/context/AuthContext';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { AdminPreviewBanner } from '@/components/AdminPreviewBanner';
 import { LoadingButton } from '@/components/ui/LoadingButton';
+import { Logo } from '@/components/ui/Logo';
 
 export function Navbar() {
   const [mounted, setMounted] = useState(false);
@@ -77,17 +78,8 @@ export function Navbar() {
           onClick={(e) => scrollToSection(e, 'hero')}
           className="flex items-center gap-2.5 group focus:outline-none"
         >
-          <div className="w-8 h-8 rounded-lg flex items-center justify-center tabular-nums font-bold text-sm tracking-tighter transition-colors bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-sm">
-            FB
-          </div>
-          <div className="flex flex-col">
-            <span className="font-semibold tracking-tight text-base text-[#111B35] dark:text-[#FBFBF9] transition-colors">
-              MyExams<span className="text-amber-500 tabular-nums text-xs ml-0.5">365</span>
-            </span>
-            <span className="text-[10px] tracking-widest uppercase tabular-nums text-[#475569] dark:text-[#94A3B8] transition-colors">
-              By MentraEdge
-            </span>
-          </div>
+          <Logo className="h-9 sm:h-10" priority />
+          <span className="sr-only">MyExams365 by MentraEdge</span>
         </a>
 
         {/* Desktop Navigation Links */}
@@ -130,7 +122,7 @@ export function Navbar() {
               try {
                 if (!user) {
                   router.push('/login');
-                } else if (user.role === 'admin' || user.role === 'editor') {
+                } else if (user.role === 'admin') {
                   router.push('/admin');
                 } else {
                   router.push('/dashboard');
@@ -141,7 +133,7 @@ export function Navbar() {
             }}
             className="px-5 py-2.5 text-sm font-bold rounded-lg transition-all duration-300 shadow-sm bg-[#111B35] text-[#FBFBF9] dark:bg-white dark:text-[#111B35] hover:opacity-90 hover:shadow-md press-effect focus-ring"
           >
-            {user ? (user.role === 'admin' || user.role === 'editor' ? 'Admin Portal' : 'My Dashboard') : 'Login'}
+            {user ? (user.role === 'admin' ? 'Admin Portal' : 'My Dashboard') : 'Login'}
           </LoadingButton>
         </div>
 
@@ -198,7 +190,7 @@ export function Navbar() {
                     try {
                       if (!user) {
                         router.push('/login');
-                      } else if (user.role === 'admin' || user.role === 'editor') {
+                      } else if (user.role === 'admin') {
                         router.push('/admin');
                       } else {
                         router.push('/dashboard');
@@ -209,7 +201,7 @@ export function Navbar() {
                   }}
                   className="w-full py-3.5 text-center rounded-lg bg-[#111B35] text-[#FBFBF9] dark:bg-white dark:text-[#111B35] font-bold flex items-center justify-center gap-2 shadow-sm hover:opacity-90 transition-all press-effect"
                 >
-                  {user ? (user.role === 'admin' || user.role === 'editor' ? 'Admin Portal' : 'My Dashboard') : 'Login'}
+                  {user ? (user.role === 'admin' ? 'Admin Portal' : 'My Dashboard') : 'Login'}
                 </LoadingButton>
               </div>
             </div>

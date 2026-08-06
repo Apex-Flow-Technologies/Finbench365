@@ -30,12 +30,14 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
-  typescript: {
-    ignoreBuildErrors: true,
-  },
+  // Both of these were `true`, which meant type errors and lint failures shipped
+  // to production silently. Among the errors being suppressed was one on the
+  // exam runner's attempt-recovery path, and the lint rule being suppressed
+  // (react-hooks/exhaustive-deps) is precisely the one that flags the stale
+  // closure that made auto-submitted exams grade a blank answer sheet.
+  //
+  // If a build starts failing here, that is the mechanism working. Fix the
+  // error rather than restoring these flags.
   serverExternalPackages: ['firebase-admin'],
   async headers() {
     return [

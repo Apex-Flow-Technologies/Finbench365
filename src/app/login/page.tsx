@@ -67,7 +67,7 @@ function LoginContent() {
   useEffect(() => {
     // If the user is already logged in, redirect based on role
     if (!loading && user) {
-      if (user.role === 'admin' || user.role === 'editor') {
+      if (user.role === 'admin') {
         router.push('/admin');
       } else {
         // Use explicit dashboard route or the redirectUrl search param, falling back to /dashboard

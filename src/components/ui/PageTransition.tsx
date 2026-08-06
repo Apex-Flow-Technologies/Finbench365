@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
+import { EASE_OUT_EXPO } from '@/lib/motion';
 
 interface PageTransitionProps {
   children: React.ReactNode;
@@ -26,7 +27,7 @@ export function PageTransition({ children, className = '' }: PageTransitionProps
       animate={{ opacity: 1, y: 0 }}
       transition={{
         duration: 0.28,
-        ease: [0.22, 1, 0.36, 1],
+        ease: EASE_OUT_EXPO,
       }}
     >
       {children}
@@ -87,7 +88,7 @@ export function StaggerItem({
     show: {
       opacity: 1,
       y: 0,
-      transition: { duration: 0.26, ease: [0.22, 1, 0.36, 1] },
+      transition: { duration: 0.26, ease: EASE_OUT_EXPO },
     },
   };
 

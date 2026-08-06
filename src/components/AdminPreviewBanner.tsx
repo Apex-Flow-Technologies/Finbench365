@@ -9,11 +9,9 @@ export function AdminPreviewBanner() {
   const { user } = useAuth();
   const router = useRouter();
 
-  if (!user || (user.role !== 'admin' && user.role !== 'editor')) {
+  if (!user || user.role !== 'admin') {
     return null;
   }
-
-  const targetPath = user.role === 'admin' ? '/admin' : '/editor';
 
   return (
     <div className="w-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border-b border-amber-500/20 px-4 py-1.5 text-xs font-semibold flex items-center justify-between relative z-50">
@@ -26,10 +24,10 @@ export function AdminPreviewBanner() {
         </div>
 
         <button
-          onClick={() => router.push(targetPath)}
+          onClick={() => router.push('/admin')}
           className="bg-amber-500 text-black px-2.5 py-0.5 rounded text-xs font-medium hover:bg-amber-400 transition shrink-0 ml-3 shadow-sm"
         >
-          Return to Editor →
+          Return to Admin →
         </button>
       </div>
     </div>

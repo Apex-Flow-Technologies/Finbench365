@@ -5,9 +5,36 @@ import { onAuthStateChanged, User } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase/config';
 import { doc, getDoc } from 'firebase/firestore';
 import { updateUserActiveSession, createUserProfile } from '@/lib/firebase/db';
+import toast from 'react-hot-toast';
+
+/**
+ * Account-status notices — suspension, and a session ended by a sign-in
+ * elsewhere.
+ *
+ * These used to be `alert()`, which renders as a "myexams365.com says…" browser
+ * dialog: unstyled, untranslatable and jarring against the rest of the UI.
+ *
+ * The stable `id` matters more than the styling. The snapshot listener that
+ * raises these fires on every write to the user document, so an unkeyed toast
+ * would stack up several identical copies of "you have been signed out" —
+ * react-hot-toast replaces an existing toast with the same id instead. The long
+ * duration is because these replace something blocking; the user has just been
+ * signed out and needs to know why.
+ */
+function notify(id: string, message: string) {
+  toast.error(message, { id, duration: 8000 });
+}
+
+/**
+ * Two roles only. An 'editor' role used to exist alongside these, but it was
+ * never assigned to anyone, could not be granted from any UI, and an admin
+ * already passed every check it gated — so it was a dead authorization branch
+ * that also stranded any account unlucky enough to be given it.
+ */
+export type UserRole = 'student' | 'admin';
 
 export interface UserProfile extends User {
-  role?: 'student' | 'editor' | 'admin';
+  role?: UserRole;
 }
 
 interface AuthContextType {
@@ -52,7 +79,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             const userData = userDoc.data();
 
             if (userData.suspended) {
-              alert("Your account has been suspended. Please contact support if you believe this is a mistake.");
+              notify('suspended', 'Your account has been suspended. Please contact support if you believe this is a mistake.');
               await auth.signOut();
               localStorage.removeItem('myexams_session_id');
               setUser(null);
@@ -87,7 +114,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
               const data = snap.data();
 
               if (data.suspended) {
-                alert("Your account has been suspended. You have been signed out.");
+                notify('suspended', 'Your account has been suspended. You have been signed out.');
                 auth.signOut();
                 localStorage.removeItem('myexams_session_id');
                 setUser(null);
@@ -96,7 +123,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
               const currentLocalSess = localStorage.getItem('myexams_session_id');
               if (data.activeSessionId && currentLocalSess && data.activeSessionId !== currentLocalSess) {
-                alert("Security Alert: Your account was logged in on another device. You have been signed out of this session.");
+                notify('session-revoked', 'Your account was signed in on another device, so this session was ended.');
                 auth.signOut();
                 localStorage.removeItem('myexams_session_id');
                 setUser(null);

@@ -31,7 +31,10 @@ export async function rateLimit(opts: {
   // Identifiers (IPs, emails) are hashed so the collection never becomes a
   // browsable list of who has been hitting the API.
   const id = crypto.createHash('sha256').update(`${scope}:${identifier}`).digest('hex');
-  const ref = adminDb.collection('rate_limits').doc(id);
+  // Typed explicitly: `adminDb` is `any`, so an untyped ref makes tx.get()
+  // resolve to the Query overload and `.exists` / `.data()` stop type-checking.
+  const ref: FirebaseFirestore.DocumentReference =
+    adminDb.collection('rate_limits').doc(id);
   const now = Date.now();
 
   try {

@@ -15,7 +15,7 @@ import {
   Loader2
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
-// Remove enrollUserInCourse from imports since we are routing to checkout now
+import { PLAN_PRICING } from '@/constants/pricing';
 
 function PricingContent() {
   const searchParams = useSearchParams();
@@ -39,13 +39,17 @@ function PricingContent() {
     router.push(checkoutUrl);
   };
 
-  const plans = [
-    {
-      id: 'plan-10',
-      name: 'Plan 1 — 10 Days',
-      days: '10 Days Access',
-      price: '₹499',
-      period: '+ GST',
+  /**
+   * Marketing copy only. Price, plan name and duration are NOT repeated here —
+   * they come from PLAN_PRICING below, the same constant the server prices the
+   * order from. They used to be duplicated as display strings ("₹499"), so this
+   * page could advertise one price while checkout charged another, with nothing
+   * to catch the drift.
+   */
+  const planCopy: Record<string, {
+    tagline: string; popular: boolean; badge: string; badgeClass: string; features: string[];
+  }> = {
+    'plan-10': {
       tagline: 'Best if your exam is within the next 10 days',
       popular: false,
       badge: 'Sprint Revision Tier',
@@ -57,12 +61,7 @@ function PricingContent() {
         'Instant access — start right after payment'
       ]
     },
-    {
-      id: 'plan-30',
-      name: 'Plan 2 — 30 Days',
-      days: '30 Days Access',
-      price: '₹599',
-      period: '+ GST',
+    'plan-30': {
       tagline: 'Best for candidates who want to prepare properly, not just cram',
       popular: true,
       badge: 'Most Popular • Recommended',
@@ -75,12 +74,7 @@ function PricingContent() {
         'Chapter-wise score tracking, so you know exactly where to focus revision'
       ]
     },
-    {
-      id: 'plan-60',
-      name: 'Plan 3 – 60 Days',
-      days: '60 Days Access',
-      price: '₹699',
-      period: '+ GST',
+    'plan-60': {
       tagline: 'Best for long-term retention and high-stakes mastery',
       popular: false,
       badge: 'Comprehensive Tier',
@@ -93,7 +87,17 @@ function PricingContent() {
         'Exclusive Formula & Metrics Tracker – all key formulas, ratios, limits, and numerical data in one place for quick revision and exam-day recall'
       ]
     }
-  ];
+  };
+
+  // Driven by the plan catalogue, so adding or repricing a plan there is enough.
+  const plans = Object.entries(PLAN_PRICING).map(([id, plan]) => ({
+    id,
+    name: plan.name,
+    days: `${plan.durationDays} Days Access`,
+    price: `₹${plan.price}`,
+    period: '+ GST',
+    ...planCopy[id],
+  }));
 
   return (
     <div className="min-h-screen pt-20 bg-slate-50 dark:bg-[#121419] text-[#111B35] dark:text-[#FBFBF9] transition-colors duration-300">

@@ -26,8 +26,8 @@ export interface EntitlementFailure {
  * of the paid course, and gating only 'exam' type left every published
  * practice test readable by any signed-up account.
  *
- * Admins and editors bypass the entitlement requirement so they can preview
- * and author content, but they are still authenticated first.
+ * Admins bypass the entitlement requirement so they can preview and author
+ * content, but they are still authenticated first.
  */
 export async function requireEntitlement(
   req: Request,
@@ -61,7 +61,7 @@ export async function requireEntitlement(
     return { ok: false, status: 403, error: 'Account suspended', reason: 'suspended' };
   }
 
-  const isStaff = userData.role === 'admin' || userData.role === 'editor';
+  const isStaff = userData.role === 'admin';
   const courseId: string | undefined = testData.courseId;
 
   if (isStaff) {

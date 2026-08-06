@@ -13,9 +13,8 @@ export interface AdminCheckFailure {
 
 /**
  * Verifies the request's bearer token and confirms the caller's Firestore
- * user doc has role === 'admin'. Deliberately stricter than the 'editor'
- * role used to gate UI tab visibility — sensitive account actions (suspend,
- * revoke entitlement) require the full admin role, not just editor.
+ * user doc has role === 'admin'. Admin is the only privileged role — see
+ * UserRole in context/AuthContext.
  */
 export async function requireAdmin(req: Request): Promise<AdminCheckResult | AdminCheckFailure> {
   const authHeader = req.headers.get('Authorization');
