@@ -306,7 +306,7 @@ export function HeroExamSimulator() {
         <div className="bg-[#15171F] border-t border-[#222630] px-6 py-3 flex items-center justify-between text-[10px] tabular-nums text-slate-400 dark:text-slate-500">
           <div className="flex items-center gap-2">
             <span className="w-1.5 h-1.5 rounded-full bg-slate-500 animate-ping" />
-            <span>IRT_CALIBRATION_ACTIVE</span>
+            <span>NISM_EXAM_PATTERN</span>
           </div>
           <span className="text-slate-600 tracking-widest">FINBENCH365 SYSTEM</span>
         </div>

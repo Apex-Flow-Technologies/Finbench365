@@ -86,7 +86,6 @@ export function Navbar() {
         <nav className="hidden md:flex items-center gap-8">
           {[
             { label: 'Exams', href: '/exams', isExternal: true },
-            { label: 'Testimonials', href: '#testimonials' },
             { label: 'FAQ', href: '#faq' },
             { label: 'Contact', href: '#contact' },
           ].map((item) => (
@@ -159,8 +158,7 @@ export function Navbar() {
           >
             <div className="flex flex-col gap-4">
               {[
-                { label: 'Exams & Curricula', href: '/exams', isExternal: true },
-                { label: 'Charterholder Reviews', href: '#testimonials' },
+                { label: 'Exams', href: '/exams', isExternal: true },
                 { label: 'Frequently Asked Questions', href: '#faq' },
                 { label: 'Institutional Contact', href: '#contact' },
               ].map((item) => (

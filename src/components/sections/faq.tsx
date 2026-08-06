@@ -83,7 +83,7 @@ export function Faq() {
             On Our Examination Engine.
           </h2>
           <p className="text-[#334155] text-lg leading-relaxed">
-            Everything you need to know about our Institutional CBT simulator, Item-Response Theory grading, and curriculum alignment.
+            Everything you need to know about our NISM mock tests, study notes, plans and access.
           </p>
         </div>
 

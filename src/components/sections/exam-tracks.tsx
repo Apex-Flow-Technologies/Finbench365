@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
+import { IN_SCOPE_PATTERNS } from '@/constants/examPatterns';
 import { 
   Layers, 
   CheckCircle2, 
@@ -20,41 +21,37 @@ interface ExamTrack {
   features: string[];
 }
 
-const EXAM_TRACKS: ExamTrack[] = [
-  {
-    id: 'cfa',
-    badge: 'CFA® CURRICULUM v2026',
-    title: 'Chartered Financial Analyst®',
-    subtitle: 'Levels I, II & III Complete Institutional Matrix',
-    description: 'Master quantitative methods, financial statement reporting, fixed income convexity, and portfolio management with exact Prometric item-set simulations.',
-    questionCount: '6,400+ Algorithmic Qs',
-    passRate: '94.2% Charterholder Pass Rate',
-    keyTopics: ['Quantitative Methods & Econometrics', 'Financial Statement Analysis (U.S. GAAP vs IFRS)', 'Fixed Income & Valuation Models', 'Derivatives & Alternative Investments'],
-    features: ['Adaptive IRT Difficulty Calibration', 'Sub-second Formula Step Derivations', 'Full Prometric Mock Examinations']
-  },
-  {
-    id: 'frm',
-    badge: 'GARP® FRM® v2026',
-    title: 'Financial Risk Manager®',
-    subtitle: 'Parts I & II Quantitative Risk Architecture',
-    description: 'Engineered specifically for quantitative risk analysts. Covers parametric VaR, Expected Shortfall, Monte Carlo credit migration, and Basel IV solvency modeling.',
-    questionCount: '4,800+ Advanced Case Qs',
-    passRate: '96.8% First-Attempt Mastery',
-    keyTopics: ['Foundations of Risk Management & Quant Methods', 'Financial Markets & Products (Exotics & Swaps)', 'Valuation & Risk Models (GARCH & Volatility)', 'Credit Risk Measurement & Counterparty CVA'],
-    features: ['Exact CBT Time-per-item Tracking', 'Randomized Distractor Generation', 'Comprehensive Formula Sheet Integration']
-  },
-  {
-    id: 'quant-ca',
-    badge: 'QUANT IT & CA ADVANCED',
-    title: 'Quantitative Finance & CA Final',
-    subtitle: 'Stochastic Calculus, Corporate Restructuring & Modeling',
-    description: 'High-performance curriculum for quantitative engineering roles and CA Final financial reporting. Deep mathematical rigor with executable Python derivation benchmarks.',
-    questionCount: '3,600+ Modeling Case Studies',
-    passRate: 'Top 5% Institutional Placement',
-    keyTopics: ['Black-Scholes-Merton Partial Differential Equations', 'Fixed Income Term Structure Models (Hull-White)', 'Advanced Corporate Valuation & LBO Modeling', 'International Taxation & Consolidation Standards'],
-    features: ['Real-world Financial Dataset Sandboxing', 'Algorithmic Excel / Python Formula Cross-checks', 'Direct Charterholder Q&A Mentorship']
-  }
-];
+/**
+ * The exams actually on sale, built from the official NISM pattern table.
+ *
+ * What was here advertised CFA®, FRM® and GARP® tracks — third-party
+ * certifications this platform does not sell and whose marks it has no licence
+ * to use — alongside invented figures presented as fact: "94.2% Charterholder
+ * Pass Rate", "96.8% First-Attempt Mastery", "6,400+ Algorithmic Qs". Those
+ * pass rates also directly contradicted the site's own disclaimer, which states
+ * that no exam result is guaranteed.
+ *
+ * Everything below is derived from NISM_EXAM_PATTERNS, so the duration, marks
+ * and pass mark on the landing page cannot drift from the ones the exam engine
+ * actually grades against.
+ */
+const EXAM_TRACKS: ExamTrack[] = IN_SCOPE_PATTERNS.slice(0, 3).map((p) => ({
+  id: p.series.toLowerCase(),
+  badge: `NISM SERIES ${p.series}`,
+  title: p.name,
+  subtitle: `${p.durationMinutes} minutes · ${p.maxMarks} marks · pass ${p.passPercent}%`,
+  description: p.description,
+  questionCount: `${p.maxMarks} questions`,
+  passRate: p.negativeMarkPercent > 0
+    ? `${p.negativeMarkPercent}% negative marking`
+    : 'No negative marking',
+  keyTopics: [],
+  features: [
+    'Full-length mock on the official exam pattern',
+    'Explanation for every option, not just the correct one',
+    'Complete syllabus study notes',
+  ],
+}));
 
 export function ExamTracks() {
   return (
@@ -71,7 +68,7 @@ export function ExamTracks() {
             Financial Examinations.
           </h2>
           <p className="text-[#334155] text-lg leading-relaxed">
-            Every learning outcome statement (LOS) is systematically mapped against our institutional item-response database. We never use static, memorized question dumps.
+            Every mock follows the official NISM exam pattern — the same duration, marks and pass mark — and every option carries an explanation for why it is right or wrong.
           </p>
         </div>
 

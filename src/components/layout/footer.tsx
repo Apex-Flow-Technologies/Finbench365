@@ -67,7 +67,6 @@ export function Footer() {
             <ul className="space-y-2.5 text-sm">
               {[
                 { label: 'Exams Overview', id: '/exams', isExternal: true },
-                { label: 'Testimonials', id: 'testimonials' },
                 { label: 'FAQ', id: 'faq' },
                 { label: 'Academic Contact', id: 'contact' },
               ].map((link) => (

@@ -321,7 +321,7 @@ export function InteractiveSandbox() {
                             <Award className="w-3.5 h-3.5" />
                             Algorithmic Step-by-Step Derivation
                           </span>
-                          <span className="text-xs text-[#475569] dark:text-[#94A3B8] dark:text-[#94A3B8]">Adaptive IRT Engine v2.4</span>
+                          <span className="text-xs text-[#475569] dark:text-[#94A3B8] dark:text-[#94A3B8]">Sample question</span>
                         </div>
                         <p className="font-sans text-[#334155] dark:text-[#E2E8F0] leading-relaxed font-normal text-xs md:text-sm">
                           {q.correctFormulaBreakdown}

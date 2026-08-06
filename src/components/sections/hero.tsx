@@ -69,7 +69,7 @@ export function Hero() {
           >
             <div className="flex items-center gap-2">
               <CheckCircle className="w-4 h-4 text-emerald-400 flex-shrink-0" />
-              <span><strong>14,800+</strong> Algorithmic Qs</span>
+              <span><strong>400+</strong> questions with explanations</span>
             </div>
             <div className="flex items-center gap-2">
               <CheckCircle className="w-4 h-4 text-emerald-400 flex-shrink-0" />

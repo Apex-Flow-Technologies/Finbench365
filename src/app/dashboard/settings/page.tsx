@@ -225,9 +225,7 @@ export default function SettingsPage() {
                         >
                           <option value="nism_va">NISM Series V-A: Mutual Fund Distributors</option>
                           <option value="nism_xa">NISM Series X-A: Investment Adviser Level 1</option>
-                          <option value="cfa_l1">CFA® Level I Examination</option>
-                          <option value="frm_p1">FRM® Part I Examination</option>
-                        </select>
+                                                                            </select>
                       </div>
                     </div>
 

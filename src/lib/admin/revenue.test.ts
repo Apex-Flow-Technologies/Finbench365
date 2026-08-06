@@ -63,6 +63,36 @@ describe('summariseRevenue', () => {
     expect(r.refunded).toBe(500);
   });
 
+  it('still counts a revoked order as revenue — access was withdrawn, money was not returned', () => {
+    // Revoking is not refunding. Treating the two the same understated
+    // takings by the value of every account an admin had ever revoked.
+    const r = summariseRevenue([{ status: 'revoked', orderId: 'order_1', amountPaid: 706.82 }]);
+    expect(r.collected).toBe(706.82);
+    expect(r.paidCount).toBe(1);
+    expect(r.refunded).toBe(0);
+  });
+
+  it('still counts a refund that the gateway has not confirmed', () => {
+    // The money is ours until Razorpay says otherwise; removing it early would
+    // double-count the loss once the refund actually lands.
+    const r = summariseRevenue([{ status: 'refund_pending', orderId: 'order_1', amountPaid: 500 }]);
+    expect(r.collected).toBe(500);
+    expect(r.refunded).toBe(0);
+  });
+
+  it('moves the money out only once the refund is confirmed', () => {
+    const pending = summariseRevenue([{ status: 'refund_pending', orderId: 'o1', amountPaid: 500 }]);
+    const done = summariseRevenue([{ status: 'refunded', orderId: 'o1', amountPaid: 500 }]);
+    expect(pending.collected).toBe(500);
+    expect(done.collected).toBe(0);
+    expect(done.refunded).toBe(500);
+  });
+
+  it('ignores a status it does not recognise rather than guessing', () => {
+    const r = summariseRevenue([paid(1180), { status: 'something_new', amountPaid: 9999 }]);
+    expect(r.collected).toBe(1180);
+  });
+
   it('reports an unknown amount instead of counting it as zero', () => {
     // The distinction the admin panel depends on: a missing figure must not be
     // silently folded in as 0, which would understate revenue while looking

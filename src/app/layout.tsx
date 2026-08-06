@@ -30,14 +30,28 @@ const jetbrainsMono = JetBrains_Mono({
   display: 'swap',
 });
 
+/**
+ * Site metadata — the title and description Google indexes and social cards show.
+ *
+ * This previously advertised CFA®, FRM® and "Quantitative Finance"
+ * certifications, an "Item-Response Theory diagnostic engine" and work by "CFA
+ * charterholders". None of that is sold here, CFA and FRM are third-party
+ * trademarks, and the claim contradicted the site's own disclaimer. What this
+ * platform actually offers is NISM mock tests and study notes.
+ */
 export const metadata: Metadata = {
-  title: 'MyExams365 | Institutional Financial Examination & CBT Simulator',
-  description: 'Prepare for CFA®, FRM®, and Quantitative Finance certifications with Institutional CBT fidelity, Item-Response Theory (IRT) diagnostic analytics, and dynamic algorithmic problem sets.',
-  keywords: ['CFA', 'FRM', 'Institutional CBT Simulator', 'CBT Mock Exam', 'Financial Certification', 'Quantitative Finance', 'Chartered Financial Analyst'],
-  authors: [{ name: 'MyExams365 Quantitative Curriculum Team' }],
+  title: 'MyExams365 | NISM Certification Mock Tests & Study Notes',
+  description:
+    'Full-length NISM mock tests that follow the official exam pattern — Mutual Fund Distributors (V-A), Research Analyst (XV), Equity Derivatives (VIII) and more. Real CBT interface, exact duration, and complete study notes.',
+  keywords: [
+    'NISM', 'NISM mock test', 'NISM Series V-A', 'Mutual Fund Distributors',
+    'Research Analyst XV', 'Equity Derivatives', 'NISM certification', 'NISM practice test',
+  ],
+  authors: [{ name: 'MentraEdge' }],
   openGraph: {
-    title: 'MyExams365 | Institutional Financial Examination & CBT Simulator',
-    description: ' global financial certifications. Engineered by quantitative analysts and CFA charterholders.',
+    title: 'MyExams365 | NISM Certification Mock Tests & Study Notes',
+    description:
+      'Full-length NISM mock tests on the official exam pattern, with complete study notes and per-question explanations.',
     type: 'website',
   },
 };

@@ -77,6 +77,7 @@ export function summariseRevenue(
   for (const order of orders) {
     if (sinceMs !== null && toMillis(order.createdAt) < sinceMs) continue;
 
+    // Only a CONFIRMED refund removes money from the books.
     if (order.status === 'refunded') {
       refunded += order.amountPaid ?? 0;
       continue;
@@ -87,7 +88,17 @@ export function summariseRevenue(
       continue;
     }
 
-    if (order.status !== 'success' && order.status !== 'bypassed') continue;
+    // 'revoked'  — access was withdrawn but no money was returned, so it is
+    //              still revenue. Dropping it understated takings by the value
+    //              of every account an admin had ever revoked.
+    // 'refund_pending' — a refund has been requested but the gateway has not
+    //              confirmed it. The money is still yours until it does;
+    //              counting it as gone would double-count once it lands.
+    const stillRevenue = order.status === 'success'
+      || order.status === 'bypassed'
+      || order.status === 'revoked'
+      || order.status === 'refund_pending';
+    if (!stillRevenue) continue;
 
     if (isComped(order)) {
       compedCount++;
