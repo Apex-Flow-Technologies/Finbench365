@@ -8,11 +8,9 @@ service cloud.firestore {
       return request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
-    // Editors author courses and question banks; admins can do everything.
-    function isEditor() {
-      return request.auth != null &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['editor', 'admin'];
-    }
+    // There is no separate 'editor' role. Authoring courses, question banks and
+    // answer keys is admin work, and an admin already satisfied every check the
+    // editor role gated — so it only ever added an untested authorization path.
 
     function testDoc(testId) {
       return get(/databases/$(database)/documents/mock_tests/$(testId)).data;
@@ -31,7 +29,7 @@ service cloud.firestore {
     // certification exams — practice material is part of the paid course, and
     // exempting it left every published practice test readable by any account.
     function canReadTestContent(testId) {
-      return isEditor() ||
+      return isAdmin() ||
         (request.auth != null && isEnrolledInCourse(testDoc(testId).get('courseId', '')));
     }
 
@@ -44,10 +42,17 @@ service cloud.firestore {
       allow read: if request.auth != null && (request.auth.uid == userId || isAdmin());
       
       // Users can update their own data BUT CANNOT change their role, enrolledCourses,
-      // totalSpent, suspended status, or pending-order tracking (all admin/server-only fields)
-      allow update: if request.auth != null && request.auth.uid == userId
-                    && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'enrolledCourses', 'totalSpent', 'suspended', 'pendingOrder'])
-                    || isAdmin();
+      // totalSpent, suspended status, or pending-order tracking (all admin/server-only fields).
+      //
+      // The parentheses are load-bearing. Without them this reads as
+      // `(A && B && C) || isAdmin()` only because `&&` binds tighter than `||` —
+      // correct today, but one reordered clause away from granting every signed-in
+      // user the admin branch. Stated explicitly rather than left to precedence.
+      allow update: if isAdmin() ||
+                    (request.auth != null
+                     && request.auth.uid == userId
+                     && !request.resource.data.diff(resource.data).affectedKeys()
+                          .hasAny(['role', 'enrolledCourses', 'totalSpent', 'suspended', 'pendingOrder']));
       
       allow delete: if isAdmin();
     }
@@ -55,13 +60,13 @@ service cloud.firestore {
     // Courses Collection
     match /courses/{courseId} {
       allow read: if true; // Public can read published courses
-      allow write: if isEditor();
+      allow write: if isAdmin();
     }
     
     // Chapters Collection
     match /chapters/{chapterId} {
       allow read: if true;
-      allow write: if isEditor();
+      allow write: if isAdmin();
     }
 
     // Mock Tests Collection
@@ -70,11 +75,11 @@ service cloud.firestore {
       // so the catalogue and marketing pages can list what a course contains.
       // The questions and solutions below are the actual paid content.
       allow read: if true;
-      allow write: if isEditor();
+      allow write: if isAdmin();
 
       match /questions/{questionId} {
         allow read: if canReadTestContent(testId);
-        allow write: if isEditor();
+        allow write: if isAdmin();
       }
 
       match /solutions/{questionId} {
@@ -82,9 +87,9 @@ service cloud.firestore {
         // as part of the learning flow; certification answer keys are never
         // served to any browser — grading happens server-side via the Admin SDK,
         // which bypasses these rules entirely.
-        allow read: if isEditor() ||
+        allow read: if isAdmin() ||
           (canReadTestContent(testId) && testDoc(testId).get('type', '') == 'practice');
-        allow write: if isEditor();
+        allow write: if isAdmin();
       }
     }
 
@@ -92,14 +97,33 @@ service cloud.firestore {
     match /test_attempts/{attemptId} {
       // Users can read and update their own attempts
       allow read: if request.auth != null && (resource.data.userId == request.auth.uid || isAdmin());
-      
-      // Users can create an attempt for themselves
-      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
 
-      // Users can update their own in-progress attempt, but once it's marked
-      // completed it's locked — prevents post-submission score tampering.
-      allow update: if request.auth != null &&
-                    ((resource.data.userId == request.auth.uid && resource.data.status != 'completed') || isAdmin());
+      // Users can create an attempt for themselves. A fresh attempt must start
+      // in_progress with no score — otherwise a caller could create one that is
+      // already 'completed' with a score of their choosing, which is exactly the
+      // tampering the update rule below prevents.
+      allow create: if request.auth != null
+                    && request.resource.data.userId == request.auth.uid
+                    && request.resource.data.status == 'in_progress'
+                    && !('score' in request.resource.data);
+
+      // The ONLY fields a browser may change on its own in-progress attempt:
+      // saved answers, review flags, and the liveness timestamps.
+      //
+      // Restricting this to a status check was not enough. While an attempt was
+      // in_progress the client could write ANY field — including
+      // {score: 60, status: 'completed'} — which bypassed /api/exams/submit
+      // entirely and let a candidate award themselves any mark, on
+      // certification exams as well as practice. Grading is server-side work:
+      // `score`, `totalQuestions`, `status` and `submittedAt` are written by the
+      // Admin SDK, which ignores these rules.
+      allow update: if isAdmin() ||
+                    (request.auth != null
+                     && resource.data.userId == request.auth.uid
+                     && request.resource.data.userId == resource.data.userId
+                     && resource.data.status != 'completed'
+                     && request.resource.data.diff(resource.data).affectedKeys()
+                          .hasOnly(['answers', 'markedForReview', 'lastSavedAt', 'lastHeartbeatAt']));
 
       allow delete: if isAdmin();
     }

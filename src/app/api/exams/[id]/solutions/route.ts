@@ -29,7 +29,7 @@ export async function GET(
       .collection('mock_tests').doc(testId).collection('solutions').get();
 
     const solutionsMap: Record<string, any> = {};
-    solutionsSnap.forEach((doc) => {
+    solutionsSnap.forEach((doc: FirebaseFirestore.QueryDocumentSnapshot) => {
       solutionsMap[doc.id] = doc.data();
     });
 

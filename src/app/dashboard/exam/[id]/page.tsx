@@ -1,24 +1,24 @@
 'use client';
 
-import React, { useState, useEffect, use } from 'react';
+import React, { useState, useEffect, useRef, useMemo, use } from 'react';
 import { useRouter } from 'next-nprogress-bar';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { useAuth } from '@/context/AuthContext';
 import { 
   getMockTest, 
   getTestQuestions, 
-  startTestAttempt, 
-  saveTestProgress, 
-  submitTestAttempt,
+  startTestAttempt,
+  saveTestProgress,
   getTestAttemptsCount,
   updateAttemptHeartbeat,
-  expireAttemptDueToDisconnect,
   getActiveAttemptForUser,
   getUserEntitlements
 } from '@/lib/firebase/db';
-import { Clock, AlertCircle, ChevronLeft, ChevronRight, CheckCircle2, LayoutGrid, AlertTriangle, ShieldCheck } from 'lucide-react';
+import { Clock, AlertCircle, ChevronLeft, ChevronRight, CheckCircle2, LayoutGrid, AlertTriangle, ShieldCheck, Calculator as CalculatorIcon } from 'lucide-react';
 import { AdminPreviewBanner } from '@/components/AdminPreviewBanner';
 import { LoadingButton } from '@/components/ui/LoadingButton';
+import { orderQuestionsForAttempt } from '@/lib/exams/shuffle';
+import { Calculator } from '@/components/exam/Calculator';
 
 export default function ExamPage({ params }: { params: Promise<{ id: string }> }) {
   const unwrappedParams = use(params);
@@ -27,7 +27,7 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
   const { user } = useAuth();
   
   // Test Data State
-  const [test, setTest] = useState<{ id: string; title: string; durationMinutes: number; totalQuestions: number; description?: string; type?: 'practice' | 'exam' } | null>(null);
+  const [test, setTest] = useState<{ id: string; title: string; durationMinutes: number; totalQuestions: number; description?: string; type?: 'practice' | 'exam'; randomiseQuestions?: boolean } | null>(null);
   const [questions, setQuestions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -57,7 +57,45 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
   const [visitedQuestions, setVisitedQuestions] = useState<Record<number, boolean>>({ 0: true });
   const [timeRemaining, setTimeRemaining] = useState<number>(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [score, setScore] = useState<number | null>(null);
+  // The graded result as returned by the server. The browser used to recompute
+  // this locally from `correctOptionIndex`, which it does not even have for a
+  // certification exam — and once negative marking exists, two independent
+  // scorers are two chances to disagree with each other in front of a candidate.
+  const [result, setResult] = useState<{
+    correctCount: number; wrongCount: number; unattemptedCount: number;
+    score: number; maxMarks: number; percentage: number; passed: boolean;
+    marksDeducted: number; timeTakenMs: number | null; flaggedOverTime: boolean;
+  } | null>(null);
+
+  // The timer and anti-cheat effects below deliberately do NOT depend on
+  // `answers` — re-registering fullscreen listeners or restarting the countdown
+  // on every answer would break both. That means the submit function they close
+  // over is the one from the render in which they last ran: the moment the exam
+  // started, when `answers` was still empty. An auto-submit therefore graded the
+  // candidate on a blank sheet. This ref gives those effects a stable handle
+  // that always resolves to the current submit, with the current answers.
+  const autoSubmitRef = useRef<() => void>(() => {});
+  // Synchronous re-entrancy guard. `isSubmitting` is committed asynchronously,
+  // so two auto-submits fired in the same tick — timer expiry landing on the
+  // third anti-cheat strike — would both pass a state-based check.
+  const submitInFlightRef = useRef(false);
+  // Set by the anti-cheat effect, called by its overlay button. See the note at
+  // the assignment for why this is not on `window`.
+  const clearWarningRef = useRef<(() => void) | null>(null);
+  const [showCalculator, setShowCalculator] = useState(false);
+
+  /**
+   * The paper as this candidate sees it.
+   *
+   * Ordered from the attempt id, so it is identical every time this attempt is
+   * opened — a refresh or a reconnect must not reshuffle the paper underneath
+   * someone who is halfway through it. Answers are stored against question ids,
+   * so shuffling changes only presentation, never what has been recorded.
+   */
+  const orderedQuestions = useMemo(
+    () => orderQuestionsForAttempt(questions, attemptId, test?.randomiseQuestions),
+    [questions, attemptId, test?.randomiseQuestions],
+  );
 
   // Mark current question as visited when index changes
   useEffect(() => {
@@ -71,10 +109,10 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
         // Test metadata is readable before entitlement — we need its courseId
         // to know what entitlement to look for in the first place.
         const testData: any = await getMockTest(testId);
-        const isAdminOrEditorRole = user?.role === 'admin' || user?.role === 'editor';
+        const isAdminRole = user?.role === 'admin';
         setAccessCourseId(testData?.courseId || null);
 
-        if (user && !isAdminOrEditorRole) {
+        if (user && !isAdminRole) {
           if (!testData?.courseId) {
             setAccessDenied('misconfigured');
             setLoading(false);
@@ -127,7 +165,7 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
         setQuestions(questionsData as any);
         setTimeRemaining((testData as any).durationMinutes * 60);
 
-        const isAdminOrEditor = user?.role === 'admin' || user?.role === 'editor';
+        const isAdmin = user?.role === 'admin';
 
         // Auto-restore backup from LocalStorage
         const cached = localStorage.getItem(`cbt_backup_${testId}`);
@@ -160,7 +198,7 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
         }
 
         // ONLY enforce 15-minute disconnect if they actually have an active session!
-        if (hasActiveSession && !isAdminOrEditor) {
+        if (hasActiveSession && !isAdmin) {
           const lastActiveStr = localStorage.getItem(`cbt_last_active_${testId}`);
           if (lastActiveStr) {
             const lastActive = parseInt(lastActiveStr, 10);
@@ -233,7 +271,7 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
         const newStrikes = prev + 1;
         if (newStrikes >= 3) {
           setIsDisqualified(true);
-          handleAutoSubmit();
+          autoSubmitRef.current();
         }
         return newStrikes;
       });
@@ -248,7 +286,7 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
         if (secondsLeft <= 0) {
           if (warningTimer) clearInterval(warningTimer);
           setIsDisqualified(true);
-          handleAutoSubmit();
+          autoSubmitRef.current();
         }
       }, 1000);
     };
@@ -268,13 +306,17 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
       }
     };
 
-    // Expose a global function for the UI button to call to clear the warning and re-enter fullscreen
-    (window as any).clearAntiCheatWarning = () => {
+    // Handed to the overlay button through a ref rather than
+    // `window.clearAntiCheatWarning`. A global was both an odd channel between
+    // an effect and JSX in the same component, and — on a screen whose entire
+    // purpose is discouraging tampering — a documented, callable way to dismiss
+    // the anti-cheat countdown from the browser console.
+    clearWarningRef.current = () => {
       if (warningTimer) clearInterval(warningTimer);
       warningTimer = null;
       isCurrentlyWarning = false;
       setAntiCheatWarning(null);
-      
+
       if (typeof document !== 'undefined' && 'requestFullscreen' in document.documentElement && !document.fullscreenElement) {
         document.documentElement.requestFullscreen().catch(err => console.error("Fullscreen error:", err));
       }
@@ -287,7 +329,7 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       document.removeEventListener("fullscreenchange", handleFullscreenChange);
       if (warningTimer) clearInterval(warningTimer);
-      delete (window as any).clearAntiCheatWarning;
+      clearWarningRef.current = null;
     };
   }, [status]);
 
@@ -340,7 +382,7 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
       setTimeRemaining((prev) => {
         if (prev <= 1) {
           clearInterval(timer);
-          handleAutoSubmit();
+          autoSubmitRef.current();
           return 0;
         }
         return prev - 1;
@@ -380,8 +422,8 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
   };
 
   const handleSelectOption = async (optionIndex: number) => {
-    if (!questions[currentQuestionIndex]) return;
-    const questionId = questions[currentQuestionIndex].id;
+    if (!orderedQuestions[currentQuestionIndex]) return;
+    const questionId = orderedQuestions[currentQuestionIndex].id;
     
     if (test?.type === 'practice' && answers[questionId] !== undefined) {
       return;
@@ -396,31 +438,22 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
   };
 
   const toggleMarkForReview = () => {
-    if (!questions[currentQuestionIndex]) return;
-    const qId = questions[currentQuestionIndex].id;
+    if (!orderedQuestions[currentQuestionIndex]) return;
+    const qId = orderedQuestions[currentQuestionIndex].id;
     setMarkedForReview(prev => ({ ...prev, [qId]: !prev[qId] }));
-    if (currentQuestionIndex < questions.length - 1) {
+    if (currentQuestionIndex < orderedQuestions.length - 1) {
       setCurrentQuestionIndex(prev => prev + 1);
     }
   };
 
-  const calculateScore = () => {
-    let correct = 0;
-    let incorrect = 0;
-    questions.forEach(q => {
-      if (answers[q.id] !== undefined) {
-        if (answers[q.id] === q.correctOptionIndex) {
-          correct++;
-        } else {
-          incorrect++;
-        }
-      }
-    });
-    return { correct, incorrect, scorePct: questions.length > 0 ? Math.round((correct / questions.length) * 100) : 0 };
-  };
+  // A local calculateScore() used to live here and drive the results screen. It
+  // counted correct answers only — no negative marking, no pass mark — and for a
+  // certification exam it read a `correctOptionIndex` the browser never receives,
+  // so it reported 0%. The server is now the only scorer; see /api/exams/submit.
 
+  // Re-entrancy is guarded inside performSubmit, synchronously — see
+  // submitInFlightRef. Checking `isSubmitting` here would be a stale read.
   const handleAutoSubmit = async () => {
-    if (isSubmitting) return;
     await performSubmit();
   };
 
@@ -432,48 +465,52 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
 
   const performSubmit = async () => {
     if (!attemptId || !user) return;
+    if (submitInFlightRef.current) return;
+    submitInFlightRef.current = true;
     setIsSubmitting(true);
     try {
-      if (test?.type === 'practice') {
-        const { correct } = calculateScore();
-        await submitTestAttempt(attemptId, answers, correct);
-        setScore(correct);
-      } else {
-        let token = '';
-        try {
-          token = await user.getIdToken(true);
-        } catch (tokenErr) {
-          console.warn("Retrying force ID token fetch...", tokenErr);
-          token = await user.getIdToken(true);
-        }
+      // Every attempt — practice included — is graded server-side against the
+      // protected solutions subcollection. Practice used to score itself in the
+      // browser and write the result straight to Firestore, which meant a
+      // candidate could set their own score, and those scores feed the
+      // "Average Accuracy" figure on the dashboard. The instant per-question
+      // feedback during a practice run is unaffected: it still comes from the
+      // answer key this browser already holds, and only the recorded score now
+      // has to come from the server.
+      let token = '';
+      try {
+        token = await user.getIdToken(true);
+      } catch (tokenErr) {
+        console.warn("Retrying force ID token fetch...", tokenErr);
+        token = await user.getIdToken(true);
+      }
 
-        const res = await fetch('/api/exams/submit', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({
-            attemptId,
-            testId,
-            answers
-          })
-        });
+      const res = await fetch('/api/exams/submit', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          attemptId,
+          testId,
+          answers
+        })
+      });
 
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to grade exam');
-      setScore(data.score);
-    }
-    
-    localStorage.removeItem(`cbt_backup_${testId}`);
-    localStorage.removeItem(`cbt_last_active_${testId}`); // Fix for timeout bug
-    setStatus('completed');
-    
-    // Exit fullscreen if active
-    if (typeof document !== 'undefined' && document.fullscreenElement) {
-      document.exitFullscreen().catch(err => console.error("Exit fullscreen error:", err));
-    }
-  } catch (err: any) {
+      setResult(data);
+
+      localStorage.removeItem(`cbt_backup_${testId}`);
+      localStorage.removeItem(`cbt_last_active_${testId}`);
+      setStatus('completed');
+
+      // Exit fullscreen if active
+      if (typeof document !== 'undefined' && document.fullscreenElement) {
+        document.exitFullscreen().catch(err => console.error("Exit fullscreen error:", err));
+      }
+    } catch (err: any) {
       console.error("[SubmitExam] Failed to submit:", err);
       const errMsg = err?.message || err?.toString() || "";
       if (errMsg.includes("permission-denied")) {
@@ -482,20 +519,40 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
         alert(err.message || "Failed to submit exam. Please try again.");
       }
     } finally {
+      submitInFlightRef.current = false;
       setIsSubmitting(false);
     }
   };
 
+  // Refreshed on every render (no dependency array) so the timer and anti-cheat
+  // effects, which are registered once per exam, always invoke the latest
+  // closure — and therefore the latest `answers` — rather than the one captured
+  // when they were registered.
+  useEffect(() => {
+    autoSubmitRef.current = handleAutoSubmit;
+  });
+
+  /** Countdown clock — always mm:ss, since the timer never exceeds one exam. */
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
+  /** Elapsed time on the results screen, which can run past an hour. */
+  const formatDuration = (ms: number) => {
+    const total = Math.max(0, Math.round(ms / 1000));
+    const h = Math.floor(total / 3600);
+    const m = Math.floor((total % 3600) / 60);
+    const s = total % 60;
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${m}:${pad(s)}`;
+  };
+
   if (loading) {
     return (
       <ProtectedRoute>
-        <div className="min-h-screen bg-slate-900 flex items-center justify-center text-white">
+        <div className="min-h-screen bg-slate-50 dark:bg-[#0B0C10] flex items-center justify-center text-[#111B35] dark:text-white">
           <AlertCircle className="w-8 h-8 animate-spin text-amber-500 mb-2" />
         </div>
       </ProtectedRoute>
@@ -523,7 +580,7 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
 
     return (
       <ProtectedRoute requiredRole="student">
-        <div className="min-h-screen bg-slate-900 text-white flex flex-col items-center justify-center p-6 text-center">
+        <div className="min-h-screen bg-slate-50 dark:bg-[#0B0C10] text-[#111B35] dark:text-white flex flex-col items-center justify-center p-6 text-center">
           <div className="w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center mb-5 text-amber-500">
             <Clock className="w-8 h-8" />
           </div>
@@ -543,7 +600,7 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
             {accessDenied !== 'misconfigured' && (
               <button
                 onClick={() => router.push('/dashboard')}
-                className="px-6 py-3 bg-[#272B33] hover:bg-[#343942] text-white font-semibold rounded-xl transition-colors"
+                className="px-6 py-3 bg-[#272B33] hover:bg-[#343942] text-[#111B35] dark:text-white font-semibold rounded-xl transition-colors"
               >
                 Back to Dashboard
               </button>
@@ -557,10 +614,10 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
   if (disconnectExpired) {
     return (
       <ProtectedRoute requiredRole="student">
-        <div className="min-h-screen bg-slate-900 text-white flex flex-col items-center justify-center p-6 text-center">
+        <div className="min-h-screen bg-slate-50 dark:bg-[#0B0C10] text-[#111B35] dark:text-white flex flex-col items-center justify-center p-6 text-center">
           <AlertTriangle className="w-16 h-16 text-amber-500 mb-4 animate-bounce" />
           <h2 className="text-2xl font-bold mb-2">15-Minute Disconnect Window Exceeded</h2>
-          <p className="text-[#475569] mb-6 max-w-md">
+          <p className="text-[#475569] dark:text-[#94A3B8] mb-6 max-w-md">
             You were disconnected from the exam session for more than 15 minutes. 
             In accordance with testing regulations, this attempt has been finalized and recorded as 1 attempt.
           </p>
@@ -578,10 +635,10 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
   if (error || !test) {
     return (
       <ProtectedRoute>
-        <div className="min-h-screen bg-slate-900 text-white flex flex-col items-center justify-center p-6 text-center">
+        <div className="min-h-screen bg-slate-50 dark:bg-[#0B0C10] text-[#111B35] dark:text-white flex flex-col items-center justify-center p-6 text-center">
           <AlertTriangle className="w-16 h-16 text-red-500 mb-4" />
           <h2 className="text-2xl font-bold mb-2">Error Loading Exam</h2>
-          <p className="text-[#475569] mb-6">{error || "Exam not found."}</p>
+          <p className="text-[#475569] dark:text-[#94A3B8] mb-6">{error || "Exam not found."}</p>
           <button onClick={() => router.push('/dashboard')} className="px-6 py-2.5 bg-amber-500 text-slate-950 font-bold rounded-xl">
             Return to Dashboard
           </button>
@@ -592,42 +649,83 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
 
   // --- Completed Screen ---
   if (status === 'completed') {
-    const stats = calculateScore();
+    const passed = result?.passed ?? false;
+    const cell = 'p-3 rounded-xl bg-slate-100 dark:bg-slate-800/80';
+    const label = 'text-[#475569] dark:text-[#94A3B8]';
 
     return (
       <ProtectedRoute requiredRole="student">
-        <div className="min-h-[calc(100vh)] bg-slate-900 text-white transition-colors duration-300 relative z-20 w-full pt-28 pb-20 px-6 flex flex-col items-center">
-          <div className="w-20 h-20 rounded-full flex items-center justify-center mb-6 border bg-emerald-500/10 border-emerald-500/30 text-emerald-400">
+        <div className="min-h-[calc(100vh)] bg-slate-50 dark:bg-[#0B0C10] text-[#111B35] dark:text-white transition-colors duration-300 relative z-20 w-full pt-28 pb-20 px-6 flex flex-col items-center">
+          <div className={`w-20 h-20 rounded-full flex items-center justify-center mb-6 border ${
+            passed
+              ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-500'
+              : 'bg-amber-500/10 border-amber-500/30 text-amber-500'
+          }`}>
             <CheckCircle2 className="w-10 h-10" />
           </div>
           <h2 className="text-3xl font-extrabold mb-2">
-            {isDisqualified ? 'Exam Disqualified' : 'Exam Submitted Successfully'}
+            {isDisqualified ? 'Exam Disqualified' : 'Exam Submitted'}
           </h2>
-          <p className="text-[#475569] mb-8 text-center max-w-md">
-            Your performance breakdown has been computed.
+          <p className={`${label} mb-8 text-center max-w-md`}>
+            {result
+              ? `You scored ${result.score} out of ${result.maxMarks}.`
+              : 'Your submission was recorded.'}
           </p>
-          
-          <div className="bg-zinc-900 border border-white/10 rounded-2xl p-8 max-w-md w-full shadow-2xl text-center mb-8 space-y-6">
-            <div>
-              <div className="text-xs tabular-nums text-[#475569] mb-1 uppercase tracking-wider">OVERALL ACCURACY</div>
-              <div className="text-6xl font-extrabold text-amber-500">
-                {stats.scorePct}%
-              </div>
-            </div>
 
-            <div className="grid grid-cols-2 gap-4 text-xs tabular-nums pt-4 border-t border-white/10">
-              <div className="p-3 bg-slate-800/80 rounded-xl">
-                <div className="text-[#475569]">Correct Answers</div>
-                <div className="text-emerald-400 font-bold text-base">{stats.correct}</div>
+          {result && (
+            <div className="bg-white dark:bg-[#181A1F] border border-slate-200 dark:border-white/10 rounded-2xl p-8 max-w-md w-full shadow-2xl text-center mb-8 space-y-6">
+              <div>
+                <div className={`text-xs tabular-nums ${label} mb-1 uppercase tracking-wider`}>Final Score</div>
+                <div className={`text-6xl font-extrabold ${passed ? 'text-emerald-500' : 'text-amber-500'}`}>
+                  {result.percentage}%
+                </div>
+                <div className={`mt-2 inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border ${
+                  passed
+                    ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
+                    : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/30'
+                }`}>
+                  {passed ? 'PASSED' : 'NOT CLEARED'}
+                </div>
               </div>
-              <div className="p-3 bg-slate-800/80 rounded-xl">
-                <div className="text-[#475569]">Incorrect Answers</div>
-                <div className="text-red-400 font-bold text-base">{stats.incorrect}</div>
-              </div>
-            </div>
-          </div>
 
-          <button 
+              <div className="grid grid-cols-3 gap-3 text-xs tabular-nums pt-4 border-t border-slate-200 dark:border-white/10">
+                <div className={cell}>
+                  <div className={label}>Correct</div>
+                  <div className="text-emerald-500 font-bold text-base">{result.correctCount}</div>
+                </div>
+                <div className={cell}>
+                  <div className={label}>Wrong</div>
+                  <div className="text-rose-500 font-bold text-base">{result.wrongCount}</div>
+                </div>
+                <div className={cell}>
+                  {/* Called out separately: with negative marking on, leaving a
+                      question blank is a deliberate strategy, not an oversight. */}
+                  <div className={label}>Skipped</div>
+                  <div className="text-slate-500 font-bold text-base">{result.unattemptedCount}</div>
+                </div>
+              </div>
+
+              {result.marksDeducted > 0 && (
+                <div className="text-xs tabular-nums text-rose-500 pt-1">
+                  −{result.marksDeducted} marks deducted for wrong answers
+                </div>
+              )}
+
+              {result.timeTakenMs !== null && (
+                <div className={`flex items-center justify-center gap-2 text-xs tabular-nums pt-1 ${
+                  result.flaggedOverTime ? 'text-amber-600 dark:text-amber-400' : label
+                }`}>
+                  <Clock className="w-3.5 h-3.5" />
+                  <span>
+                    Time taken {formatDuration(result.timeTakenMs)}
+                    {test?.durationMinutes ? ` of ${test.durationMinutes}:00 allowed` : ''}
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
+
+          <button
             onClick={() => router.push('/dashboard')}
             className="px-8 py-3 rounded-xl bg-amber-500 text-slate-950 font-bold shadow-lg hover:bg-amber-400 transition-colors"
           >
@@ -640,31 +738,31 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
 
   // Pre-exam instructions screen
   if (status === 'pre_exam') {
-    const isAdminOrEditor = user?.role === 'admin' || user?.role === 'editor';
-    const isExhausted = !isAdminOrEditor && attemptsCount >= MAX_ATTEMPTS;
+    const isAdmin = user?.role === 'admin';
+    const isExhausted = !isAdmin && attemptsCount >= MAX_ATTEMPTS;
 
     return (
       <ProtectedRoute requiredRole="student">
-        <div className="min-h-screen bg-slate-900 text-white pt-28 pb-16 px-6">
-          {isAdminOrEditor && <AdminPreviewBanner />}
-          <div className="max-w-3xl mx-auto bg-zinc-900 border border-white/10 rounded-2xl p-8 space-y-6 shadow-2xl">
+        <div className="min-h-screen bg-slate-50 dark:bg-[#0B0C10] text-[#111B35] dark:text-white pt-28 pb-16 px-6">
+          {isAdmin && <AdminPreviewBanner />}
+          <div className="max-w-3xl mx-auto bg-white dark:bg-[#181A1F] border border-slate-200 dark:border-white/10 rounded-2xl p-8 space-y-6 shadow-2xl">
             <h1 className="text-2xl font-bold text-amber-500">{test.title} — CBT Simulator</h1>
-            <p className="text-slate-300 text-sm">{test.description || "NISM Series V-A Official Standard Mock Exam."}</p>
+            <p className="text-[#334155] dark:text-slate-300 text-sm">{test.description || "NISM Series V-A Official Standard Mock Exam."}</p>
             
-            <div className="grid grid-cols-2 gap-4 py-4 border-y border-white/10 text-xs tabular-nums">
+            <div className="grid grid-cols-2 gap-4 py-4 border-y border-slate-200 dark:border-y-white/10 text-xs tabular-nums">
               <div>
-                <div className="text-[#475569]">Duration</div>
-                <div className="font-bold text-white text-sm">{test.durationMinutes} Minutes</div>
+                <div className="text-[#475569] dark:text-[#94A3B8]">Duration</div>
+                <div className="font-bold text-[#111B35] dark:text-white text-sm">{test.durationMinutes} Minutes</div>
               </div>
               <div>
-                <div className="text-[#475569]">Total Questions</div>
-                <div className="font-bold text-white text-sm">{questions.length} Items</div>
+                <div className="text-[#475569] dark:text-[#94A3B8]">Total Questions</div>
+                <div className="font-bold text-[#111B35] dark:text-white text-sm">{questions.length} Items</div>
               </div>
             </div>
 
             <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl space-y-2 text-xs">
               <div className="font-bold text-amber-400">Institutional CBT Rules:</div>
-              <ul className="list-disc pl-5 space-y-1 text-slate-300">
+              <ul className="list-disc pl-5 space-y-1 text-[#334155] dark:text-slate-300">
                 <li>Full-screen mode is required throughout the examination.</li>
                 <li>Tab switching triggers an anti-cheat countdown warning.</li>
                 <li>4-Color Palette indicates Visited, Answered, Marked for Review, and Unanswered items.</li>
@@ -686,12 +784,14 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
   }
 
   // Active CBT Simulator Screen
-  const currentQuestion = questions[currentQuestionIndex] || {};
+  const currentQuestion = orderedQuestions[currentQuestionIndex] || {};
 
   return (
     <ProtectedRoute requiredRole="student">
       <div className="min-h-screen bg-slate-950 text-white flex flex-col select-none relative z-20">
         
+        {showCalculator && <Calculator onClose={() => setShowCalculator(false)} />}
+
         {/* Anti-Cheat Overlay */}
         {antiCheatWarning !== null && (
           <div className="fixed inset-0 z-50 bg-slate-950/95 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center">
@@ -713,7 +813,7 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
             </div>
             
             <button 
-              onClick={() => (window as any).clearAntiCheatWarning?.()}
+              onClick={() => clearWarningRef.current?.()}
               className="px-8 py-4 bg-red-600 hover:bg-red-500 text-white font-bold rounded-xl text-lg shadow-[0_0_30px_rgba(220,38,38,0.3)] transition-all hover:scale-105 active:scale-95"
             >
               I Understand, Return to Fullscreen
@@ -736,6 +836,23 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
               <Clock className="w-4 h-4" />
               {test?.type === 'exam' ? formatTime(timeRemaining) : 'Practice Mode'}
             </div>
+            {/* NISM provides a basic calculator in the real exam, so a mock
+                without one is harder than the test it simulates. */}
+            <button
+              type="button"
+              onClick={() => setShowCalculator((v) => !v)}
+              title="Calculator"
+              aria-pressed={showCalculator}
+              className={`px-3 py-2 h-9 rounded-xl text-xs font-bold border transition-colors flex items-center gap-1.5 ${
+                showCalculator
+                  ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                  : 'bg-white/5 text-slate-300 border-white/10 hover:bg-white/10'
+              }`}
+            >
+              <CalculatorIcon className="w-4 h-4" />
+              <span className="hidden sm:inline">Calculator</span>
+            </button>
+
             <LoadingButton
               onClick={handleManualSubmit}
               isLoading={isSubmitting}
@@ -754,13 +871,34 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
             <div className="max-w-3xl mx-auto space-y-6">
               
               <div className="flex justify-between items-center text-xs tabular-nums text-[#475569] border-b border-white/10 pb-3">
-                <span>QUESTION {currentQuestionIndex + 1} OF {questions.length}</span>
+                <span>QUESTION {currentQuestionIndex + 1} OF {orderedQuestions.length}</span>
                 {markedForReview[currentQuestion.id] && (
                   <span className="px-2.5 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/40 font-bold">
                     ● MARKED FOR REVIEW
                   </span>
                 )}
               </div>
+
+              {/* Case scenario for a Section B question. Collapsible, because
+                  the passages run long and four questions share one — a
+                  candidate needs it open while reading the question, then out
+                  of the way. Defaults open on the first question of a case. */}
+              {currentQuestion.casePassage && (
+                <details
+                  open
+                  className="rounded-xl border border-amber-500/25 bg-amber-500/[0.06] overflow-hidden group"
+                >
+                  <summary className="cursor-pointer list-none px-4 py-3 flex items-center justify-between gap-3 hover:bg-amber-500/10 transition-colors">
+                    <span className="text-xs font-bold uppercase tracking-wider text-amber-400">
+                      Case scenario{currentQuestion.caseTitle ? ` · ${currentQuestion.caseTitle}` : ''}
+                    </span>
+                    <ChevronRight className="w-4 h-4 text-amber-400 transition-transform group-open:rotate-90 shrink-0" />
+                  </summary>
+                  <div className="px-4 pb-4 pt-1 text-sm text-slate-300 leading-relaxed whitespace-pre-line border-t border-amber-500/15">
+                    {currentQuestion.casePassage}
+                  </div>
+                </details>
+              )}
 
               <div className="text-base text-white leading-relaxed font-medium">
                 {currentQuestion.text || "Loading question..."}
@@ -814,22 +952,55 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
                 })}
               </div>
 
-              {/* Instant Feedback Explanation (Only for Practice Tests) */}
-              {test?.type === 'practice' && answers[currentQuestion.id] !== undefined && currentQuestion.explanation && (
-                <div className="mt-6 p-5 rounded-xl bg-slate-800/50 border border-slate-700 animate-in fade-in slide-in-from-bottom-2">
-                  <div className="flex items-center gap-2 mb-2">
+              {/* Instant feedback, practice mode only.
+                  Shows the reasoning for EVERY option, not just the correct
+                  one — a candidate learns as much from why the three
+                  distractors fail as from why one answer works, which is why
+                  the source documents carry an explanation per option. */}
+              {test?.type === 'practice' && answers[currentQuestion.id] !== undefined && (
+                <div className="mt-6 p-5 rounded-xl bg-slate-800/50 border border-slate-700 animate-in fade-in slide-in-from-bottom-2 space-y-3">
+                  <div className="flex items-center gap-2">
                     {answers[currentQuestion.id] === currentQuestion.correctOptionIndex ? (
                       <CheckCircle2 className="w-5 h-5 text-emerald-400" />
                     ) : (
                       <AlertTriangle className="w-5 h-5 text-red-400" />
                     )}
                     <h3 className="font-bold text-slate-200">
-                      {answers[currentQuestion.id] === currentQuestion.correctOptionIndex ? 'Correct!' : 'Incorrect'}
+                      {answers[currentQuestion.id] === currentQuestion.correctOptionIndex ? 'Correct' : 'Incorrect'}
                     </h3>
                   </div>
-                  <p className="text-sm text-[#475569] leading-relaxed">
-                    {currentQuestion.explanation}
-                  </p>
+
+                  {Array.isArray(currentQuestion.optionExplanations)
+                    && currentQuestion.optionExplanations.some((e: string) => e) ? (
+                    <ul className="space-y-2.5">
+                      {currentQuestion.options?.map((opt: string, i: number) => {
+                        const reason = currentQuestion.optionExplanations[i];
+                        if (!reason) return null;
+                        const isCorrect = i === currentQuestion.correctOptionIndex;
+                        const wasChosen = answers[currentQuestion.id] === i;
+                        return (
+                          <li key={i} className="flex gap-2.5 text-sm">
+                            <span
+                              className={`shrink-0 w-6 h-6 rounded flex items-center justify-center text-xs font-bold ${
+                                isCorrect ? 'bg-emerald-500 text-slate-950' : 'bg-slate-700 text-slate-300'
+                              }`}
+                            >
+                              {String.fromCharCode(65 + i)}
+                            </span>
+                            <div className="flex-1">
+                              <span className={isCorrect ? 'text-emerald-400 font-semibold' : 'text-slate-400'}>
+                                {isCorrect ? 'Correct' : 'Incorrect'}
+                                {wasChosen && !isCorrect && ' — you chose this'}
+                              </span>
+                              <p className="text-[#94A3B8] leading-relaxed mt-0.5">{reason}</p>
+                            </div>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  ) : currentQuestion.explanation ? (
+                    <p className="text-sm text-[#94A3B8] leading-relaxed">{currentQuestion.explanation}</p>
+                  ) : null}
                 </div>
               )}
 
@@ -851,8 +1022,8 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
                 </button>
 
                 <button
-                  onClick={() => setCurrentQuestionIndex(prev => Math.min(questions.length - 1, prev + 1))}
-                  disabled={currentQuestionIndex === questions.length - 1}
+                  onClick={() => setCurrentQuestionIndex(prev => Math.min(orderedQuestions.length - 1, prev + 1))}
+                  disabled={currentQuestionIndex === orderedQuestions.length - 1}
                   className="px-6 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs transition-all flex items-center gap-1.5"
                 >
                   Save & Next <ChevronRight className="w-4 h-4" />
@@ -866,11 +1037,11 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
           <div className="w-80 bg-zinc-900 border-l border-white/10 p-5 hidden lg:flex flex-col justify-between shrink-0">
             <div>
               <div className="font-bold text-white text-sm border-b border-white/10 pb-3 mb-4">
-                NISM Question Palette ({questions.length} Items)
+                Question Palette ({orderedQuestions.length} Items)
               </div>
 
               <div className="grid grid-cols-4 gap-2.5 max-h-96 overflow-y-auto pr-1">
-                {questions.map((q, idx) => {
+                {orderedQuestions.map((q, idx) => {
                   const isAnswered = answers[q.id] !== undefined;
                   const isMarked = markedForReview[q.id];
                   const isVisited = visitedQuestions[idx];

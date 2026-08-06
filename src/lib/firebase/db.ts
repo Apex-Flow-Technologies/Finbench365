@@ -84,12 +84,17 @@ export async function getTestQuestions(testId: string, withSolutions: boolean = 
 
 // --- Test Attempts (The Engine) ---
 
+// Attempt timestamps are `startedAt` / `submittedAt` throughout. They used to be
+// written as `startTime` / `endTime` here while every reader (the submit route's
+// over-time check, getUserAnalytics) looked for `startedAt` / `submittedAt` — so
+// the duration logic was dead code and "Total CBT Time" was permanently 0h 0m.
+// Readers fall back to the legacy names so historical attempts still count.
 export async function startTestAttempt(userId: string, testId: string) {
   const attemptRef = doc(collection(db, 'test_attempts'));
   const newAttempt = {
     userId,
     testId,
-    startTime: serverTimestamp(),
+    startedAt: serverTimestamp(),
     status: 'in_progress',
     answers: {}
   };
@@ -105,15 +110,11 @@ export async function saveTestProgress(attemptId: string, answers: Record<string
   });
 }
 
-export async function submitTestAttempt(attemptId: string, answers: Record<string, number>, score: number) {
-  const attemptRef = doc(db, 'test_attempts', attemptId);
-  await updateDoc(attemptRef, {
-    answers,
-    score,
-    endTime: serverTimestamp(),
-    status: 'completed'
-  });
-}
+// NOTE: there is deliberately no client-side submit here any more. Completing an
+// attempt — writing `score`, `status` and `submittedAt` — belongs to
+// /api/exams/submit, which grades against the protected solutions subcollection
+// using the Admin SDK. Firestore rules now reject those fields from a browser,
+// so a client-side equivalent would fail anyway.
 
 export async function updateAttemptHeartbeat(attemptId: string) {
   const attemptRef = doc(db, 'test_attempts', attemptId);
@@ -122,14 +123,11 @@ export async function updateAttemptHeartbeat(attemptId: string) {
   });
 }
 
-export async function expireAttemptDueToDisconnect(attemptId: string) {
-  const attemptRef = doc(db, 'test_attempts', attemptId);
-  await updateDoc(attemptRef, {
-    status: 'completed',
-    expiredDueToDisconnect: true,
-    endedAt: serverTimestamp()
-  });
-}
+// `expireAttemptDueToDisconnect` used to live here. It had no callers — the
+// 15-minute disconnect rule in the exam runner only ever showed a screen and
+// never recorded anything — and it wrote `status`/`submittedAt`, which the
+// browser is no longer permitted to set. Enforcing that rule for real belongs
+// server-side, keyed off the `lastHeartbeatAt` written below.
 
 export async function getTestAttempt(attemptId: string) {
   const attemptRef = doc(db, 'test_attempts', attemptId);
@@ -192,6 +190,38 @@ export async function createMockTest(data: {
   return testRef.id;
 }
 
+/**
+ * Removes every question and its answer key from a test.
+ *
+ * Exists because a mis-uploaded .docx previously had to be undone one question
+ * at a time — a 100-question import meant 100 confirmations, so in practice
+ * nobody undid it and wrong content stayed live.
+ *
+ * Deletes the `solutions` document alongside each question. Removing only the
+ * question would orphan its answer key, and the grader counts `solutions` to
+ * decide how many questions a paper has — leaving them behind would mark every
+ * candidate against questions that no longer exist.
+ *
+ * @returns how many questions were removed
+ */
+export async function deleteAllQuestions(testId: string): Promise<number> {
+  const questionsSnap = await getDocs(collection(db, `mock_tests/${testId}/questions`));
+  const solutionsSnap = await getDocs(collection(db, `mock_tests/${testId}/solutions`));
+
+  const refs = [...questionsSnap.docs, ...solutionsSnap.docs].map((d) => d.ref);
+
+  // Firestore caps a batch at 500 writes.
+  const CHUNK = 450;
+  for (let i = 0; i < refs.length; i += CHUNK) {
+    const batch = writeBatch(db);
+    refs.slice(i, i + CHUNK).forEach((ref) => batch.delete(ref));
+    await batch.commit();
+  }
+
+  await updateDoc(doc(db, 'mock_tests', testId), { totalQuestions: 0 }).catch(() => {});
+  return questionsSnap.size;
+}
+
 export async function saveQuestionsBatch(testId: string, questions: any[], testType?: string) {
   const batch = writeBatch(db);
   
@@ -200,28 +230,41 @@ export async function saveQuestionsBatch(testId: string, questions: any[], testT
     const questionsRef = collection(db, `mock_tests/${testId}/questions`);
     const qRef = q.id ? doc(db, `mock_tests/${testId}/questions`, q.id) : doc(questionsRef);
     
-    // We explicitly exclude the local 'id' and 'explanation' fields from public data
-    const { id, correctOptionIndex, explanation, ...publicData } = q;
+    // Strip everything that would give the answer away from the public record.
+    //
+    // `optionExplanations` is the important addition: each entry reads like
+    // "as compliance review is permitted" and is index-aligned with the
+    // options, so publishing them would hand over the answer key — the wording
+    // alone distinguishes the correct option. They belong with the solution.
+    const {
+      id, correctOptionIndex, explanation, optionExplanations, answerUnresolved, number,
+      ...publicData
+    } = q;
     const safeCorrectOptionIndex = correctOptionIndex ?? 0;
-    
+
     // For practice tests, we keep correctOptionIndex public for instant grading UI
     // For certification exams, it is completely stripped from the client payload
-    const finalPublicData = testType === 'practice' 
-      ? { ...publicData, correctOptionIndex: safeCorrectOptionIndex } 
+    const finalPublicData = testType === 'practice'
+      ? { ...publicData, correctOptionIndex: safeCorrectOptionIndex }
       : publicData;
-    
-    // 1. Save public question data 
+
+    // 1. Save public question data. Case fields (caseId/caseTitle/casePassage)
+    //    ride along in publicData — a candidate must be able to read the
+    //    scenario to answer the questions attached to it.
     batch.set(qRef, {
       ...finalPublicData,
       order: index,
       updatedAt: serverTimestamp()
     }, { merge: true });
-    
+
     // 2. Save the solution securely in a separate subcollection using the SAME document ID
     const solutionRef = doc(db, `mock_tests/${testId}/solutions`, qRef.id);
     batch.set(solutionRef, {
       correctOptionIndex: safeCorrectOptionIndex,
       explanation: explanation || "",
+      // Why each option is right or wrong — released to a candidate only after
+      // a practice attempt, and never for a certification exam.
+      optionExplanations: Array.isArray(optionExplanations) ? optionExplanations : [],
       updatedAt: serverTimestamp()
     }, { merge: true });
   });
@@ -266,9 +309,14 @@ export async function getUserEntitlements(userId: string) {
   
   return entries.map(([courseId, data], i) => {
     const courseSnap = courseSnaps[i];
+    // A deleted course used to be papered over with a title synthesised from its
+    // id ("NISM VA MOCK TEST SERIES") and an invented "Professional" tier. That
+    // is indistinguishable from real catalogue data, so a course removed from
+    // under a paying candidate still looked live on their dashboard. Say plainly
+    // that it is gone and flag it, so the UI can treat it differently.
     const courseData = courseSnap.exists()
-      ? { id: courseSnap.id, ...courseSnap.data() }
-      : { id: courseId, title: courseId.replace(/-/g, ' ').toUpperCase(), tier: 'Professional' };
+      ? { id: courseSnap.id, ...courseSnap.data(), isMissing: false }
+      : { id: courseId, title: 'Course no longer available', tier: null, isMissing: true };
 
     const parseDate = (val: any) => {
       if (!val) return new Date();
@@ -291,7 +339,7 @@ export async function getUserEntitlements(userId: string) {
 }
 
 // --- Admin Portal ---
-export async function updateUserRole(userId: string, newRole: 'student' | 'editor' | 'admin') {
+export async function updateUserRole(userId: string, newRole: 'student' | 'admin') {
   const userRef = doc(db, 'users', userId);
   await updateDoc(userRef, { role: newRole });
 }
@@ -351,8 +399,25 @@ export async function createUserProfile(
   }, { merge: true });
 }
 
-// Find existing active attempt for fallback recovery
-export async function getActiveAttemptForUser(userId: string, testId: string) {
+export interface ActiveAttempt {
+  id: string;
+  userId: string;
+  testId: string;
+  status: string;
+  answers?: Record<string, number>;
+  startedAt?: any;
+  [key: string]: any;
+}
+
+// Find existing active attempt for fallback recovery.
+//
+// The return type is declared rather than inferred: spreading `docSnap.data()`
+// (typed `DocumentData`) produced `{ id: string }`, so every field the caller
+// actually reads — `answers` above all — was a type error at the call site.
+export async function getActiveAttemptForUser(
+  userId: string,
+  testId: string,
+): Promise<ActiveAttempt | null> {
   const q = query(
     collection(db, 'test_attempts'),
     where('userId', '==', userId),
@@ -362,7 +427,7 @@ export async function getActiveAttemptForUser(userId: string, testId: string) {
   const snapshot = await getDocs(q);
   if (snapshot.empty) return null;
   const docSnap = snapshot.docs[0];
-  return { id: docSnap.id, ...docSnap.data() };
+  return { id: docSnap.id, ...docSnap.data() } as ActiveAttempt;
 }
 
 export async function getUserAnalytics(userId: string) {
@@ -374,27 +439,35 @@ export async function getUserAnalytics(userId: string) {
   
   const snapshot = await getDocs(q);
   
-  let totalScore = 0;
+  let totalCorrect = 0;
   let totalQuestions = 0;
   let totalTimeMs = 0;
-  
+
   snapshot.docs.forEach(doc => {
     const data = doc.data();
-    
+
     // Fallback to max 50 if missing for old data
-    const attemptTotalQuestions = data.totalQuestions || Object.keys(data.answers || {}).length || 50; 
-    
-    totalScore += (data.score || 0);
+    const attemptTotalQuestions = data.totalQuestions || Object.keys(data.answers || {}).length || 50;
+
+    // Accuracy is "percent answered correctly", which is NOT the same as the
+    // score once negative marking exists — `score` can be fractional or
+    // negative, and dividing it by the question count would report a candidate
+    // as, say, 42% accurate on a paper where they got 60 of 100 right.
+    // `correctCount` is written by the grader; `score` is the pre-negative-
+    // marking fallback for attempts recorded before that field existed.
+    totalCorrect += data.correctCount ?? Math.max(0, data.score || 0);
     totalQuestions += attemptTotalQuestions;
-    
-    if (data.startedAt && data.submittedAt) {
-      const start = data.startedAt.toDate();
-      const end = data.submittedAt.toDate();
-      totalTimeMs += Math.max(0, end.getTime() - start.getTime());
+
+    // Legacy names accepted so attempts recorded before the rename still
+    // contribute to the total rather than silently counting as zero.
+    const started = data.startedAt ?? data.startTime;
+    const ended = data.submittedAt ?? data.endTime ?? data.endedAt;
+    if (started?.toDate && ended?.toDate) {
+      totalTimeMs += Math.max(0, ended.toDate().getTime() - started.toDate().getTime());
     }
   });
 
-  const accuracy = totalQuestions > 0 ? Math.round((totalScore / totalQuestions) * 100) : 0;
+  const accuracy = totalQuestions > 0 ? Math.round((totalCorrect / totalQuestions) * 100) : 0;
   const attemptsCount = snapshot.size;
 
   return {
