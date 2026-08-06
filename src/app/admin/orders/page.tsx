@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { collection, query, getDocs, doc, getDoc } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase/config';
 import { CreditCard, CheckCircle2, ShieldCheck, Download, Search, RefreshCw, RotateCcw, Clock } from 'lucide-react';
@@ -39,6 +39,9 @@ export default function AdminOrdersPage() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [reconciling, setReconciling] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<'all' | 'paid' | 'unpaid' | 'refunded'>('all');
+  const [refundingId, setRefundingId] = useState<string | null>(null);
+  const [confirmRefund, setConfirmRefund] = useState<Order | null>(null);
 
   const handleReconcile = async () => {
     if (!auth.currentUser) return;
@@ -60,9 +63,8 @@ export default function AdminOrdersPage() {
     }
   };
 
-  useEffect(() => {
-    async function fetchOrders() {
-      try {
+  const reload = useCallback(async () => {
+    try {
         // Unordered read + client sort: ordering in the query drops any order
         // document missing createdAt, which previously hid coupon/webhook-born
         // orders from this list entirely.
@@ -110,13 +112,12 @@ export default function AdminOrdersPage() {
         setOrders([...fetchedOrders].sort((a, b) => ms(b) - ms(a)));
       } catch (error) {
         console.error('Error fetching orders:', error);
-      } finally {
-        setLoading(false);
-      }
+    } finally {
+      setLoading(false);
     }
-
-    fetchOrders();
   }, []);
+
+  useEffect(() => { reload(); }, [reload]);
 
   /**
    * Exports what is currently on screen (so a search narrows the export too).
@@ -158,12 +159,52 @@ export default function AdminOrdersPage() {
    */
   const filteredOrders = useMemo(() => {
     const needle = searchQuery.trim().toLowerCase();
-    if (!needle) return orders;
-    return orders.filter((order) =>
-      [order.orderId, order.paymentId, order.userEmail, order.courseId, order.userId]
-        .some((field) => String(field ?? '').toLowerCase().includes(needle)),
-    );
-  }, [orders, searchQuery]);
+    return orders.filter((order) => {
+      // "Unpaid" is the follow-up queue: money may have left a candidate's
+      // account without the order ever resolving, and there was previously no
+      // way to isolate those from a list dominated by successful ones.
+      if (statusFilter === 'unpaid' && order.status !== 'created') return false;
+      if (statusFilter === 'paid' && order.status !== 'success') return false;
+      if (statusFilter === 'refunded'
+        && !['refunded', 'refund_pending', 'revoked'].includes(order.status)) return false;
+
+      if (!needle) return true;
+      return [order.orderId, order.paymentId, order.userEmail, order.courseId, order.userId]
+        .some((field) => String(field ?? '').toLowerCase().includes(needle));
+    });
+  }, [orders, searchQuery, statusFilter]);
+
+  const counts = useMemo(() => ({
+    all: orders.length,
+    paid: orders.filter((o) => o.status === 'success').length,
+    unpaid: orders.filter((o) => o.status === 'created').length,
+    refunded: orders.filter((o) => ['refunded', 'refund_pending', 'revoked'].includes(o.status)).length,
+  }), [orders]);
+
+  const handleRefund = async (order: Order) => {
+    if (!auth.currentUser) return;
+    setRefundingId(order.orderId);
+    try {
+      const token = await auth.currentUser.getIdToken();
+      const res = await fetch('/api/admin/refund', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ orderId: order.orderId, revokeAccess: true }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Refund failed');
+      toast.success(
+        `Refunded ${data.amount != null ? formatInr(data.amount, { decimals: true }) : ''} — access revoked.`,
+        { duration: 8000 },
+      );
+      setConfirmRefund(null);
+      await reload();
+    } catch (err: any) {
+      toast.error(err.message, { duration: 10000 });
+    } finally {
+      setRefundingId(null);
+    }
+  };
 
   // Revenue belongs on the page that holds the ledger it is derived from —
   // the Overview's "money collected" tile had no way to show its working, and
@@ -214,6 +255,30 @@ export default function AdminOrdersPage() {
           />
           </div>
         </div>
+      </div>
+
+      {/* Status tabs. "Unpaid" is the follow-up queue the Code Red list asks
+          for: orders where money may have left a candidate's account without
+          the order ever resolving. */}
+      <div className="flex flex-wrap gap-2">
+        {([
+          ['all', 'All orders', counts.all],
+          ['paid', 'Paid', counts.paid],
+          ['unpaid', 'Unpaid / abandoned', counts.unpaid],
+          ['refunded', 'Refunded & revoked', counts.refunded],
+        ] as const).map(([key, label, n]) => (
+          <button
+            key={key}
+            onClick={() => setStatusFilter(key)}
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold border transition-colors ${
+              statusFilter === key
+                ? 'bg-amber-500 text-slate-950 border-amber-500'
+                : 'bg-white dark:bg-[#121419] text-slate-600 dark:text-slate-300 border-slate-200 dark:border-[#282C36] hover:border-amber-500/50'
+            }`}
+          >
+            {label} <span className="tabular-nums opacity-70">({n})</span>
+          </button>
+        ))}
       </div>
 
       {/* Revenue for whatever is currently on screen — narrowing the search
@@ -268,12 +333,13 @@ export default function AdminOrdersPage() {
                 <th className="py-4 px-6 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Paid (incl. GST)</th>
                 <th className="py-4 px-6 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Status</th>
                 <th className="py-4 px-6 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Date</th>
+                <th className="py-4 px-6 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 dark:divide-[#282C36]">
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="py-12 text-center text-slate-500">
+                  <td colSpan={7} className="py-12 text-center text-slate-500">
                     <div className="flex items-center justify-center gap-2">
                       <div className="w-4 h-4 rounded-full border-2 border-amber-500 border-t-transparent animate-spin"></div>
                       Loading orders...
@@ -282,7 +348,7 @@ export default function AdminOrdersPage() {
                 </tr>
               ) : filteredOrders.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="py-12 text-center text-slate-500 dark:text-slate-400">
+                  <td colSpan={7} className="py-12 text-center text-slate-500 dark:text-slate-400">
                     No orders found.
                   </td>
                 </tr>
@@ -386,6 +452,22 @@ export default function AdminOrdersPage() {
                               </span>
                             );
                           }
+                          if (order.status === 'refund_pending') {
+                            return (
+                              <span className={`${badge.base} bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20`}>
+                                <Clock className="w-3.5 h-3.5" />
+                                Refunding
+                              </span>
+                            );
+                          }
+                          if (order.status === 'revoked') {
+                            return (
+                              <span className={`${badge.base} bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/20`}>
+                                <RotateCcw className="w-3.5 h-3.5" />
+                                Access revoked
+                              </span>
+                            );
+                          }
                           if (order.status === 'created') {
                             return (
                               <span className={`${badge.base} bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/20`}>
@@ -405,6 +487,23 @@ export default function AdminOrdersPage() {
                       <td className="py-4 px-6 text-sm text-slate-500 dark:text-slate-400 whitespace-nowrap">
                         {order.createdAt?.toDate ? order.createdAt.toDate().toLocaleString('en-US', { month: 'short', day: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false }) : 'Unknown'}
                       </td>
+                      <td className="py-4 px-6 text-right whitespace-nowrap">
+                        {/* Refundable only when real money was captured. A comped
+                            enrolment has nothing at the gateway to return. */}
+                        {order.status === 'success' && order.paymentId && !isComped ? (
+                          <button
+                            onClick={() => setConfirmRefund(order)}
+                            disabled={refundingId === order.orderId}
+                            className="px-3 py-1.5 rounded-lg text-xs font-bold text-rose-600 dark:text-rose-400 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 transition-colors disabled:opacity-50"
+                          >
+                            Refund
+                          </button>
+                        ) : order.status === 'refund_pending' ? (
+                          <span className="text-xs text-amber-600 dark:text-amber-400 font-semibold">in progress</span>
+                        ) : (
+                          <span className="text-xs text-slate-400 dark:text-slate-600">—</span>
+                        )}
+                      </td>
                     </tr>
                   );
                 })
@@ -413,6 +512,50 @@ export default function AdminOrdersPage() {
           </table>
         </div>
       </div>
+
+      {confirmRefund && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/60 backdrop-blur-sm"
+          onClick={() => !refundingId && setConfirmRefund(null)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-md rounded-2xl bg-white dark:bg-[#181A1F] border border-slate-200 dark:border-white/10 p-6 shadow-2xl"
+          >
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white">
+              Refund {confirmRefund.amountPaid != null
+                ? formatInr(confirmRefund.amountPaid, { decimals: true })
+                : 'this order'}?
+            </h3>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-2 leading-relaxed">
+              This returns the money through Razorpay and revokes access to{' '}
+              <strong className="text-slate-700 dark:text-slate-200">{confirmRefund.courseId}</strong>{' '}
+              for {confirmRefund.userEmail || 'this candidate'}.
+            </p>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-3 leading-relaxed">
+              A refund cannot be undone. Razorpay settles it back to the candidate over the
+              next 5–7 working days, so they will not see it immediately.
+            </p>
+
+            <div className="flex flex-col-reverse sm:flex-row gap-2.5 mt-6">
+              <button
+                onClick={() => setConfirmRefund(null)}
+                disabled={Boolean(refundingId)}
+                className="flex-1 px-4 py-2.5 rounded-xl font-bold text-sm bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-white/10 dark:hover:bg-white/20 dark:text-white transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleRefund(confirmRefund)}
+                disabled={Boolean(refundingId)}
+                className="flex-1 px-4 py-2.5 rounded-xl font-bold text-sm bg-rose-500 hover:bg-rose-400 text-white transition-colors disabled:opacity-50"
+              >
+                {refundingId ? 'Refunding…' : 'Refund and revoke access'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
