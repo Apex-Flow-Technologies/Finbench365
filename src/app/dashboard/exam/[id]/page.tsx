@@ -224,19 +224,41 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
           hasActiveSession = false; 
         }
 
-        // ONLY enforce 15-minute disconnect if they actually have an active session!
-        if (hasActiveSession && !isAdmin) {
-          const lastActiveStr = localStorage.getItem(`cbt_last_active_${testId}`);
-          if (lastActiveStr) {
-            const lastActive = parseInt(lastActiveStr, 10);
-            const elapsedMinutes = (Date.now() - lastActive) / (1000 * 60);
+        // The 15-minute disconnect rule, decided by the server.
+        //
+        // This used to read a timestamp out of localStorage and show a screen
+        // saying the attempt "has been finalized and recorded as 1 attempt"
+        // while writing nothing at all — the attempt stayed in_progress, had no
+        // score, and counted towards nothing. Clearing browser storage bypassed
+        // it entirely, and it did not exist on a second device.
+        //
+        // The server decides from `lastHeartbeatAt`, which is written every ten
+        // seconds while an exam is open, and closes the attempt for real if the
+        // candidate has been gone too long — marking whatever they had actually
+        // answered, since progress is saved as they work.
+        if (hasActiveSession && !isAdmin && activeAttempt && user) {
+          try {
+            const token = await user.getIdToken();
+            const res = await fetch('/api/exams/attempt-status', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+              body: JSON.stringify({ attemptId: activeAttempt.id }),
+            });
+            const status = await res.json();
 
-            if (elapsedMinutes > 15) {
+            if (res.ok && status.expired) {
               setDisconnectExpired(true);
+              setResult(status.alreadyCompleted ? null : status);
               localStorage.removeItem(`cbt_backup_${testId}`);
               localStorage.removeItem(`cbt_last_active_${testId}`);
+              setLoading(false);
               return;
             }
+          } catch (err) {
+            // A failed check must not strand a candidate outside their exam.
+            // The attempt stays open and the server will close it on the next
+            // load or on submit.
+            console.error('Could not check attempt status:', err);
           }
         } else if (!hasActiveSession) {
           // No active session in Firestore. Wipe out any stale browser tracking so it doesn't ban them.
@@ -693,14 +715,33 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
     return (
       <ProtectedRoute requiredRole="student">
         <div className="min-h-screen bg-slate-50 dark:bg-[#0B0C10] text-[#111B35] dark:text-white flex flex-col items-center justify-center p-6 text-center">
-          <AlertTriangle className="w-16 h-16 text-amber-500 mb-4 animate-bounce" />
-          <h2 className="text-2xl font-bold mb-2">15-Minute Disconnect Window Exceeded</h2>
-          <p className="text-[#475569] dark:text-[#94A3B8] mb-6 max-w-md">
-            You were disconnected from the exam session for more than 15 minutes. 
-            In accordance with testing regulations, this attempt has been finalized and recorded as 1 attempt.
+          <AlertTriangle className="w-16 h-16 text-amber-500 mb-4" />
+          <h2 className="text-2xl font-bold mb-2">Attempt closed after disconnection</h2>
+          <p className="text-[#475569] dark:text-[#94A3B8] mb-6 max-w-md leading-relaxed">
+            You were away from this exam for more than 15 minutes, so it has been submitted
+            and counts as one of your attempts. It was marked on the answers you had given —
+            your progress was saved as you worked.
           </p>
-          <button 
-            onClick={() => router.push('/dashboard')} 
+
+          {/* The score is shown because the attempt genuinely was marked. The
+              screen used to claim it had been "finalized and recorded" while
+              writing nothing at all. */}
+          {result && (
+            <div className="bg-white dark:bg-[#181A1F] border border-slate-200 dark:border-white/10 rounded-2xl p-6 max-w-sm w-full mb-8">
+              <div className="text-xs uppercase tracking-wider text-[#475569] dark:text-[#94A3B8] mb-1">
+                Score recorded
+              </div>
+              <div className={`text-4xl font-extrabold ${result.passed ? 'text-emerald-500' : 'text-amber-500'}`}>
+                {result.percentage}%
+              </div>
+              <div className="text-sm text-[#475569] dark:text-[#94A3B8] mt-2 tabular-nums">
+                {result.correctCount} correct · {result.wrongCount} wrong · {result.unattemptedCount} not attempted
+              </div>
+            </div>
+          )}
+
+          <button
+            onClick={() => router.push('/dashboard')}
             className="px-6 py-3 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl shadow-lg transition-colors"
           >
             Return to Dashboard
