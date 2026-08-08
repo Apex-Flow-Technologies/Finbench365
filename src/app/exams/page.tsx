@@ -27,7 +27,7 @@ interface CoursePackage {
   description: string;
   mockCount: string;
   notesCount: string;
-  features: string[];
+  pattern: { durationMinutes: number; maxMarks: number; passPercent: number; negativeMarkPercent: number } | null;
   levelColor: string;
   badgeBg: string;
   badgeText: string;
@@ -109,20 +109,10 @@ export default function ExamsPage() {
             category: course.tier || 'Foundation',
             mockCount: `${counts[i].mocks} Full Mock${counts[i].mocks === 1 ? '' : 's'}`,
             notesCount: `${counts[i].notes} PDF Note${counts[i].notes === 1 ? '' : 's'}`,
-            // The exam's own facts, from the official NISM pattern — not the
-            // three hardcoded marketing lines that used to appear identically
-            // on every card ("Step-by-step matrix derivation walkthroughs"
-            // described nothing in this product). Empty when the course has no
-            // series set yet, so nothing is invented.
-            features: pattern
-              ? [
-                  `${pattern.durationMinutes} minutes · ${pattern.maxMarks} marks`,
-                  `Pass mark ${pattern.passPercent}%`,
-                  pattern.negativeMarkPercent > 0
-                    ? `Negative marking ${pattern.negativeMarkPercent}% per wrong answer`
-                    : 'No negative marking',
-                ]
-              : [],
+            // The official pattern, passed through whole so this card lays it
+            // out exactly as the landing page does. Null when the course has no
+            // series set — nothing is invented in that case.
+            pattern,
             ...color
           } as CoursePackage;
         });
@@ -323,26 +313,36 @@ export default function ExamsPage() {
                         {course.description}
                       </p>
 
-                      {/* Key Study Resources Grid */}
+                      {/* The same four figures the landing page shows, so a
+                          candidate comparing the two sees one description of the
+                          exam rather than two. */}
+                      {course.pattern && (
+                        <div className="grid grid-cols-2 gap-2 mb-5">
+                          {[
+                            ['Duration', `${course.pattern.durationMinutes} min`],
+                            ['Questions', String(course.pattern.maxMarks)],
+                            ['Pass mark', `${course.pattern.passPercent}%`],
+                            ['Negative marking', course.pattern.negativeMarkPercent > 0
+                              ? `${course.pattern.negativeMarkPercent}%` : 'None'],
+                          ].map(([label, value]) => (
+                            <div key={label} className="rounded-lg bg-slate-50 dark:bg-[#121419] border border-slate-200 dark:border-[#282C36] px-3 py-2">
+                              <div className="text-sm font-bold text-[#111B35] dark:text-white tabular-nums">{value}</div>
+                              <div className="text-[10px] uppercase tracking-wider text-[#475569] dark:text-[#94A3B8]">{label}</div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* What the course actually contains, counted live. */}
                       <div className="grid grid-cols-2 gap-2 py-3 px-3.5 rounded-xl bg-slate-50 border border-slate-200 dark:bg-[#121419] dark:border-[#282C36] text-center text-xs mb-6 transition-colors">
                         <div>
                           <span className="block tabular-nums font-bold text-amber-600 dark:text-amber-500 text-sm">{course.mockCount.split(' ')[0]}</span>
-                          <span className="text-[10px] text-[#475569] dark:text-[#94A3B8] uppercase tracking-tighter">Full Mocks</span>
+                          <span className="text-[10px] text-[#475569] dark:text-[#94A3B8] uppercase tracking-tighter">Mock tests</span>
                         </div>
                         <div className="border-l border-slate-200 dark:border-[#282C36]">
                           <span className="block tabular-nums font-bold text-[#334155] dark:text-[#E2E8F0] text-sm">{course.notesCount.split(' ')[0]}</span>
-                          <span className="text-[10px] text-[#475569] dark:text-[#94A3B8] uppercase tracking-tighter">PDF Notes</span>
+                          <span className="text-[10px] text-[#475569] dark:text-[#94A3B8] uppercase tracking-tighter">Study notes</span>
                         </div>
-                      </div>
-
-                      {/* Key Features Bullet Points */}
-                      <div className="space-y-2.5 mb-8 border-t border-slate-100 dark:border-[#282C36] pt-5 transition-colors">
-                        {course.features.map((feat, idx) => (
-                          <div key={idx} className="flex items-start gap-2.5 text-xs text-[#334155] dark:text-[#E2E8F0]">
-                            <CheckCircle2 className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
-                            <span>{feat}</span>
-                          </div>
-                        ))}
                       </div>
                     </div>
 

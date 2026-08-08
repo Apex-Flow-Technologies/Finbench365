@@ -15,9 +15,10 @@ interface ExamTrack {
   title: string;
   subtitle: string;
   description: string;
-  questionCount: string;
-  passRate: string;
-  keyTopics: string[];
+  durationMinutes: number;
+  maxMarks: number;
+  passPercent: number;
+  negativeMarkPercent: number;
   features: string[];
 }
 
@@ -41,11 +42,10 @@ const EXAM_TRACKS: ExamTrack[] = IN_SCOPE_PATTERNS.slice(0, 3).map((p) => ({
   title: p.name,
   subtitle: `${p.durationMinutes} minutes · ${p.maxMarks} marks · pass ${p.passPercent}%`,
   description: p.description,
-  questionCount: `${p.maxMarks} questions`,
-  passRate: p.negativeMarkPercent > 0
-    ? `${p.negativeMarkPercent}% negative marking`
-    : 'No negative marking',
-  keyTopics: [],
+  durationMinutes: p.durationMinutes,
+  maxMarks: p.maxMarks,
+  passPercent: p.passPercent,
+  negativeMarkPercent: p.negativeMarkPercent,
   features: [
     'Full-length mock on the official exam pattern',
     'Explanation for every option, not just the correct one',
@@ -88,8 +88,16 @@ export function ExamTracks() {
                   <span className="px-2.5 py-1 rounded bg-white dark:bg-[#181A1F] transition-colors duration-300 text-[#111B35] dark:text-white font-bold tracking-wider">
                     {track.badge}
                   </span>
-                  <span className="text-emerald-700 font-semibold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                    {track.passRate}
+                  {/* Negative marking is the single fact that most changes how
+                      a candidate sits the paper, so it stays on the badge row. */}
+                  <span className={`font-semibold px-2 py-0.5 rounded border ${
+                    track.negativeMarkPercent > 0
+                      ? 'text-rose-700 bg-rose-50 border-rose-200 dark:text-rose-300 dark:bg-rose-500/10 dark:border-rose-500/30'
+                      : 'text-emerald-700 bg-emerald-50 border-emerald-200 dark:text-emerald-300 dark:bg-emerald-500/10 dark:border-emerald-500/30'
+                  }`}>
+                    {track.negativeMarkPercent > 0
+                      ? `${track.negativeMarkPercent}% negative marking`
+                      : 'No negative marking'}
                   </span>
                 </div>
 
@@ -105,36 +113,32 @@ export function ExamTracks() {
                   {track.description}
                 </p>
 
-                {/* Key Topics List */}
-                <div className="space-y-2 mb-6 pt-6 border-t border-slate-150">
-                  <span className="tabular-nums text-xs font-bold uppercase tracking-wider text-[#475569] dark:text-[#94A3B8] dark:text-[#94A3B8] block mb-3">
-                    Core Curriculum Modules
-                  </span>
-                  {track.keyTopics.map((topic, tIdx) => (
-                    <div key={tIdx} className="flex items-start gap-2.5 text-xs text-[#334155]">
-                      <CheckCircle2 className="w-4 h-4 text-amber-700 flex-shrink-0 mt-0.5" />
-                      <span className="font-medium leading-snug">{topic}</span>
+                {/* The exam's own pattern, in the four figures a candidate
+                    actually compares. "Core Curriculum Modules" used to sit here
+                    over an empty list — the topics were never populated — and
+                    the footer claimed "Prometric CBT Formats", which is not how
+                    NISM delivers these exams. */}
+                <div className="grid grid-cols-2 gap-2.5 mt-6 pt-6 border-t border-slate-150 dark:border-white/10">
+                  {[
+                    ['Duration', `${track.durationMinutes} min`],
+                    ['Questions', String(track.maxMarks)],
+                    ['Pass mark', `${track.passPercent}%`],
+                    ['Negative marking', track.negativeMarkPercent > 0 ? `${track.negativeMarkPercent}%` : 'None'],
+                  ].map(([label, value]) => (
+                    <div key={label} className="rounded-lg bg-slate-50 dark:bg-white/5 px-3 py-2">
+                      <div className="text-sm font-bold text-[#111B35] dark:text-white tabular-nums">{value}</div>
+                      <div className="text-[10px] uppercase tracking-wider text-[#475569] dark:text-[#94A3B8]">{label}</div>
                     </div>
                   ))}
                 </div>
               </div>
 
-              {/* Bottom Metrics & CTA */}
-              <div className="pt-6 border-t border-slate-150 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="tabular-nums text-xs text-[#334155]">
-                  <span className="block font-bold text-[#111B35]">{track.questionCount}</span>
-                  <span>Prometric CBT Formats</span>
-                </div>
-
+              <div className="pt-5">
                 <a
-                  href="#sandbox"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    document.getElementById('sandbox')?.scrollIntoView({ behavior: 'smooth' });
-                  }}
-                  className="group inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-white dark:bg-[#181A1F] transition-colors duration-300 hover:bg-[#282C36] text-[#111B35] dark:text-white font-semibold text-xs sm:text-sm transition-all shadow-sm"
+                  href="/exams"
+                  className="group w-full inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-[#111B35] font-bold text-sm transition-colors shadow-sm"
                 >
-                  <span>Try a sample question</span>
+                  <span>Buy Now</span>
                   <ArrowUpRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
                 </a>
               </div>

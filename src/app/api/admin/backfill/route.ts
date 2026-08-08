@@ -88,6 +88,30 @@ export async function POST(req: Request) {
           : FieldValue.serverTimestamp();
       }
 
+      // Entitlements bought before study notes were plan-gated carry a planId
+      // but no planTier. Firestore rules default a missing tier to the LOWEST,
+      // so without this a 60-day customer silently loses access to the premium
+      // workbook they paid for. Derived from the planId already on the record —
+      // never guessed.
+      //
+      // Applied with update() and NOT folded into `patch`: set({merge:true})
+      // treats "a.b.c" as a literal field name, so a dotted path there would
+      // create a junk top-level key instead of touching the nested value.
+      const tierPatch: Record<string, number> = {};
+      const enrolled = data.enrolledCourses;
+      if (enrolled && typeof enrolled === 'object') {
+        for (const [courseId, ent] of Object.entries<any>(enrolled)) {
+          if (ent?.planTier === undefined && ent?.planId) {
+            const tier = PLAN_PRICING[ent.planId]?.tier;
+            if (tier) tierPatch[`enrolledCourses.${courseId}.planTier`] = tier;
+          }
+        }
+      }
+      if (Object.keys(tierPatch).length > 0) {
+        changes.push({ type: 'planTier', id: doc.id, fields: Object.keys(tierPatch) });
+        if (!dryRun) await doc.ref.update(tierPatch);
+      }
+
       const email = data.email || patch.email;
       if (email) userEmailById.set(doc.id, email);
 

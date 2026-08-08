@@ -107,9 +107,6 @@ export default function DashboardPage() {
             <h1 className="text-3xl font-bold tracking-tight mb-2 text-[#111B35] dark:text-white">
               Welcome back, {user?.displayName?.split(' ')[0] || 'Student'}
             </h1>
-            <p className="font-medium text-[#475569] dark:text-[#94A3B8]">
-              Continue your preparation for global financial certifications.
-            </p>
           </div>
           <div className="flex items-center gap-3 self-start md:self-auto">
             <button
