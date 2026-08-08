@@ -35,6 +35,75 @@ export async function getCourse(courseId: string) {
   return { id: snap.id, ...snap.data() };
 }
 
+export interface CourseMaterial {
+  id: string;
+  name: string;
+  url: string;
+  /** Lowest plan tier that unlocks this note. 1 = every plan. */
+  minPlanTier: number;
+  order: number;
+}
+
+/**
+ * Study notes for a course.
+ *
+ * Held in a subcollection rather than on the course document, because the
+ * course document is publicly readable — the catalogue depends on that. A link
+ * to paid material cannot live there, or hiding a locked note in the UI would
+ * protect nothing. Firestore rules gate these by entitlement AND plan tier, so
+ * a 10-day candidate requesting a 60-day note is refused by the database, not
+ * merely by the interface.
+ *
+ * A permission error here is the rule doing its job, so it resolves to an empty
+ * list rather than throwing.
+ */
+export async function getCourseMaterials(courseId: string): Promise<CourseMaterial[]> {
+  try {
+    const snap = await getDocs(collection(db, `courses/${courseId}/materials`));
+    return snap.docs
+      .map((d) => ({ id: d.id, ...(d.data() as any) }))
+      .map((m) => ({ ...m, minPlanTier: m.minPlanTier ?? 1, order: m.order ?? 0 }))
+      .sort((a, b) => a.order - b.order);
+  } catch (err) {
+    console.warn('Study notes unavailable (likely not entitled):', err);
+    return [];
+  }
+}
+
+/** Replaces the whole set of study notes for a course. Admin only. */
+export async function saveCourseMaterials(
+  courseId: string,
+  materials: { id?: string; name: string; url: string; minPlanTier: number }[],
+) {
+  const existing = await getDocs(collection(db, `courses/${courseId}/materials`));
+  const batch = writeBatch(db);
+
+  // Anything removed in the editor must actually go, or a deleted note would
+  // linger in the subcollection and stay downloadable.
+  const keep = new Set(materials.map((m) => m.id).filter(Boolean));
+  existing.docs.forEach((d) => { if (!keep.has(d.id)) batch.delete(d.ref); });
+
+  materials.forEach((m, i) => {
+    const ref = m.id
+      ? doc(db, `courses/${courseId}/materials`, m.id)
+      : doc(collection(db, `courses/${courseId}/materials`));
+    batch.set(ref, {
+      name: m.name,
+      url: m.url,
+      minPlanTier: m.minPlanTier ?? 1,
+      order: i,
+      updatedAt: serverTimestamp(),
+    }, { merge: true });
+  });
+
+  await batch.commit();
+
+  // A public count so the storefront can say "2 study notes" without being able
+  // to read the notes themselves.
+  await updateDoc(doc(db, 'courses', courseId), { materialCount: materials.length })
+    .catch(() => {});
+}
+
 export async function getCourseChapters(courseId: string) {
   const q = query(
     collection(db, 'chapters'), 

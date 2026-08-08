@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect, use } from 'react';
 import { useRouter } from 'next-nprogress-bar';
-import { getCourse, updateCourse, getCourseTests, createMockTest } from '@/lib/firebase/db';
+import { getCourse, updateCourse, getCourseTests, createMockTest, getCourseMaterials, saveCourseMaterials } from '@/lib/firebase/db';
+import { PLAN_TIER_OPTIONS } from '@/constants/pricing';
 import { IN_SCOPE_PATTERNS, findExamPattern } from '@/constants/examPatterns';
 import { 
   ChevronLeft, Plus, Save, Settings, UploadCloud, FileText, 
@@ -35,7 +36,7 @@ export default function ExamBuilderPage({ params }: { params: Promise<{ id: stri
   const [saveSuccess, setSaveSuccess] = useState(false);
 
   // Materials state — flat list of {name, url}
-  const [materials, setMaterials] = useState<{ name: string; url: string }[]>([]);
+  const [materials, setMaterials] = useState<{ id?: string; name: string; url: string; minPlanTier: number }[]>([]);
 
   useEffect(() => {
     async function load() {
@@ -45,7 +46,14 @@ export default function ExamBuilderPage({ params }: { params: Promise<{ id: stri
           getCourseTests(courseId)
         ]);
         setExam(examData as any);
-        setMaterials((examData as any).materials || []);
+        // Study notes live in a subcollection now. Anything still on the
+        // course document is from before that move and is carried across on
+        // first save — it is not left behind.
+        const fromSubcollection = await getCourseMaterials(courseId);
+        const legacy = ((examData as any).materials || []).map((m: any) => ({
+          name: m.name ?? '', url: m.url ?? '', minPlanTier: 1,
+        }));
+        setMaterials(fromSubcollection.length > 0 ? fromSubcollection : legacy);
         setTests(testsData);
       } catch (err) {
         console.error(err);
@@ -66,8 +74,8 @@ export default function ExamBuilderPage({ params }: { params: Promise<{ id: stri
         // Links this course to an official NISM series, which is where the
         // storefront gets its duration, marks, pass mark and negative marking.
         nismSeries: exam.nismSeries || null,
-        materials: materials,
       });
+      await saveCourseMaterials(courseId, materials);
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 2500);
     } catch (err) {
@@ -78,10 +86,10 @@ export default function ExamBuilderPage({ params }: { params: Promise<{ id: stri
   };
 
   const addMaterial = () => {
-    setMaterials([...materials, { name: '', url: '' }]);
+    setMaterials([...materials, { name: '', url: '', minPlanTier: 1 }]);
   };
 
-  const updateMaterial = (index: number, field: 'name' | 'url', value: string) => {
+  const updateMaterial = (index: number, field: 'name' | 'url' | 'minPlanTier', value: string | number) => {
     const updated = [...materials];
     updated[index] = { ...updated[index], [field]: value };
     setMaterials(updated);
@@ -119,8 +127,8 @@ export default function ExamBuilderPage({ params }: { params: Promise<{ id: stri
         // Links this course to an official NISM series, which is where the
         // storefront gets its duration, marks, pass mark and negative marking.
         nismSeries: exam.nismSeries || null,
-        materials: materials,
       });
+      await saveCourseMaterials(courseId, materials);
       router.push(targetUrl);
     } catch (err) {
       console.error(err);
@@ -142,8 +150,8 @@ export default function ExamBuilderPage({ params }: { params: Promise<{ id: stri
         // Links this course to an official NISM series, which is where the
         // storefront gets its duration, marks, pass mark and negative marking.
         nismSeries: exam.nismSeries || null,
-        materials: materials,
       });
+      await saveCourseMaterials(courseId, materials);
 
       const testId = await createMockTest({
         title,
@@ -345,7 +353,7 @@ export default function ExamBuilderPage({ params }: { params: Promise<{ id: stri
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">PDF URL (Google Drive / S3 / Any)</label>
+                      <label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">File URL (Google Drive / S3 / any)</label>
                       <input
                         type="url"
                         value={mat.url}
@@ -353,6 +361,22 @@ export default function ExamBuilderPage({ params }: { params: Promise<{ id: stri
                         placeholder="https://drive.google.com/..."
                         className="w-full bg-slate-50 dark:bg-[#0B0C10] border border-slate-200 dark:border-[#282C36] rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-amber-500 font-mono transition-colors"
                       />
+                    </div>
+
+                    {/* Which plans unlock this note. Enforced by Firestore
+                        rules, not just hidden here — the document holding this
+                        link is unreadable to a candidate below the tier. */}
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Available on</label>
+                      <select
+                        value={mat.minPlanTier ?? 1}
+                        onChange={(e) => updateMaterial(idx, 'minPlanTier', Number(e.target.value))}
+                        className="w-full bg-slate-50 dark:bg-[#0B0C10] border border-slate-200 dark:border-[#282C36] rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-amber-500 transition-colors"
+                      >
+                        {PLAN_TIER_OPTIONS.map((o) => (
+                          <option key={o.tier} value={o.tier}>{o.label}</option>
+                        ))}
+                      </select>
                     </div>
                   </div>
                   <div className="flex items-center gap-1.5 mt-6 shrink-0">

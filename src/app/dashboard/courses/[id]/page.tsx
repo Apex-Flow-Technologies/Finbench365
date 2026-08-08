@@ -5,7 +5,7 @@ import { useRouter } from 'next-nprogress-bar';
 import { motion, AnimatePresence } from 'framer-motion';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { useAuth } from '@/context/AuthContext';
-import { getCourse, getCourseTests, getUserEntitlements, getTestAttemptsCount } from '@/lib/firebase/db';
+import { getCourse, getCourseTests, getUserEntitlements, getTestAttemptsCount, getCourseMaterials } from '@/lib/firebase/db';
 import { 
   BookOpen, PlayCircle, Loader2, ArrowLeft, Clock, 
   FileDown, AlertCircle, BookMarked, ClipboardList
@@ -56,7 +56,10 @@ export default function StudentExamPage({ params }: { params: Promise<{ id: stri
   const [activeTab, setActiveTab] = useState<'materials' | 'tests'>('materials');
   const [startingTestId, setStartingTestId] = useState<string | null>(null);
 
-  const materials = exam?.materials || [];
+  // Fetched from the protected subcollection, so what comes back is already
+  // filtered to this candidate's plan — a note above their tier is refused by
+  // Firestore, not merely hidden here.
+  const [materials, setMaterials] = useState<any[]>([]);
 
   useEffect(() => {
     async function loadData() {
@@ -99,6 +102,7 @@ export default function StudentExamPage({ params }: { params: Promise<{ id: stri
         ]);
 
         setExam(examData);
+        setMaterials(await getCourseMaterials(examId));
 
         // Filter to published tests (admins see all tests)
         const publishedTests = user.role === 'admin'

@@ -42,6 +42,7 @@ export default function AdminOrdersPage() {
   const [statusFilter, setStatusFilter] = useState<'all' | 'paid' | 'unpaid' | 'refunded'>('all');
   const [refundingId, setRefundingId] = useState<string | null>(null);
   const [confirmRefund, setConfirmRefund] = useState<Order | null>(null);
+  const [syncing, setSyncing] = useState(false);
 
   const handleReconcile = async () => {
     if (!auth.currentUser) return;
@@ -60,6 +61,62 @@ export default function AdminOrdersPage() {
       toast.error(err.message || 'Reconciliation failed');
     } finally {
       setReconciling(false);
+    }
+  };
+
+  /**
+   * Reconciles our orders against the refunds Razorpay actually holds.
+   *
+   * Refunds issued in the Razorpay dashboard never reached this system, so
+   * those orders still read as paid and the revenue figures counted money that
+   * had been given back. Runs as a dry run first and asks before writing.
+   */
+  const handleSyncRefunds = async () => {
+    if (!auth.currentUser) return;
+    setSyncing(true);
+    try {
+      const token = await auth.currentUser.getIdToken();
+      const post = (body: any) => fetch('/api/admin/sync-refunds', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(body),
+      }).then(async (r) => {
+        const d = await r.json();
+        if (!r.ok) throw new Error(d.error || 'Sync failed');
+        return d;
+      });
+
+      const preview = await post({ dryRun: true });
+
+      if (preview.willUpdate === 0) {
+        toast.success(
+          `Already up to date — ${preview.refundsAtGateway} refund(s) at Razorpay, all recorded.` +
+          (preview.unmatched?.length ? ` ${preview.unmatched.length} could not be matched to an order.` : ''),
+          { duration: 8000 },
+        );
+        return;
+      }
+
+      const ok = window.confirm(
+        [
+          `Razorpay holds ${preview.refundsAtGateway} refund(s).`,
+          `${preview.willUpdate} order(s) here still show as paid and will be marked refunded.`,
+          '',
+          'Lifetime spend is corrected for each. Course access is NOT withdrawn —',
+          'do that individually if needed.',
+          '',
+          'Apply now?',
+        ].join('\n'),
+      );
+      if (!ok) return;
+
+      const result = await post({ dryRun: false, revokeAccess: false });
+      toast.success(`${result.ordersUpdated} order(s) marked refunded.`, { duration: 8000 });
+      await reload();
+    } catch (err: any) {
+      toast.error(err.message, { duration: 9000 });
+    } finally {
+      setSyncing(false);
     }
   };
 
@@ -243,6 +300,15 @@ export default function AdminOrdersPage() {
           >
             <RefreshCw className={`w-4 h-4 ${reconciling ? 'animate-spin' : ''}`} />
             {reconciling ? 'Reconciling…' : 'Reconcile Stuck Orders'}
+          </button>
+          <button
+            onClick={handleSyncRefunds}
+            disabled={syncing}
+            title="Finds refunds issued in the Razorpay dashboard and records them here"
+            className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/30 disabled:opacity-50 transition-colors whitespace-nowrap"
+          >
+            <RotateCcw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} />
+            {syncing ? 'Syncing…' : 'Sync Refunds'}
           </button>
           <div className="relative w-full sm:w-72">
           <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />

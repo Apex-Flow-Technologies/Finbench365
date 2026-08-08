@@ -57,10 +57,40 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    // The plan tier a caller holds for a course. 0 when not enrolled.
+    //
+    // Written onto the entitlement at purchase (see grantEntitlement). Rules
+    // cannot look a plan id up in a table, so the tier is stored as a number and
+    // compared directly. Entitlements granted before this field existed default
+    // to the lowest tier rather than the highest — a missing value must not hand
+    // out premium material.
+    function planTierFor(courseId) {
+      let user = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+      return user.get('enrolledCourses', {}).get(courseId, {}).get('planTier', 1);
+    }
+
     // Courses Collection
     match /courses/{courseId} {
-      allow read: if true; // Public can read published courses
+      // The catalogue is public so the storefront can list what is on sale.
+      // It carries titles, descriptions and counts — never a link to paid
+      // material. Those live in the subcollection below.
+      allow read: if true;
       allow write: if isAdmin();
+
+      // Study notes. Each carries the minimum plan tier that unlocks it, which
+      // is what keeps the Excel workbook and metrics tracker exclusive to the
+      // 60-day plan.
+      //
+      // These documents hold the actual file links, and this rule is the only
+      // thing protecting them. Hiding a locked note in the UI while leaving its
+      // URL on the publicly readable course document would protect nothing —
+      // anyone could read the course and follow the link.
+      match /materials/{materialId} {
+        allow read: if isAdmin() ||
+          (isEnrolledInCourse(courseId)
+           && planTierFor(courseId) >= resource.data.get('minPlanTier', 1));
+        allow write: if isAdmin();
+      }
     }
     
     // Chapters Collection

@@ -83,6 +83,10 @@ export async function grantEntitlementIdempotent(params: GrantParams): Promise<G
           enrolledAt: FieldValue.serverTimestamp(),
           durationDays: days,
           planId,
+          // Written alongside planId because Firestore rules cannot look a plan
+          // up in a table — gating a study note on "60-day plan only" comes down
+          // to comparing this number against the note's minimum tier.
+          planTier: planData.tier,
           paymentId,
         },
       },
