@@ -7,6 +7,7 @@ import { parseDocxText } from '@/lib/parser';
 import { UploadCloud, CheckCircle2, AlertCircle, Save, Plus, ChevronDown, ChevronUp, Trash2, ArrowLeft, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { IN_SCOPE_PATTERNS, findExamPattern } from '@/constants/examPatterns';
+import { CasePanel } from '@/components/exam/CasePanel';
 
 export default function TestBuilderPage({ params }: { params: Promise<{ id: string }> }) {
   return (
@@ -196,6 +197,19 @@ function TestBuilderContent({ params }: { params: Promise<{ id: string }> }) {
     const updated = [...questions];
     updated[index] = { ...updated[index], [field]: value };
     setQuestions(updated);
+  };
+
+  /**
+   * Edits a field on every question in a case at once.
+   *
+   * The scenario belongs to the case, not to any one question — editing it on
+   * question 81 and leaving 82-84 with the old text would show four candidates
+   * four different versions of the same case.
+   */
+  const updateCase = (caseId: string, field: 'casePassage' | 'caseTitle', value: string) => {
+    setQuestions((prev) => prev.map((q: any) =>
+      q.caseId === caseId ? { ...q, [field]: value } : q,
+    ));
   };
 
   const updateOption = (qIndex: number, optIndex: number, value: string) => {
@@ -653,6 +667,57 @@ function TestBuilderContent({ params }: { params: Promise<{ id: string }> }) {
                   <Trash2 className="w-4 h-4" /> Delete
                 </button>
               </div>
+
+              {/* Case scenario.
+                  The passage is edited as text with a live preview of how it
+                  will be split into cards, rather than through a structured
+                  form. Imports arrive as one unbroken run from Word, so what an
+                  author needs is to see where the automatic split went wrong and
+                  correct it — adding a line break is enough, and the preview
+                  shows the result immediately. Editing here updates every
+                  question in the case, since they share one scenario. */}
+              {questions[activeQuestion].caseId && (
+                <div className="space-y-2 border border-amber-500/25 bg-amber-500/[0.05] rounded-2xl p-5">
+                  <div className="flex items-center justify-between gap-3">
+                    <label className="text-xs font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider">
+                      Case scenario · {questions[activeQuestion].caseTitle || questions[activeQuestion].caseId}
+                    </label>
+                    <span className="text-[11px] text-slate-500">
+                      shared by {questions.filter((q: any) => q.caseId === questions[activeQuestion].caseId).length} questions
+                    </span>
+                  </div>
+
+                  <input
+                    value={questions[activeQuestion].caseTitle || ''}
+                    onChange={(e) => updateCase(questions[activeQuestion].caseId, 'caseTitle', e.target.value)}
+                    placeholder="Case title, e.g. Integrated financial analysis"
+                    className="w-full bg-white dark:bg-[#121419] border border-slate-200 dark:border-[#282C36] rounded-xl px-4 py-2.5 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-amber-500"
+                  />
+
+                  <textarea
+                    value={questions[activeQuestion].casePassage || ''}
+                    onChange={(e) => updateCase(questions[activeQuestion].caseId, 'casePassage', e.target.value)}
+                    className="w-full h-40 bg-white dark:bg-[#121419] border border-slate-200 dark:border-[#282C36] rounded-xl p-4 text-slate-900 dark:text-white focus:outline-none focus:border-amber-500 resize-y text-sm"
+                    placeholder="The scenario the candidate reads before answering…"
+                  />
+
+                  <div>
+                    <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">
+                      Preview — how candidates will see it
+                    </div>
+                    <div className="rounded-xl bg-slate-900 p-3">
+                      <CasePanel
+                        passage={questions[activeQuestion].casePassage || ''}
+                        title={questions[activeQuestion].caseTitle}
+                      />
+                    </div>
+                    <p className="text-[11px] text-slate-500 mt-1.5 leading-relaxed">
+                      Sections are detected from headings ending in a colon. If something is
+                      grouped wrongly, put it on its own line — your line breaks are always kept.
+                    </p>
+                  </div>
+                </div>
+              )}
 
               {/* Question Text */}
               <div className="space-y-2">

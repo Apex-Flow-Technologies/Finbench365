@@ -20,6 +20,7 @@ import { LoadingButton } from '@/components/ui/LoadingButton';
 import { orderQuestionsForAttempt } from '@/lib/exams/shuffle';
 import { Calculator } from '@/components/exam/Calculator';
 import { ExplanationBody } from '@/components/exam/ExplanationBody';
+import { CasePanel, CaseQuestionTabs } from '@/components/exam/CasePanel';
 
 export default function ExamPage({ params }: { params: Promise<{ id: string }> }) {
   const unwrappedParams = use(params);
@@ -108,6 +109,20 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
     () => orderQuestionsForAttempt(questions, attemptId, test?.randomiseQuestions),
     [questions, attemptId, test?.randomiseQuestions],
   );
+
+  /**
+   * The other questions belonging to the same case as the current one.
+   *
+   * Computed against the ORDERED paper so the tab positions match what the
+   * candidate is actually navigating. Empty for a standalone Section A question.
+   */
+  const caseSiblings = useMemo(() => {
+    const caseId = orderedQuestions[currentQuestionIndex]?.caseId;
+    if (!caseId) return [];
+    return orderedQuestions
+      .map((q: any, i: number) => ({ id: q.id, caseId: q.caseId, paperIndex: i }))
+      .filter((q) => q.caseId === caseId);
+  }, [orderedQuestions, currentQuestionIndex]);
 
   // Mark current question as visited when index changes
   useEffect(() => {
@@ -1026,25 +1041,22 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
                 )}
               </div>
 
-              {/* Case scenario for a Section B question. Collapsible, because
-                  the passages run long and four questions share one — a
-                  candidate needs it open while reading the question, then out
-                  of the way. Defaults open on the first question of a case. */}
+              {/* Case scenario. Laid out as cards rather than a paragraph:
+                  four questions share this passage and a candidate scans it for
+                  a figure rather than reading it through. */}
               {currentQuestion.casePassage && (
-                <details
-                  open
-                  className="rounded-xl border border-amber-500/25 bg-amber-500/[0.06] overflow-hidden group"
-                >
-                  <summary className="cursor-pointer list-none px-4 py-3 flex items-center justify-between gap-3 hover:bg-amber-500/10 transition-colors">
-                    <span className="text-xs font-bold uppercase tracking-wider text-amber-400">
-                      Case scenario{currentQuestion.caseTitle ? ` · ${currentQuestion.caseTitle}` : ''}
-                    </span>
-                    <ChevronRight className="w-4 h-4 text-amber-400 transition-transform group-open:rotate-90 shrink-0" />
-                  </summary>
-                  <div className="px-4 pb-4 pt-1 text-sm text-slate-300 leading-relaxed whitespace-pre-line border-t border-amber-500/15">
-                    {currentQuestion.casePassage}
-                  </div>
-                </details>
+                <div className="space-y-3">
+                  <CasePanel
+                    passage={currentQuestion.casePassage}
+                    title={currentQuestion.caseTitle}
+                  />
+                  <CaseQuestionTabs
+                    questions={caseSiblings}
+                    currentIndex={currentQuestionIndex}
+                    answers={answers}
+                    onSelect={setCurrentQuestionIndex}
+                  />
+                </div>
               )}
 
               <div className="text-base text-white leading-relaxed font-medium">
