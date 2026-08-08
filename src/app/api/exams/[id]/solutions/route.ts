@@ -19,10 +19,28 @@ export async function GET(
       return NextResponse.json({ error: check.error, reason: check.reason }, { status: check.status });
     }
 
-    // Only practice tests ever release their answer key to the browser;
-    // certification exams are graded server-side and never expose solutions.
-    if (check.testData.type !== 'practice') {
-      return NextResponse.json({ error: 'Solutions not available for exam mode' }, { status: 403 });
+    // Practice tests release their answer key so the candidate gets instant
+    // feedback while working through them.
+    //
+    // A certification exam releases it only AFTER the candidate has actually
+    // finished one — reviewing what you got wrong is the point of sitting a
+    // mock, and previously the exam ended at a bare score with no way to learn
+    // from it. The completed-attempt check is what keeps this safe: the key
+    // cannot be fetched before or during an attempt, only afterwards.
+    if (check.testData.type !== 'practice' && !check.isStaff) {
+      const completed = await adminDb.collection('test_attempts')
+        .where('userId', '==', check.uid)
+        .where('testId', '==', testId)
+        .where('status', '==', 'completed')
+        .limit(1)
+        .get();
+
+      if (completed.empty) {
+        return NextResponse.json(
+          { error: 'Answers are available once you have submitted this exam.', reason: 'not-attempted' },
+          { status: 403 },
+        );
+      }
     }
 
     const solutionsSnap = await adminDb

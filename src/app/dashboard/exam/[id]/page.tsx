@@ -19,6 +19,7 @@ import { AdminPreviewBanner } from '@/components/AdminPreviewBanner';
 import { LoadingButton } from '@/components/ui/LoadingButton';
 import { orderQuestionsForAttempt } from '@/lib/exams/shuffle';
 import { Calculator } from '@/components/exam/Calculator';
+import { ExplanationBody } from '@/components/exam/ExplanationBody';
 
 export default function ExamPage({ params }: { params: Promise<{ id: string }> }) {
   const unwrappedParams = use(params);
@@ -82,7 +83,18 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
   // Set by the anti-cheat effect, called by its overlay button. See the note at
   // the assignment for why this is not on `window`.
   const clearWarningRef = useRef<(() => void) | null>(null);
+  // Set the instant submission begins, so the anti-cheat watcher stops treating
+  // our own teardown (leaving fullscreen, the confirm dialog stealing focus) as
+  // a violation. Must be a ref: state would not be visible to the already-
+  // registered listeners until after the next render.
+  const examEndedRef = useRef(false);
   const [showCalculator, setShowCalculator] = useState(false);
+  // Answer review, fetched on demand after submitting. Not loaded up front:
+  // for a certification exam the answer key must not be in the browser until
+  // the attempt is finished.
+  const [review, setReview] = useState<Record<string, any> | null>(null);
+  const [reviewLoading, setReviewLoading] = useState(false);
+  const [reviewError, setReviewError] = useState('');
 
   /**
    * The paper as this candidate sees it.
@@ -264,6 +276,18 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
     let isCurrentlyWarning = false; // Prevent double-triggering strikes
 
     const triggerWarning = () => {
+      // The exam is over — anything that looks like a violation from here on is
+      // us, not the candidate.
+      //
+      // Submitting calls document.exitFullscreen(), which fires
+      // `fullscreenchange`, which this very listener read as "the candidate
+      // escaped fullscreen" and charged them a strike. `setStatus('completed')`
+      // runs first, but React state is asynchronous, so this effect had not been
+      // torn down yet when the event arrived. A candidate who answered all 100
+      // questions and pressed Submit was shown an anti-cheat warning on their
+      // way out. A ref is used rather than state precisely because it updates
+      // synchronously.
+      if (examEndedRef.current) return;
       if (isCurrentlyWarning) return;
       isCurrentlyWarning = true;
       
@@ -458,15 +482,26 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
   };
 
   const handleManualSubmit = async () => {
-    if (window.confirm("Are you sure you want to submit your exam? You cannot change your answers after submission.")) {
-      await performSubmit();
+    // The confirm dialog takes focus away from the page, which some browsers
+    // report as a visibility change — another way the candidate was charged a
+    // strike for doing nothing wrong. Suppressed across the dialog and restored
+    // if they decide not to submit after all.
+    examEndedRef.current = true;
+    const confirmed = window.confirm(
+      "Are you sure you want to submit your exam? You cannot change your answers after submission."
+    );
+    if (!confirmed) {
+      examEndedRef.current = false;
+      return;
     }
+    await performSubmit();
   };
 
   const performSubmit = async () => {
     if (!attemptId || !user) return;
     if (submitInFlightRef.current) return;
     submitInFlightRef.current = true;
+    examEndedRef.current = true;
     setIsSubmitting(true);
     try {
       // Every attempt — practice included — is graded server-side against the
@@ -532,11 +567,39 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
     autoSubmitRef.current = handleAutoSubmit;
   });
 
-  /** Countdown clock — always mm:ss, since the timer never exceeds one exam. */
+  const loadReview = async () => {
+    if (!user || review) { return; }
+    setReviewLoading(true);
+    setReviewError('');
+    try {
+      const token = await user.getIdToken();
+      const res = await fetch(`/api/exams/${testId}/solutions`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Could not load the answers.');
+      setReview(data.solutions ?? {});
+    } catch (err: any) {
+      setReviewError(err.message);
+    } finally {
+      setReviewLoading(false);
+    }
+  };
+
+  /**
+   * Countdown clock, as h:mm:ss.
+   *
+   * It used to read mm:ss, so a 3-hour paper began at "180:00" — a number that
+   * tells a candidate nothing about how long they have left in the terms they
+   * actually think in.
+   */
   const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    const total = Math.max(0, seconds);
+    const h = Math.floor(total / 3600);
+    const m = Math.floor((total % 3600) / 60);
+    const s = total % 60;
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    return `${h}:${pad(m)}:${pad(s)}`;
   };
 
   /** Elapsed time on the results screen, which can run past an hour. */
@@ -718,19 +781,103 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
                   <Clock className="w-3.5 h-3.5" />
                   <span>
                     Time taken {formatDuration(result.timeTakenMs)}
-                    {test?.durationMinutes ? ` of ${test.durationMinutes}:00 allowed` : ''}
+                    {test?.durationMinutes ? ` of ${formatDuration(test.durationMinutes * 60000)} allowed` : ''}
                   </span>
                 </div>
               )}
             </div>
           )}
 
-          <button
-            onClick={() => router.push('/dashboard')}
-            className="px-8 py-3 rounded-xl bg-amber-500 text-slate-950 font-bold shadow-lg hover:bg-amber-400 transition-colors"
-          >
-            Return to Dashboard
-          </button>
+          <div className="flex flex-col sm:flex-row gap-3">
+            {/* A mock exists to be learnt from. Finishing at a bare score gave a
+                candidate no way to find out what they got wrong. */}
+            <button
+              onClick={loadReview}
+              disabled={reviewLoading}
+              className="px-8 py-3 rounded-xl bg-amber-500 text-slate-950 font-bold shadow-lg hover:bg-amber-400 transition-colors disabled:opacity-60"
+            >
+              {reviewLoading ? 'Loading answers…' : 'Review answers'}
+            </button>
+            <button
+              onClick={() => router.push('/dashboard')}
+              className="px-8 py-3 rounded-xl bg-slate-200 dark:bg-[#272B33] text-slate-800 dark:text-white font-bold hover:bg-slate-300 dark:hover:bg-[#343942] transition-colors"
+            >
+              Return to Dashboard
+            </button>
+          </div>
+
+          {reviewError && (
+            <p className="mt-4 text-sm text-rose-500">{reviewError}</p>
+          )}
+
+          {review && (
+            <div className="w-full max-w-3xl mt-10 space-y-4 text-left">
+              <h3 className="text-lg font-bold text-[#111B35] dark:text-white">
+                Answer review
+              </h3>
+              {orderedQuestions.map((q: any, i: number) => {
+                const sol = review[q.id];
+                if (!sol) return null;
+                const chosen = answers[q.id];
+                const correct = sol.correctOptionIndex;
+                const gotIt = chosen === correct;
+                const skipped = chosen === undefined || chosen === null;
+
+                return (
+                  <div
+                    key={q.id}
+                    className="rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#181A1F] p-5"
+                  >
+                    <div className="flex items-start justify-between gap-3 mb-2">
+                      <span className="text-xs font-bold text-[#475569] dark:text-[#94A3B8]">
+                        Question {i + 1}
+                      </span>
+                      <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                        skipped ? 'bg-slate-500/10 text-slate-500'
+                          : gotIt ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                          : 'bg-rose-500/10 text-rose-600 dark:text-rose-400'
+                      }`}>
+                        {skipped ? 'Not attempted' : gotIt ? 'Correct' : 'Incorrect'}
+                      </span>
+                    </div>
+
+                    <p className="text-sm text-[#111B35] dark:text-white font-medium mb-3">{q.text}</p>
+
+                    <div className="space-y-1.5 mb-3">
+                      {q.options?.map((opt: string, oi: number) => (
+                        <div
+                          key={oi}
+                          className={`text-sm px-3 py-2 rounded-lg border ${
+                            oi === correct
+                              ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 font-semibold'
+                              : oi === chosen
+                              ? 'border-rose-500/40 bg-rose-500/10 text-rose-700 dark:text-rose-300'
+                              : 'border-slate-200 dark:border-white/10 text-[#475569] dark:text-[#94A3B8]'
+                          }`}
+                        >
+                          {String.fromCharCode(65 + oi)}. {opt}
+                          {oi === correct && <span className="ml-2 text-xs">← correct answer</span>}
+                          {oi === chosen && oi !== correct && <span className="ml-2 text-xs">← your answer</span>}
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Only the correct option is explained. Walking a candidate
+                        through why each distractor fails was asked to be removed —
+                        the reasoning that matters is for the right answer. */}
+                    {sol.explanation && (
+                      <div className="rounded-lg bg-slate-50 dark:bg-[#0B0C10] border border-slate-200 dark:border-white/10 p-3">
+                        <div className="text-xs font-bold text-[#475569] dark:text-[#94A3B8] mb-1">
+                          Explanation
+                        </div>
+                        <ExplanationBody text={sol.explanation} />
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       </ProtectedRoute>
     );
@@ -953,10 +1100,12 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
               </div>
 
               {/* Instant feedback, practice mode only.
-                  Shows the reasoning for EVERY option, not just the correct
-                  one — a candidate learns as much from why the three
-                  distractors fail as from why one answer works, which is why
-                  the source documents carry an explanation per option. */}
+                  Shows the reasoning for the CORRECT option only. Explaining
+                  every distractor was tried and removed at the client's
+                  request: a candidate who picks B wants to know why A is right,
+                  not a walkthrough of why B, C and D are each wrong. The
+                  per-option text is still captured on import, so this is a
+                  display decision and can be reversed without re-importing. */}
               {test?.type === 'practice' && answers[currentQuestion.id] !== undefined && (
                 <div className="mt-6 p-5 rounded-xl bg-slate-800/50 border border-slate-700 animate-in fade-in slide-in-from-bottom-2 space-y-3">
                   <div className="flex items-center gap-2">
@@ -970,37 +1119,21 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
                     </h3>
                   </div>
 
-                  {Array.isArray(currentQuestion.optionExplanations)
-                    && currentQuestion.optionExplanations.some((e: string) => e) ? (
-                    <ul className="space-y-2.5">
-                      {currentQuestion.options?.map((opt: string, i: number) => {
-                        const reason = currentQuestion.optionExplanations[i];
-                        if (!reason) return null;
-                        const isCorrect = i === currentQuestion.correctOptionIndex;
-                        const wasChosen = answers[currentQuestion.id] === i;
-                        return (
-                          <li key={i} className="flex gap-2.5 text-sm">
-                            <span
-                              className={`shrink-0 w-6 h-6 rounded flex items-center justify-center text-xs font-bold ${
-                                isCorrect ? 'bg-emerald-500 text-slate-950' : 'bg-slate-700 text-slate-300'
-                              }`}
-                            >
-                              {String.fromCharCode(65 + i)}
-                            </span>
-                            <div className="flex-1">
-                              <span className={isCorrect ? 'text-emerald-400 font-semibold' : 'text-slate-400'}>
-                                {isCorrect ? 'Correct' : 'Incorrect'}
-                                {wasChosen && !isCorrect && ' — you chose this'}
-                              </span>
-                              <p className="text-[#94A3B8] leading-relaxed mt-0.5">{reason}</p>
-                            </div>
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  ) : currentQuestion.explanation ? (
-                    <p className="text-sm text-[#94A3B8] leading-relaxed">{currentQuestion.explanation}</p>
-                  ) : null}
+                  {answers[currentQuestion.id] !== currentQuestion.correctOptionIndex
+                    && currentQuestion.options?.[currentQuestion.correctOptionIndex] && (
+                    <p className="text-sm text-emerald-400 font-semibold">
+                      Correct answer: {String.fromCharCode(65 + currentQuestion.correctOptionIndex)}.{' '}
+                      {currentQuestion.options[currentQuestion.correctOptionIndex]}
+                    </p>
+                  )}
+
+                  {(currentQuestion.optionExplanations?.[currentQuestion.correctOptionIndex]
+                    || currentQuestion.explanation) && (
+                    <ExplanationBody
+                      text={currentQuestion.optionExplanations?.[currentQuestion.correctOptionIndex]
+                        || currentQuestion.explanation}
+                    />
+                  )}
                 </div>
               )}
 
