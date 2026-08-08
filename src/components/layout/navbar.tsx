@@ -78,7 +78,7 @@ export function Navbar() {
           onClick={(e) => scrollToSection(e, 'hero')}
           className="flex items-center gap-2.5 group focus:outline-none"
         >
-          <Logo className="h-9 sm:h-10" priority />
+          <Logo className="h-8 sm:h-9" priority withWordmark />
           <span className="sr-only">MyExams365 by MentraEdge</span>
         </a>
 

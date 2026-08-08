@@ -3,7 +3,9 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next-nprogress-bar';
 import { motion } from 'framer-motion';
-import { getCourses, createCourse, deleteCourse } from '@/lib/firebase/db';
+import { getCourses, createCourse } from '@/lib/firebase/db';
+import { auth } from '@/lib/firebase/config';
+import toast from 'react-hot-toast';
 import { Plus, ClipboardList, Loader2, BookOpen, Trash2 } from 'lucide-react';
 
 // Skeleton card for loading
@@ -27,6 +29,9 @@ export default function EditorDashboard() {
   const [exams, setExams] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
+  const [checkingImpact, setCheckingImpact] = useState<string | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<{ id: string; title: string; impact: any } | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -61,16 +66,63 @@ export default function EditorDashboard() {
     }
   };
 
+  /**
+   * Step 1 of deleting an exam: find out what it would destroy.
+   *
+   * Deleting used to remove only the course document, leaving every enrolled
+   * candidate holding an entitlement to something that no longer existed — their
+   * dashboard kept showing the exam as a card reading "Course no longer
+   * available". The tests, questions and answer keys were orphaned too.
+   *
+   * The impact is fetched before anything is confirmed, so nobody withdraws a
+   * course from under people who have paid for it without seeing that first.
+   */
   const handleDeleteExam = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (window.confirm('Are you sure you want to delete this exam? This action cannot be undone.')) {
-      try {
-        await deleteCourse(id);
-        setExams(exams.filter(exam => exam.id !== id));
-      } catch (error) {
-        console.error("Error deleting exam:", error);
-        alert('Failed to delete exam.');
-      }
+    if (!auth.currentUser) return;
+    setCheckingImpact(id);
+    try {
+      const token = await auth.currentUser.getIdToken();
+      const res = await fetch('/api/admin/delete-course', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ courseId: id, dryRun: true }),
+      });
+      const impact = await res.json();
+      if (!res.ok) throw new Error(impact.error || 'Could not check the exam.');
+      setPendingDelete({ id, title: exams.find((x) => x.id === id)?.title ?? 'this exam', impact });
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setCheckingImpact(null);
+    }
+  };
+
+  /** Step 2: actually delete, once the impact has been seen and accepted. */
+  const confirmDeleteExam = async () => {
+    if (!pendingDelete || !auth.currentUser) return;
+    setIsDeleting(true);
+    try {
+      const token = await auth.currentUser.getIdToken();
+      const res = await fetch('/api/admin/delete-course', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ courseId: pendingDelete.id, dryRun: false }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Delete failed.');
+      setExams(exams.filter((x) => x.id !== pendingDelete.id));
+      toast.success(
+        `Deleted. ${data.entitlementsRemoved} student enrolment(s) removed, ` +
+        `${data.testsDeleted} mock test(s) and ${data.questionsDeleted} question(s) cleared. ` +
+        `Payment records kept.`,
+        { duration: 9000 },
+      );
+      setPendingDelete(null);
+    } catch (err: any) {
+      toast.error(err.message, { duration: 9000 });
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -149,10 +201,13 @@ export default function EditorDashboard() {
                   <div className="flex items-center gap-2">
                     <button
                       onClick={(e) => handleDeleteExam(exam.id, e)}
-                      className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-colors"
+                      disabled={checkingImpact === exam.id}
+                      className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-colors disabled:opacity-50"
                       title="Delete Exam"
                     >
-                      <Trash2 className="w-4 h-4" />
+                      {checkingImpact === exam.id
+                        ? <Loader2 className="w-4 h-4 animate-spin" />
+                        : <Trash2 className="w-4 h-4" />}
                     </button>
                     <span className={`px-3 py-1 rounded-full text-xs font-bold ${
                       exam.isPublished
@@ -191,6 +246,67 @@ export default function EditorDashboard() {
           })
         )}
       </div>
+
+      {pendingDelete && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/60 backdrop-blur-sm"
+          onClick={() => !isDeleting && setPendingDelete(null)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-lg rounded-2xl bg-white dark:bg-[#181A1F] border border-slate-200 dark:border-white/10 p-6 shadow-2xl"
+          >
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white">
+              Delete “{pendingDelete.title}”?
+            </h3>
+
+            {pendingDelete.impact.enrolledActive > 0 ? (
+              <div className="mt-3 p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/25">
+                <p className="text-sm font-bold text-rose-600 dark:text-rose-400">
+                  {pendingDelete.impact.enrolledActive} student
+                  {pendingDelete.impact.enrolledActive === 1 ? '' : 's'} currently have paid, active access.
+                </p>
+                <p className="text-xs text-rose-600/90 dark:text-rose-300/90 mt-1.5 leading-relaxed">
+                  Deleting removes their access immediately. Consider unpublishing the exam instead,
+                  or refunding them first.
+                </p>
+                {pendingDelete.impact.activeEmails?.length > 0 && (
+                  <p className="text-[11px] text-rose-600/80 dark:text-rose-300/80 mt-2 break-all">
+                    {pendingDelete.impact.activeEmails.join(', ')}
+                  </p>
+                )}
+              </div>
+            ) : (
+              <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">
+                No student currently has active access to this exam.
+              </p>
+            )}
+
+            <ul className="mt-4 space-y-1 text-sm text-slate-600 dark:text-slate-300">
+              <li>· {pendingDelete.impact.mockTests} mock test(s), with their questions and answer keys</li>
+              <li>· {pendingDelete.impact.enrolledTotal} enrolment record(s), including expired ones</li>
+              <li>· Payment records are <strong>kept</strong> — they are your financial record</li>
+            </ul>
+
+            <div className="flex flex-col-reverse sm:flex-row gap-2.5 mt-6">
+              <button
+                onClick={() => setPendingDelete(null)}
+                disabled={isDeleting}
+                className="flex-1 px-4 py-2.5 rounded-xl font-bold text-sm bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-white/10 dark:hover:bg-white/20 dark:text-white transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDeleteExam}
+                disabled={isDeleting}
+                className="flex-1 px-4 py-2.5 rounded-xl font-bold text-sm bg-rose-500 hover:bg-rose-400 text-white transition-colors disabled:opacity-50"
+              >
+                {isDeleting ? 'Deleting…' : 'Delete permanently'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

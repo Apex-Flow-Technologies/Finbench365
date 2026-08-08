@@ -28,7 +28,7 @@ const FAQ_ITEMS: FaqItem[] = [
   {
     category: 'Exam Coverage',
     question: 'Which exams does MyExams365 currently support?',
-    answer: "Right now, MyExams365 offers mock tests and study material for Mutual Fund Distributors (V-A), Mutual Fund Foundation (V-B), Mutual Fund – Specialized Investment Fund Distributors (V-D), Research Analyst (XV), Securities Markets Foundation (XII), and Equity Derivatives (VIII). We're actively expanding to cover more NISM certifications, as well as other non-NISM finance exams in India.",
+    answer: "For now, MyExams365 is solely focused on NISM certifications. We're actively working on expanding to more NISM exams as well as other Non-NISM Finance exams in India — so, stay tuned for updates!",
   },
   {
     category: 'Exam Blueprint Accuracy',

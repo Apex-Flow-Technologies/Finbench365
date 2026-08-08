@@ -14,13 +14,19 @@ import Image from 'next/image';
 export function Logo({
   className = 'h-8',
   priority = false,
+  withWordmark = false,
 }: {
   /** Height utility; width follows the aspect ratio. */
   className?: string;
   priority?: boolean;
+  /**
+   * Prints "MyExams365" beneath the mark. The mark alone reads as "ME 365",
+   * which does not tell a first-time visitor what the product is called.
+   */
+  withWordmark?: boolean;
 }) {
   const common = `w-auto ${className}`;
-  return (
+  const mark = (
     <>
       <Image
         src="/logo.png"
@@ -40,5 +46,16 @@ export function Logo({
         className={`${common} hidden dark:block`}
       />
     </>
+  );
+
+  if (!withWordmark) return mark;
+
+  return (
+    <span className="inline-flex flex-col items-start leading-none">
+      {mark}
+      <span className="mt-1 text-[11px] sm:text-xs font-semibold tracking-[0.12em] uppercase text-[#111B35] dark:text-[#E2E8F0]">
+        MyExams<span className="text-emerald-600 dark:text-emerald-400">365</span>
+      </span>
+    </span>
   );
 }

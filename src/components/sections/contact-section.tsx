@@ -8,7 +8,7 @@ export function ContactSection() {
         <div className="text-center mb-16 max-w-2xl mx-auto">
           <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-4 text-[#111B35] dark:text-white transition-colors">Get in Touch</h2>
           <p className="text-[#334155] dark:text-[#94A3B8] text-lg transition-colors">
-            Connect with our designated partner today.
+            Questions about a plan, your access, or an invoice? Reach out and we will get back to you.
           </p>
         </div>
 

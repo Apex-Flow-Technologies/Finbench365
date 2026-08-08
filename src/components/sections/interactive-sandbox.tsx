@@ -56,14 +56,13 @@ export function InteractiveSandbox() {
         <div className="text-center max-w-3xl mx-auto mb-12 space-y-4">
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-200/80 dark:bg-slate-800/80 border border-slate-300/80 dark:border-slate-700 text-[#111B35] dark:text-amber-400 tabular-nums text-xs font-semibold uppercase tracking-wider">
             <Target className="w-3.5 h-3.5 text-amber-700 dark:text-amber-400" />
-            <span>3D Spiral Interactive Deck</span>
+            <span>Sample question</span>
           </div>
           <h2 className="text-3xl sm:text-4xl md:text-5xl font-semibold tracking-tight text-[#111B35] dark:text-white leading-[1.16]">
-            Experience Institutional Fidelity. <br />
-            Test the Diagnostic Sandbox.
+            Try it before you buy it.
           </h2>
           <p className="text-[#334155] dark:text-[#E2E8F0] text-base md:text-lg leading-relaxed max-w-2xl mx-auto">
-            Spin the spiral carousel from left to right. Click any option on the center viewing card to test real-time formula derivations and Two-Parameter Logistic (2PL) distractor deconstruction.
+            Scroll through a real mock question, click to attempt it, and see the full explanation instantly, so exam day feels familiar, not foreign.
           </p>
         </div>
 

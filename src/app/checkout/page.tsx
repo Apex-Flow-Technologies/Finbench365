@@ -713,7 +713,7 @@ function CheckoutContent() {
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <span className="text-[10px] tabular-nums font-bold uppercase tracking-wider text-amber-500 block mb-1">
-                      Target Curriculum
+                      Exam Selected
                     </span>
                     <h3 className="font-bold text-base leading-snug text-slate-900 dark:text-white">
                       {course ? course.title : 'Loading Course Details...'}

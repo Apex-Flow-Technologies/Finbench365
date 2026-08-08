@@ -13,7 +13,7 @@ export default function ContactPage() {
         
         <div className="text-center mb-16">
           <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-4 text-[#111B35] dark:text-white transition-colors">Get in Touch</h1>
-          <p className="text-[#334155] dark:text-[#94A3B8] text-lg transition-colors">Connect with our designated partner today.</p>
+          <p className="text-[#334155] dark:text-[#94A3B8] text-lg transition-colors">Questions about a plan, your access, or an invoice? Reach out and we will get back to you.</p>
         </div>
 
         {/* Each card's href and its visible text are generated from one value.

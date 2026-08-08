@@ -61,11 +61,10 @@ export function ExamTracks() {
         <div className="max-w-3xl mx-auto text-center mb-16 space-y-4">
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-300/60 border border-slate-400/60 text-[#111B35] tabular-nums text-xs font-semibold uppercase tracking-wider">
             <Layers className="w-3.5 h-3.5 text-amber-700" />
-            <span>Curriculum Engineering</span>
+            <span>NISM certifications</span>
           </div>
           <h2 className="text-3xl sm:text-4xl md:text-5xl font-semibold tracking-tight text-[#111B35] leading-[1.16]">
-            Architected for High-Stakes <br />
-            Financial Examinations.
+            Built for Exams That Actually Matter.
           </h2>
           <p className="text-[#334155] text-lg leading-relaxed">
             Every mock follows the official NISM exam pattern — the same duration, marks and pass mark — and every option carries an explanation for why it is right or wrong.
@@ -135,7 +134,7 @@ export function ExamTracks() {
                   }}
                   className="group inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-white dark:bg-[#181A1F] transition-colors duration-300 hover:bg-[#282C36] text-[#111B35] dark:text-white font-semibold text-xs sm:text-sm transition-all shadow-sm"
                 >
-                  <span>Launch Practice</span>
+                  <span>Try a sample question</span>
                   <ArrowUpRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
                 </a>
               </div>

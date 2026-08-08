@@ -45,12 +45,17 @@ export function Footer() {
             >
               {/* The footer is always dark, so it always takes the light
                   artwork — not the theme-swapped <Logo />. */}
-              <Image src="/logo-dark.png" alt="MyExams365" width={953} height={535} className="h-10 w-auto" />
-              <span className="sr-only">MyExams365 by MentraEdge</span>
+              <span className="inline-flex flex-col items-start leading-none">
+                <Image src="/logo-dark.png" alt="MyExams365" width={953} height={535} className="h-10 w-auto" />
+                <span className="mt-1.5 text-xs font-semibold tracking-[0.12em] uppercase text-slate-300">
+                  MyExams<span className="text-emerald-400">365</span>
+                </span>
+              </span>
+              <span className="sr-only">by MentraEdge</span>
             </a>
 
             <p className="text-slate-400 text-sm leading-relaxed pr-6">
-              Engineering calm confidence, mathematical precision, and Institutional CBT exact fidelity for high-stakes global financial certification examinations.
+              Full-length NISM mock tests on the official exam pattern, with complete study notes and step-by-step explanations.
             </p>
 
             <div className="flex items-center gap-2 text-xs tabular-nums text-slate-500 pt-2">
