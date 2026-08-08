@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, use } from 'react';
 import { useRouter } from 'next-nprogress-bar';
-import { getCourse, updateCourse, getCourseTests, createMockTest, getCourseMaterials, saveCourseMaterials } from '@/lib/firebase/db';
+import { getCourse, updateCourse, getCourseTests, createMockTest, getCourseMaterials, saveCourseMaterials, saveTestOrder } from '@/lib/firebase/db';
 import { PLAN_TIER_OPTIONS } from '@/constants/pricing';
 import { IN_SCOPE_PATTERNS, findExamPattern } from '@/constants/examPatterns';
 import { 
@@ -34,6 +34,32 @@ export default function ExamBuilderPage({ params }: { params: Promise<{ id: stri
   const [isSaving, setIsSaving] = useState(false);
   const [isCreatingTest, setIsCreatingTest] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  // Index of the row being dragged. Null when nothing is in flight.
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+
+  /**
+   * Reorders the mock tests and persists the arrangement.
+   *
+   * Optimistic: the list moves as the admin drops, and reverts if the write
+   * fails. Waiting for a round trip before the row moves makes dragging feel
+   * broken even when it worked.
+   */
+  const moveTest = async (from: number, to: number) => {
+    if (from === to) return;
+    const previous = tests;
+    const next = [...tests];
+    const [moved] = next.splice(from, 1);
+    next.splice(to, 0, moved);
+    setTests(next);
+    try {
+      await saveTestOrder(next.map((t: any) => t.id));
+    } catch (err) {
+      console.error('Could not save the new order:', err);
+      setTests(previous);
+      alert('Could not save the new order. Please try again.');
+    }
+  };
 
   // Materials state — flat list of {name, url}
   const [materials, setMaterials] = useState<{ id?: string; name: string; url: string; minPlanTier: number }[]>([]);
@@ -438,12 +464,30 @@ export default function ExamBuilderPage({ params }: { params: Promise<{ id: stri
                 <p className="text-sm font-medium group-hover:text-slate-600 dark:group-hover:text-slate-300 transition-colors">No mock tests yet. Click to create one.</p>
               </div>
             ) : (
-              tests.map((test) => (
+              tests.map((test, tIdx) => (
                 <div
                   key={test.id}
-                  className="bg-white dark:bg-[#121419] border border-slate-200 dark:border-[#282C36] rounded-xl p-5 flex items-center justify-between gap-4 hover:border-slate-300 dark:hover:border-[#323842] transition-colors group"
+                  draggable
+                  onDragStart={() => setDragIndex(tIdx)}
+                  onDragEnd={() => { setDragIndex(null); setDragOverIndex(null); }}
+                  onDragOver={(e) => { e.preventDefault(); setDragOverIndex(tIdx); }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    if (dragIndex !== null) moveTest(dragIndex, tIdx);
+                    setDragIndex(null);
+                    setDragOverIndex(null);
+                  }}
+                  className={`bg-white dark:bg-[#121419] border rounded-xl p-5 flex items-center justify-between gap-4 transition-colors group ${
+                    dragIndex === tIdx
+                      ? 'opacity-40 border-amber-500'
+                      : dragOverIndex === tIdx
+                      ? 'border-amber-500 border-dashed'
+                      : 'border-slate-200 dark:border-[#282C36] hover:border-slate-300 dark:hover:border-[#323842]'
+                  }`}
                 >
                   <div className="flex items-center gap-4">
+                    {/* The handle is the whole row, but this says so. */}
+                    <GripVertical className="w-4 h-4 text-slate-300 dark:text-slate-600 cursor-grab active:cursor-grabbing shrink-0" />
                     <div className="w-10 h-10 rounded-lg bg-amber-50 dark:bg-amber-500/10 flex items-center justify-center shrink-0">
                       <ClipboardList className="w-5 h-5 text-amber-500" />
                     </div>

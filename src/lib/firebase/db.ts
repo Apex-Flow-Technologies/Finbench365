@@ -242,17 +242,23 @@ export async function updateChapter(chapterId: string, data: any) {
 }
 
 export async function createMockTest(data: {
-  title: string, 
-  durationMinutes: number, 
+  title: string,
+  durationMinutes: number,
   totalQuestions: number,
   chapterId?: string,
   courseId: string,
   type?: 'practice' | 'exam'
 }) {
+  // Placed at the end of the course's existing tests. Without an order a new
+  // test landed wherever Firestore happened to return it, which is what made
+  // the list appear to reshuffle every time one was added.
+  const siblings = await getCourseTests(data.courseId).catch(() => [] as any[]);
+
   const testRef = doc(collection(db, 'mock_tests'));
   await setDoc(testRef, {
     ...data,
     type: data.type || 'practice',
+    order: siblings.length,
     createdAt: serverTimestamp(),
     isPublished: false
   });
@@ -414,13 +420,42 @@ export async function updateUserRole(userId: string, newRole: 'student' | 'admin
 }
 
 // Get all mock tests for a given exam
+/**
+ * Mock tests for a course, in the order an admin arranged them.
+ *
+ * There was no ordering at all, so Firestore returned them in document-id
+ * order — effectively random. Adding a test reshuffled the list, and "Mock 1,
+ * Mock 4, Mock 5, Mock 3, Mock 2" is what a candidate saw too.
+ *
+ * Sorted here rather than in the query: `orderBy('order')` would silently drop
+ * every test written before the field existed, which is the same trap that once
+ * hid users and orders from the admin panel. Tests with no order yet sort last,
+ * then by title, so the list is at least stable and alphabetical until someone
+ * arranges it.
+ */
 export async function getCourseTests(courseId: string) {
   const q = query(
     collection(db, 'mock_tests'),
     where('courseId', '==', courseId)
   );
   const snapshot = await getDocs(q);
-  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  const tests = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as any[];
+
+  return tests.sort((a, b) => {
+    const ao = typeof a.order === 'number' ? a.order : Number.MAX_SAFE_INTEGER;
+    const bo = typeof b.order === 'number' ? b.order : Number.MAX_SAFE_INTEGER;
+    if (ao !== bo) return ao - bo;
+    return String(a.title ?? '').localeCompare(String(b.title ?? ''), undefined, { numeric: true });
+  });
+}
+
+/** Persists a manual arrangement of a course's mock tests. */
+export async function saveTestOrder(orderedTestIds: string[]) {
+  const batch = writeBatch(db);
+  orderedTestIds.forEach((id, i) => {
+    batch.update(doc(db, 'mock_tests', id), { order: i });
+  });
+  await batch.commit();
 }
 
 // Get all registered users for Admin Management
