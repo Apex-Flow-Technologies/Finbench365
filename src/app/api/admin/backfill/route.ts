@@ -208,10 +208,67 @@ export async function POST(req: Request) {
       }
     }
 
+    // -------------------------------------------------------------- materials
+    //
+    // Study notes used to live as an array on the course document, which is
+    // publicly readable — the URLs were open to anyone who looked, on any plan.
+    // They now live in a subcollection the rules gate on the buyer's plan tier.
+    //
+    // Existing courses still hold the old array, and the student page reads
+    // only the subcollection, so until this runs their study notes appear
+    // missing. Migration is therefore not optional cleanup: it is what restores
+    // them.
+    //
+    // Copy first, then drop the public array — in that order, so an interrupted
+    // run can only ever leave the notes readable, never lost. Courses whose
+    // subcollection already holds something are left alone, so this can never
+    // overwrite notes an admin has since curated.
+    const coursesSnap = await adminDb.collection('courses').get();
+    let materialsMigrated = 0;
+
+    for (const courseDoc of coursesSnap.docs) {
+      const legacy = courseDoc.data().materials;
+      if (!Array.isArray(legacy) || legacy.length === 0) continue;
+
+      const subSnap = await courseDoc.ref.collection('materials').limit(1).get();
+      if (!subSnap.empty) continue;
+
+      changes.push({
+        type: 'materials',
+        id: courseDoc.id,
+        count: legacy.length,
+        note: 'copied to subcollection, public array removed',
+      });
+      materialsMigrated += legacy.length;
+      if (dryRun) continue;
+
+      const batch = adminDb.batch();
+      legacy.forEach((m: any, i: number) => {
+        batch.set(courseDoc.ref.collection('materials').doc(), {
+          name: m?.name ?? m?.title ?? `Study Note ${i + 1}`,
+          url: m?.url ?? '',
+          // Every migrated note stays available on every plan. Restricting one
+          // is a commercial decision for the admin to make in the editor, not
+          // something to infer here — guessing would silently withdraw a note a
+          // candidate has already been using.
+          minPlanTier: 1,
+          order: i,
+          updatedAt: FieldValue.serverTimestamp(),
+        });
+      });
+      batch.update(courseDoc.ref, {
+        materialCount: legacy.length,
+        materials: FieldValue.delete(),
+      });
+      await batch.commit();
+    }
+
     return NextResponse.json({
       dryRun,
       usersScanned: usersSnap.size,
       ordersScanned: ordersSnap.size,
+      coursesScanned: coursesSnap.size,
+      materialsMigrated,
       changeCount: changes.length,
       // Surfaced, not silently ignored: these need a human decision.
       unresolvedAmounts,
