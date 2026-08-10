@@ -1,7 +1,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
-import { PRODUCT, LEGAL_ENTITY, SUPPORT_EMAIL, PRIVACY_EMAIL, GRIEVANCE_EMAIL } from '@/constants/brand';
+import { PRODUCT, LEGAL_ENTITY, SUPPORT_EMAIL, PRIVACY_EMAIL, GRIEVANCE_EMAIL, SUPPORT_PHONE } from '@/constants/brand';
 
 export default function TermsPage() {
   return (
@@ -139,7 +139,7 @@ export default function TermsPage() {
               For complaints or questions about these Terms, contact our Grievance Officer: <br />
               <strong>[Grievance Officer Name]</strong> <br />
               Email: {GRIEVANCE_EMAIL} <br />
-              Phone: [Phone Number] <br />
+              Phone: {SUPPORT_PHONE} <br />
               Address: [Registered Address, Chennai, Tamil Nadu] <br />
               We acknowledge consumer grievances within 48 hours and aim to resolve them within 30 days, in line with the Consumer Protection (E-Commerce) Rules, 2020.
             </p>
