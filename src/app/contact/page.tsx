@@ -1,6 +1,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { ArrowLeft, Mail, Phone } from 'lucide-react';
+import { SUPPORT_EMAIL, SUPPORT_PHONE, SUPPORT_PHONE_TEL } from '@/constants/brand';
 
 export default function ContactPage() {
   return (
@@ -16,15 +17,16 @@ export default function ContactPage() {
           <p className="text-[#334155] dark:text-[#94A3B8] text-lg transition-colors">Questions about a plan, your access, or an invoice? Reach out and we will get back to you.</p>
         </div>
 
-        {/* Each card's href and its visible text are generated from one value.
-            They had drifted apart: the card read "support@myexams365.com" while
-            the mailto: opened wealth@fintelyxinvestments.com, so every candidate
-            who clicked it wrote to the wrong company. */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 md:gap-8 max-w-5xl mx-auto">
+        {/* Each card's href and its visible text come from one constant. They
+            had drifted apart twice: the card read "support@myexams365.com"
+            while the mailto: opened wealth@fintelyxinvestments.com, and a
+            mobile was listed here while the home page showed the landline —
+            printed in a different format again. One published number now, from
+            one place. */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 md:gap-8 max-w-3xl mx-auto">
           {[
-            { icon: Phone, title: 'Call us', display: '+91 90088 67475', href: 'tel:+919008867475' },
-            { icon: Phone, title: 'Landline', display: '044 4636 7250', href: 'tel:+914446367250' },
-            { icon: Mail, title: 'Mail us', display: 'support@myexams365.com', href: 'mailto:support@myexams365.com' },
+            { icon: Phone, title: 'Reach us at', display: SUPPORT_PHONE, href: SUPPORT_PHONE_TEL },
+            { icon: Mail, title: 'Mail us', display: SUPPORT_EMAIL, href: `mailto:${SUPPORT_EMAIL}` },
           ].map((c) => (
             <a
               key={c.title}

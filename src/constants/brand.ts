@@ -36,5 +36,18 @@ export const SUPPORT_EMAIL = 'support@myexams365.com';
 export const PRIVACY_EMAIL = 'privacy@myexams365.com';
 export const GRIEVANCE_EMAIL = 'grievance@myexams365.com';
 
+/**
+ * The one contact number published anywhere on the site.
+ *
+ * Two values for one number, because the visible text and the tel: link had
+ * drifted apart before: the site showed a mobile on /contact and a landline on
+ * the home page, and printed the landline itself two different ways. Both are
+ * derived here so a card cannot dial something other than what it displays.
+ *
+ * Anything that shows a phone number MUST read it from here.
+ */
+export const SUPPORT_PHONE = '+91 4446367250';
+export const SUPPORT_PHONE_TEL = 'tel:+914446367250';
+
 /** Courts named in the governing-law clause. */
 export const JURISDICTION = 'Chennai, Tamil Nadu';
