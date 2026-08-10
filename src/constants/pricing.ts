@@ -39,12 +39,34 @@ export function planTier(planId: string | undefined | null): number {
   return (planId && PLAN_PRICING[planId]?.tier) || BASE_PLAN_TIER;
 }
 
-/** Choices for the "minimum plan" control on a study note. */
+/**
+ * Choices for the "minimum plan" control on a study note.
+ *
+ * Deliberately two, not three. Plans 1 and 2 differ only in how long access
+ * lasts — they carry identical content — so a "30-day and above" restriction
+ * would describe a distinction the product does not make. The only real content
+ * boundary is plan 3, which adds the Excel workbooks and formula sheets.
+ *
+ * The tier numbers still run 1..3 so the entitlement comparison keeps working;
+ * it is only the offered choices that collapse to two.
+ */
 export const PLAN_TIER_OPTIONS = [
   { tier: 1, label: 'All plans' },
-  { tier: 2, label: '30-day plan and above' },
-  { tier: 3, label: '60-day plan only' },
+  { tier: 3, label: 'Only 60-day plan' },
 ];
+
+/**
+ * Snaps a stored minimum tier onto one of the offered choices.
+ *
+ * A note saved against the withdrawn "30-day and above" option still holds a
+ * tier of 2. Left alone it would select nothing in the dropdown, and an admin
+ * who saved the course without noticing would write back whatever the blank
+ * control produced. Anything above "all plans" resolves to the 60-day
+ * restriction, which is the only restriction the product now offers.
+ */
+export function normalisePlanTier(tier: number | undefined | null): number {
+  return !tier || tier <= BASE_PLAN_TIER ? BASE_PLAN_TIER : 3;
+}
 
 export const GST_RATE = 0.18;
 

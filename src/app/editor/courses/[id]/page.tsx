@@ -3,7 +3,7 @@
 import React, { useState, useEffect, use } from 'react';
 import { useRouter } from 'next-nprogress-bar';
 import { getCourse, updateCourse, getCourseTests, createMockTest, getCourseMaterials, saveCourseMaterials, saveTestOrder } from '@/lib/firebase/db';
-import { PLAN_TIER_OPTIONS } from '@/constants/pricing';
+import { PLAN_TIER_OPTIONS, normalisePlanTier } from '@/constants/pricing';
 import { IN_SCOPE_PATTERNS, findExamPattern } from '@/constants/examPatterns';
 import { 
   ChevronLeft, Plus, Save, Settings, UploadCloud, FileText, 
@@ -79,7 +79,13 @@ export default function ExamBuilderPage({ params }: { params: Promise<{ id: stri
         const legacy = ((examData as any).materials || []).map((m: any) => ({
           name: m.name ?? '', url: m.url ?? '', minPlanTier: 1,
         }));
-        setMaterials(fromSubcollection.length > 0 ? fromSubcollection : legacy);
+        // Normalised on the way in so a note saved against the withdrawn
+        // "30-day and above" choice still selects something in the dropdown.
+        setMaterials(
+          (fromSubcollection.length > 0 ? fromSubcollection : legacy).map((m: any) => ({
+            ...m, minPlanTier: normalisePlanTier(m.minPlanTier),
+          })),
+        );
         setTests(testsData);
       } catch (err) {
         console.error(err);
