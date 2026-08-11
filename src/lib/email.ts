@@ -348,9 +348,16 @@ export async function sendInvoiceEmail(params: InvoiceEmailParams) {
     LEGAL_GSTIN ? `GSTIN: ${LEGAL_GSTIN}` : '',
   ].filter(Boolean).join('\n');
 
+  // A blind copy of every invoice, so the business holds the same document the
+  // customer received rather than only a row in a database. Blind, not a second
+  // "to", because the customer must not see an internal address on their tax
+  // invoice. Set INVOICE_BCC_EMAIL to switch it on; unset, nothing changes.
+  const bcc = process.env.INVOICE_BCC_EMAIL?.trim();
+
   const { data, error } = await resend.emails.send({
     from: `${FROM_NAME} <${FROM_EMAIL}>`,
     to: email,
+    ...(bcc ? { bcc } : {}),
     replyTo: SUPPORT_EMAIL,
     subject: isFree
       ? `Enrolment confirmed — ${courseTitle}`

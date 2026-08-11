@@ -130,4 +130,53 @@ describe('formatInr', () => {
     expect(formatInr(1180, { decimals: true })).toContain('1,180.00');
     expect(formatInr(1180)).toContain('1,180');
   });
+
+  /**
+   * "Net after fees" was a single blended rate applied to everything. Razorpay
+   * prices UPI, cards and net banking differently, so the blend could never say
+   * where the money actually went — only roughly how much left.
+   */
+  describe('gateway fees', () => {
+    const paid = (extra: Record<string, unknown> = {}) => ({
+      status: 'success', orderId: 'order_1', amountPaid: 1180, ...extra,
+    });
+
+    it('uses the real fee when the order has been synced', () => {
+      const r = summariseRevenue([paid({ gatewayFee: 20, gatewayFeeTax: 3.6 })]);
+      expect(r.gatewayFees).toBeCloseTo(23.6, 2);
+      expect(r.gatewayFeeGst).toBeCloseTo(3.6, 2);
+      expect(r.estimatedFeeCount).toBe(0);
+      expect(r.netAfterFees).toBeCloseTo(1000 - 23.6, 2);
+    });
+
+    it('falls back to the blended rate and says so', () => {
+      const r = summariseRevenue([paid()]);
+      expect(r.estimatedFeeCount).toBe(1);
+      expect(r.gatewayFees).toBeCloseTo(1180 * 0.0236, 2);
+    });
+
+    it('counts a zero fee as a real answer, not a missing one', () => {
+      const r = summariseRevenue([paid({ gatewayFee: 0, gatewayFeeTax: 0 })]);
+      expect(r.estimatedFeeCount).toBe(0);
+      expect(r.gatewayFees).toBe(0);
+      expect(r.netAfterFees).toBeCloseTo(1000, 2);
+    });
+
+    it('mixes synced and unsynced orders without hiding the estimate', () => {
+      const r = summariseRevenue([
+        paid({ orderId: 'order_1', gatewayFee: 20, gatewayFeeTax: 3.6 }),
+        paid({ orderId: 'order_2' }),
+      ]);
+      expect(r.paidCount).toBe(2);
+      expect(r.estimatedFeeCount).toBe(1);
+      expect(r.gatewayFees).toBeCloseTo(23.6 + 1180 * 0.0236, 2);
+    });
+
+    it('charges no gateway fee on a comped enrolment', () => {
+      const r = summariseRevenue([{ status: 'bypassed', orderId: 'BYPASS-1', amountPaid: 0 }]);
+      expect(r.gatewayFees).toBe(0);
+      expect(r.estimatedFeeCount).toBe(0);
+      expect(r.compedCount).toBe(1);
+    });
+  });
 });

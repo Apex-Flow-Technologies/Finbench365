@@ -4,8 +4,8 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { collection, query, getDocs, doc, getDoc } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase/config';
 import { CreditCard, CheckCircle2, ShieldCheck, Download, Search, RefreshCw, RotateCcw, Clock } from 'lucide-react';
-import { PLAN_PRICING } from '@/constants/pricing';
-import { formatInr, summariseRevenue } from '@/lib/admin/revenue';
+import { PLAN_PRICING, GST_RATE, RAZORPAY_FEE_RATE } from '@/constants/pricing';
+import { formatInr, summariseRevenue, round2 } from '@/lib/admin/revenue';
 import toast from 'react-hot-toast';
 
 /**
@@ -43,6 +43,7 @@ export default function AdminOrdersPage() {
   const [refundingId, setRefundingId] = useState<string | null>(null);
   const [confirmRefund, setConfirmRefund] = useState<Order | null>(null);
   const [syncing, setSyncing] = useState(false);
+  const [syncingFees, setSyncingFees] = useState(false);
 
   const handleReconcile = async () => {
     if (!auth.currentUser) return;
@@ -71,6 +72,53 @@ export default function AdminOrdersPage() {
    * those orders still read as paid and the revenue figures counted money that
    * had been given back. Runs as a dry run first and asks before writing.
    */
+  /**
+   * Replaces the estimated gateway cut with what Razorpay actually charged.
+   *
+   * Read-only at the gateway and it writes nothing but fee figures — it cannot
+   * move money or change who has access — so unlike the refund sync it does not
+   * need a confirmation step. The preview still runs first, to report what will
+   * change and what could not be resolved.
+   */
+  const handleSyncFees = async () => {
+    if (!auth.currentUser) return;
+    setSyncingFees(true);
+    try {
+      const token = await auth.currentUser.getIdToken();
+      const post = (body: any) => fetch('/api/admin/sync-fees', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(body),
+      }).then(async (r) => {
+        const d = await r.json();
+        if (!r.ok) throw new Error(d.error || 'Fee sync failed');
+        return d;
+      });
+
+      const preview = await post({ dryRun: true });
+      if (preview.synced === 0) {
+        toast.success(
+          `Every paid order already has its real fee recorded.` +
+          (preview.unresolved?.length ? ` ${preview.unresolved.length} could not be resolved at the gateway.` : ''),
+          { duration: 8000 },
+        );
+        return;
+      }
+
+      const result = await post({ dryRun: false });
+      toast.success(
+        `Recorded actual fees on ${result.synced} order(s) — ₹${result.totalFeeCharged} charged in total.` +
+        (result.unresolved?.length ? ` ${result.unresolved.length} unresolved.` : ''),
+        { duration: 9000 },
+      );
+      await reload();
+    } catch (err: any) {
+      toast.error(err.message, { duration: 9000 });
+    } finally {
+      setSyncingFees(false);
+    }
+  };
+
   const handleSyncRefunds = async () => {
     if (!auth.currentUser) return;
     setSyncing(true);
@@ -183,16 +231,41 @@ export default function AdminOrdersPage() {
    */
   const handleExportCsv = () => {
     const cell = (v: any) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+    // Follows one order all the way down: what the candidate paid, the GST
+    // inside it, what the gateway took, and what is actually left. "Net to you"
+    // is the last column because it is the number the question is really about.
     const header = [
-      'Order ID', 'Payment ID', 'Email', 'Course', 'Plan',
-      'Base (ex-GST)', 'GST', 'Paid (incl GST)', 'Coupon', 'Status', 'Date',
+      'Order ID', 'Payment ID', 'Invoice No', 'Email', 'Course', 'Plan',
+      'Base (ex-GST)', 'GST collected', 'Paid (incl GST)',
+      'Payment method', 'Gateway fee', 'GST on fee', 'Fee total', 'Fee source',
+      'Net to you', 'Coupon', 'Status', 'Refunded', 'Date',
     ];
-    const rows = filteredOrders.map((o: any) => [
-      o.orderId, o.paymentId, o.userEmail, o.courseId, o.planId,
-      o.amountBase ?? '', o.gstAmount ?? '', o.amountPaid ?? '',
-      o.couponCode ?? '', o.status,
-      o.createdAt?.toDate ? o.createdAt.toDate().toISOString() : '',
-    ]);
+
+    const rows = filteredOrders.map((o: any) => {
+      const paid = typeof o.amountPaid === 'number' ? o.amountPaid : null;
+      const exact = typeof o.gatewayFee === 'number';
+
+      // Estimated rows are labelled rather than left to look reconciled. An
+      // unsynced order still needs a plausible figure, but the reader has to
+      // be able to tell which is which.
+      const fee = exact ? o.gatewayFee : (paid !== null ? round2(paid * RAZORPAY_FEE_RATE / (1 + GST_RATE)) : null);
+      const feeTax = exact
+        ? (o.gatewayFeeTax ?? 0)
+        : (fee !== null ? round2(fee * GST_RATE) : null);
+      const feeTotal = fee !== null && feeTax !== null ? round2(fee + feeTax) : null;
+      const net = paid !== null && feeTotal !== null
+        ? round2(paid / (1 + GST_RATE) - feeTotal)
+        : null;
+
+      return [
+        o.orderId, o.paymentId ?? '', o.invoiceNumber ?? '', o.userEmail, o.courseId, o.planId,
+        o.amountBase ?? '', o.gstAmount ?? '', paid ?? '',
+        o.paymentMethod ?? '', fee ?? '', feeTax ?? '', feeTotal ?? '',
+        exact ? 'Razorpay (actual)' : 'Estimated — run Sync Fees',
+        net ?? '', o.couponCode ?? '', o.status, o.refundAmount ?? '',
+        o.createdAt?.toDate ? o.createdAt.toDate().toISOString() : '',
+      ];
+    });
 
     const csv = [header, ...rows].map((r) => r.map(cell).join(',')).join('\r\n');
     // BOM so Excel opens UTF-8 correctly rather than mangling the rupee sign.
@@ -309,6 +382,16 @@ export default function AdminOrdersPage() {
           >
             <RotateCcw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} />
             {syncing ? 'Syncing…' : 'Sync Refunds'}
+          </button>
+
+          <button
+            onClick={handleSyncFees}
+            disabled={syncingFees}
+            title="Fetches the exact fee Razorpay charged on each paid order, so Net After Fees stops being an estimate"
+            className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold bg-sky-500/10 hover:bg-sky-500/20 text-sky-600 dark:text-sky-400 border border-sky-500/30 disabled:opacity-50 transition-colors whitespace-nowrap"
+          >
+            <RefreshCw className={`w-4 h-4 ${syncingFees ? 'animate-spin' : ''}`} />
+            {syncingFees ? 'Syncing…' : 'Sync Fees'}
           </button>
           <div className="relative w-full sm:w-72">
           <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />

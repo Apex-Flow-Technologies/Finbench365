@@ -144,7 +144,12 @@ export default function AdminOverviewPage() {
           <StatCard
             label="Net after fees"
             value={formatInr(revenue.netAfterFees, { decimals: true })}
-            sub="Indicative — gateway settlement is authoritative"
+            // Says which it is rather than hedging permanently. Once every paid
+            // order has its real fee from Razorpay there is nothing indicative
+            // left, and calling it an estimate then would undersell the figure.
+            sub={revenue.estimatedFeeCount > 0
+              ? `Estimated on ${revenue.estimatedFeeCount} order${revenue.estimatedFeeCount === 1 ? '' : 's'} — run Sync Fees`
+              : `After ${formatInr(revenue.gatewayFees, { decimals: true })} in gateway fees`}
             icon={TrendingUp}
             tone="neutral"
             loading={ordersLoading}

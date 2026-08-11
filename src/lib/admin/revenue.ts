@@ -18,6 +18,18 @@ export interface OrderLike {
   amountBase?: number;   // ex-GST, post-discount
   gstAmount?: number;
   createdAt?: any;       // Firestore Timestamp | Date | string | number
+  /**
+   * What Razorpay actually charged for this transaction, in rupees, as
+   * reported by the gateway — not a percentage we assumed.
+   *
+   * The real rate varies by payment method: a UPI payment, a domestic card and
+   * an international card are all charged differently, so a single blended
+   * rate cannot tell you where the money went. Absent until the order has been
+   * synced from Razorpay.
+   */
+  gatewayFee?: number;
+  /** GST charged on that fee, in rupees. Also from the gateway. */
+  gatewayFeeTax?: number;
 }
 
 export interface RevenueSummary {
@@ -25,8 +37,18 @@ export interface RevenueSummary {
   collected: number;
   /** Portion of `collected` that is GST and must be remitted — not yours. */
   gstPayable: number;
-  /** Indicative take-home: ex-GST revenue minus the gateway's cut. */
+  /** Take-home: ex-GST revenue minus the gateway's cut. */
   netAfterFees: number;
+  /** Gateway fees charged, GST on the fee included. */
+  gatewayFees: number;
+  /** Of `gatewayFees`, the part that is GST on the fee. */
+  gatewayFeeGst: number;
+  /**
+   * Paid orders whose real fee has not been synced from Razorpay yet, and are
+   * therefore still estimated at the blended rate. While this is above zero
+   * `netAfterFees` remains indicative; at zero it is exact.
+   */
+  estimatedFeeCount: number;
   /** Refunded back to customers. Excluded from `collected`. */
   refunded: number;
   /** Orders that moved real money. */
@@ -59,7 +81,8 @@ export function isComped(order: OrderLike): boolean {
     && (order.amountPaid === 0 || String(order.orderId ?? '').startsWith('BYPASS-'));
 }
 
-const round2 = (n: number) => Math.round(n * 100) / 100;
+/** Rupees to two decimal places. Exported so exports round the same way. */
+export const round2 = (n: number) => Math.round(n * 100) / 100;
 
 export function summariseRevenue(
   orders: OrderLike[],
@@ -70,6 +93,9 @@ export function summariseRevenue(
   let collected = 0;
   let refunded = 0;
   let paidCount = 0;
+  let gatewayFees = 0;
+  let gatewayFeeGst = 0;
+  let estimatedFeeCount = 0;
   let compedCount = 0;
   let unpaidCount = 0;
   let unknownAmountCount = 0;
@@ -114,6 +140,18 @@ export function summariseRevenue(
 
     collected += order.amountPaid;
     paidCount++;
+
+    // Prefer what the gateway actually charged. The blended rate is a stand-in
+    // for orders not yet synced, and every one of those is counted so the
+    // figure can say whether it is exact or still an estimate.
+    if (typeof order.gatewayFee === 'number') {
+      const tax = typeof order.gatewayFeeTax === 'number' ? order.gatewayFeeTax : 0;
+      gatewayFees += order.gatewayFee + tax;
+      gatewayFeeGst += tax;
+    } else {
+      gatewayFees += order.amountPaid * RAZORPAY_FEE_RATE;
+      estimatedFeeCount++;
+    }
   }
 
   // collected is GST-inclusive, so the tax portion is what's left once the
@@ -123,7 +161,10 @@ export function summariseRevenue(
   return {
     collected: round2(collected),
     gstPayable: round2(gstPayable),
-    netAfterFees: round2(collected / (1 + GST_RATE) - collected * RAZORPAY_FEE_RATE),
+    netAfterFees: round2(collected / (1 + GST_RATE) - gatewayFees),
+    gatewayFees: round2(gatewayFees),
+    gatewayFeeGst: round2(gatewayFeeGst),
+    estimatedFeeCount,
     refunded: round2(refunded),
     paidCount,
     compedCount,
