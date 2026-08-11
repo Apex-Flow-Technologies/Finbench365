@@ -13,8 +13,25 @@ import { rateLimit } from '@/lib/api/rateLimit';
  * figure could say what was probably taken, never where it went.
  *
  * The payment entity carries `fee` and `tax` in paise — the authoritative
- * amounts. Storing them per order turns the estimate into a reconciled figure
- * and makes a per-transaction breakdown possible.
+ * amounts. Razorpay documents `fee` as "Fee (including GST) charged by
+ * Razorpay" and `tax` as "GST charged for the payment", so `fee` is the total
+ * and `tax` is the part of it that is GST. They are split apart below rather
+ * than added together.
+ *
+ * ---------------------------------------------------------------------------
+ * DO NOT switch this to the payment LIST endpoint (`GET /v1/payments`).
+ *
+ * That endpoint returns `fee: 0` and `tax: 0` for every payment, whatever was
+ * actually charged. Verified 11 Aug 2026 on one netbanking payment:
+ *
+ *     GET /v1/payments/pay_TK4c5uEJSWXh6H        fee=1390  tax=212
+ *     GET /v1/orders/order_TK4byDzwnYK188/payments  fee=1390  tax=212
+ *     GET /v1/payments  (same payment in the list)  fee=0     tax=0
+ *
+ * Reading fees from the list would silently report every order as costing
+ * nothing, and the "net after fees" figure would quietly overstate profit.
+ * Fetch per order, as below, or per payment id.
+ * ---------------------------------------------------------------------------
  *
  * Read-only against the gateway, and it only ever fills in fees. It cannot
  * move money, change an order's status, or touch anyone's access.

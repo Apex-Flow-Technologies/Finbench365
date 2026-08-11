@@ -71,9 +71,24 @@ export function normalisePlanTier(tier: number | undefined | null): number {
 export const GST_RATE = 0.18;
 
 /**
- * Razorpay's cut as a fraction of the gross amount charged: a 2% platform fee
- * plus 18% GST levied on that fee (2% x 1.18 = 2.36%). Used only for the
- * indicative "net after fees" figure in the admin panel — the authoritative
- * number is always the Razorpay settlement report.
+ * A LAST-RESORT stand-in for Razorpay's cut: a 2% platform fee plus 18% GST on
+ * that fee (2% x 1.18 = 2.36%). Used only for orders whose real fee has not
+ * been fetched yet, and every such order is counted so the admin panel can say
+ * the figure is still an estimate.
+ *
+ * Treat this number as fiction, because a single blended rate cannot describe
+ * what is actually charged. Measured on this account (11 Aug 2026, every
+ * captured payment, fee read from the payment entity):
+ *
+ *     upi          4 payments   Rs 1405.64 charged   Rs  0.00 fees   0.000%
+ *     netbanking   1 payment    Rs  588.82 charged   Rs 13.90 fees   2.361%
+ *
+ * Note what that does NOT mean. UPI is not free by law: the 0% mandate covers
+ * the NPCI rails, and Razorpay does levy a platform fee on UPI for many
+ * merchants. Zero here is a term of THIS account's pricing plan, and it can
+ * change with a renegotiation, a volume tier or a plan migration. So never
+ * hard-code a per-method rate anywhere — read the fee off each payment.
+ *
+ * The authoritative figure is always the gateway's own settlement report.
  */
 export const RAZORPAY_FEE_RATE = 0.0236;
