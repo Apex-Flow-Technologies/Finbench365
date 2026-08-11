@@ -190,9 +190,7 @@ export function InteractiveSandbox() {
                 {/* Card Header */}
                 <div className="bg-[#F4F4F0] border-b border-[#E2E2DE] px-5 py-3.5 flex items-center justify-between gap-4 flex-wrap">
                   <div className="flex items-center gap-2.5">
-                    <span className="px-2.5 py-0.5 rounded bg-white dark:bg-[#181A1F] transition-colors duration-300 text-[#111B35] dark:text-white tabular-nums text-xs font-bold">
-                      {q.track}
-                    </span>
+                    {/* The exam-track badge is deliberately not shown. */}
                     <span className="text-[#334155] tabular-nums text-xs font-medium">
                       {q.topic}
                     </span>
@@ -281,19 +279,9 @@ export function InteractiveSandbox() {
                                       ? 'bg-emerald-100/60 border-emerald-200 text-emerald-950 font-medium' 
                                       : 'bg-amber-100/60 border-amber-200 text-amber-950 font-normal'
                                   }`}>
-                                    <div className="font-bold tabular-nums tracking-wide uppercase mb-1 flex items-center gap-1.5">
-                                      {isCorrectOption ? (
-                                        <>
-                                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-700" />
-                                          <span>Correct Diagnostic Reasoning</span>
-                                        </>
-                                      ) : (
-                                        <>
-                                          <XCircle className="w-3.5 h-3.5 text-amber-800" />
-                                          <span>Why this distractor is incorrect</span>
-                                        </>
-                                      )}
-                                    </div>
+                                    {/* No heading here. The green or amber panel
+                                        already says which this is, and the
+                                        labels read as jargon to a candidate. */}
                                     {opt.explanation}
                                   </div>
                                 </motion.div>
@@ -315,13 +303,6 @@ export function InteractiveSandbox() {
                         transition={{ duration: 0.35 }}
                         className="p-4 rounded-xl bg-white dark:bg-[#181A1F] transition-colors duration-300 text-slate-200 tabular-nums text-xs md:text-sm shadow-md border border-[#313642]"
                       >
-                        <div className="flex items-center justify-between text-amber-400 border-b border-slate-800 pb-2.5 mb-2.5 font-semibold uppercase tracking-wider">
-                          <span className="flex items-center gap-2">
-                            <Award className="w-3.5 h-3.5" />
-                            Algorithmic Step-by-Step Derivation
-                          </span>
-                          <span className="text-xs text-[#475569] dark:text-[#94A3B8] dark:text-[#94A3B8]">Sample question</span>
-                        </div>
                         <p className="font-sans text-[#334155] dark:text-[#E2E8F0] leading-relaxed font-normal text-xs md:text-sm">
                           {q.correctFormulaBreakdown}
                         </p>
@@ -345,8 +326,29 @@ export function InteractiveSandbox() {
                         <span>Retry Question</span>
                       </button>
 
-                      <div className="flex items-center gap-2 tabular-nums text-xs text-[#475569] dark:text-[#94A3B8]">
-                        <span>Side cards: Click or swipe to spin carousel</span>
+                      {/* Answering makes this card several hundred pixels
+                          taller, which pushes the controls above the carousel
+                          off the top of the screen. Reaching the next question
+                          then meant hitting a sliver of a blurred card, so the
+                          same controls live here too — directly under the
+                          explanation the candidate has just finished reading. */}
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={handlePrev}
+                          aria-label="Previous question"
+                          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-[#D4D4CE] bg-white hover:bg-slate-100 text-[#111B35] font-medium text-xs md:text-sm transition-colors cursor-pointer"
+                        >
+                          <ChevronLeft className="w-3.5 h-3.5" />
+                          <span>Previous</span>
+                        </button>
+                        <button
+                          onClick={handleNext}
+                          aria-label="Next question"
+                          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[#111B35] hover:bg-[#1E293B] text-white font-medium text-xs md:text-sm transition-colors cursor-pointer"
+                        >
+                          <span>Next question</span>
+                          <ChevronRight className="w-3.5 h-3.5" />
+                        </button>
                       </div>
                     </div>
                   )}

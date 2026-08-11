@@ -37,12 +37,27 @@ export function CasePanel({
           <p className="text-sm text-slate-300 leading-relaxed">{parsed.intro}</p>
         )}
 
+        {/* Columns follow the content instead of always being three. A single
+            block used to render as a third-width strip with two thirds of the
+            row empty, which is what turned a gold-price scenario into a tall
+            thin column of broken sentences. */}
         {parsed.blocks.length > 0 && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          <div className={`grid gap-3 ${
+            parsed.blocks.length === 1
+              ? 'grid-cols-1'
+              : parsed.blocks.length === 2
+              ? 'grid-cols-1 sm:grid-cols-2'
+              : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'
+          }`}>
             {parsed.blocks.map((block, i) => (
               <div
                 key={i}
-                className="rounded-lg bg-slate-900/50 border border-white/10 p-3"
+                // A block of figures is a table and reads well narrow. A block
+                // of sentences is prose and must not be squeezed into a column,
+                // so it takes the full width of the row.
+                className={`rounded-lg bg-slate-900/50 border border-white/10 p-3 ${
+                  block.items.length === 0 ? 'col-span-full' : ''
+                }`}
               >
                 <div className="text-[11px] font-bold uppercase tracking-wide text-amber-400/90 mb-2 leading-snug">
                   {block.title}
@@ -63,9 +78,19 @@ export function CasePanel({
                   </dl>
                 )}
 
-                {block.notes.map((note, j) => (
-                  <p key={j} className="text-xs text-slate-400 leading-relaxed mt-2">{note}</p>
-                ))}
+                {block.notes.length > 0 && (
+                  // Bulleted rather than stacked paragraphs: these are a list of
+                  // observations, and running them together as prose is what the
+                  // candidate was struggling to read in the first place.
+                  <ul className="space-y-1.5 mt-1">
+                    {block.notes.map((note, j) => (
+                      <li key={j} className="text-xs text-slate-300 leading-relaxed flex gap-2">
+                        <span className="text-amber-400/70 shrink-0 select-none">•</span>
+                        <span>{note}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
             ))}
           </div>

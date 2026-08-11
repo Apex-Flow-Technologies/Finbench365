@@ -99,4 +99,59 @@ describe('parseCasePassage — other shapes', () => {
     expect(parseCasePassage(null).isPlainProse).toBe(true);
     expect(parseCasePassage(undefined).intro).toBe('');
   });
+
+  /**
+   * The gold-price case as it actually arrived from Word, reported after the
+   * scenario rendered as one squashed column. Every break here falls between
+   * two letters, so the digit-and-punctuation rules alone found none of them.
+   */
+  describe('passages whose points are sentences, not figures', () => {
+    const GOLD = 'An analyst is studying the impact of various factors on the price of gold. '
+      + 'The following observations have been made:Global Factors:US Federal Reserve has '
+      + 'signaled a less hawkish stance on interest ratesUS Dollar Index has weakened from '
+      + '105 to 102Global inflation has risen from 2.5% to 3.5%Real yields on US Treasuries '
+      + 'have declinedGold ETF inflows have been positive for 4 consecutive weeksCentral '
+      + 'banks have been net buyers of goldDomestic Factors (India):Indian rupee has '
+      + 'depreciated from Rs. 83 to Rs. 86 per USDDomestic gold demand has increased due to '
+      + 'festive seasonGold import duty has been reduced by 5%Domestic inflation is at 5.5% '
+      + "(higher than RBI's target of 4%)";
+
+    it('finds both section headings', () => {
+      const r = parseCasePassage(GOLD);
+      expect(r.blocks.map((b) => b.title)).toEqual(['Global Factors', 'Domestic Factors (India)']);
+    });
+
+    it('separates every observation instead of running them together', () => {
+      const r = parseCasePassage(GOLD);
+      const global = r.blocks[0].notes;
+      expect(global).toHaveLength(6);
+      expect(global[0]).toBe('US Federal Reserve has signaled a less hawkish stance on interest rates');
+      expect(global[1]).toBe('US Dollar Index has weakened from 105 to 102');
+      expect(global[3]).toBe('Real yields on US Treasuries have declined');
+      expect(global[5]).toBe('Central banks have been net buyers of gold');
+    });
+
+    it('keeps an acronym whole when it runs into the next line', () => {
+      const r = parseCasePassage(GOLD);
+      const domestic = r.blocks[1].notes;
+      expect(domestic[0]).toBe('Indian rupee has depreciated from Rs. 83 to Rs. 86 per USD');
+      expect(domestic[1]).toBe('Domestic gold demand has increased due to festive season');
+      expect(domestic).toHaveLength(4);
+    });
+
+    it('never breaks a word that merely opens with a lowercase letter', () => {
+      const r = parseCasePassage('Process:\neKYC verification is mandatory\niOS app support added');
+      expect(r.blocks[0].notes).toEqual([
+        'eKYC verification is mandatory',
+        'iOS app support added',
+      ]);
+    });
+
+    it('does not lose any of the original words', () => {
+      const r = parseCasePassage(GOLD);
+      const out = [r.intro, ...r.blocks.flatMap((b) => [b.title, ...b.notes, ...b.items.map((i) => `${i.label} ${i.value}`)])].join(' ');
+      const norm = (s: string) => s.replace(/[^a-z0-9]/gi, '').toLowerCase();
+      expect(norm(out)).toBe(norm(GOLD));
+    });
+  });
 });

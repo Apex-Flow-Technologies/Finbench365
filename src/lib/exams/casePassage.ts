@@ -61,6 +61,23 @@ function restoreLineBreaks(text: string): string {
     // matching only Title Case silently swallowed "1,800EBIT: 800" into the
     // previous value — losing a figure the question then asked about.
     .replace(/([\d)%.,])(?=[A-Z][a-z]|[A-Z]{2,})/g, '$1\n')
+    // "interest ratesUS Dollar", "have declinedGold ETF", "of goldDomestic
+    // Factors", "festive seasonGold import".
+    //
+    // Passages whose points are sentences rather than figures run out of
+    // punctuation entirely: the break lands between an ordinary lowercase word
+    // and the capital that starts the next line. Without this the whole of a
+    // "Global Factors" list collapsed into one item.
+    .replace(/([a-z])(?=[A-Z][a-z]|[A-Z]{2,})/g, (m, _ch, offset: number, whole: string) => {
+      // "eKYC", "iOS", "eNPS" — a lone lowercase letter opening a word belongs
+      // to that word, and breaking there would invent a line that is one letter
+      // long. Only a real word ending may be treated as a lost line break.
+      if (/(?:^|[\s("'‘“])[a-z]$/.test(whole.slice(0, offset + 1))) return m;
+      return `${m}\n`;
+    })
+    // "per USDDomestic gold demand" — an acronym butting into the next line.
+    // Splits before the capitalised word, keeping the acronym whole.
+    .replace(/([A-Z])(?=[A-Z][a-z])/g, '$1\n')
     // "available:Balance"  — but never "Share: Rs. 75", which has a space
     .replace(/:(?=[A-Z])/g, ':\n');
 }

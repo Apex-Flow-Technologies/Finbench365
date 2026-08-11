@@ -162,10 +162,28 @@ export default function ExamBuilderPage({ params }: { params: Promise<{ id: stri
       });
       await saveCourseMaterials(courseId, materials);
       router.push(targetUrl);
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      alert('Could not save draft before navigating. Please check your network and try again.');
+
+      // Editing questions must not be held hostage by an unrelated save.
+      //
+      // This used to swallow the error into "check your network" and refuse to
+      // navigate, so a permission failure on the study-notes subcollection —
+      // exactly what happens while the new Firestore rules are still
+      // undeployed — presented as the question editor being broken. The cause
+      // is now named, and going on is the admin's decision rather than ours.
+      const denied = err?.code === 'permission-denied';
+      const reason = denied
+        ? 'The database refused the write. This usually means the updated security rules have not been deployed yet.'
+        : (err?.message || 'Unknown error.');
+
+      const goAnyway = window.confirm(
+        `Could not save this course before opening the question editor.\n\n${reason}\n\n` +
+        'Open the question editor anyway? Any unsaved changes to the course details ' +
+        'and study notes on this screen will be lost.',
+      );
       setIsSaving(false);
+      if (goAnyway) router.push(targetUrl);
     }
   };
 
