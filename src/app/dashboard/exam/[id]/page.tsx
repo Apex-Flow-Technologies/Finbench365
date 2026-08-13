@@ -879,14 +879,42 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
                 const gotIt = chosen === correct;
                 const skipped = chosen === undefined || chosen === null;
 
+                // A sub-question read alone is close to meaningless — "What is
+                // the EPS of XYZ Ltd.?" cannot be checked without the balance
+                // sheet it refers to. The scenario is shown once at the head of
+                // its group rather than repeated under all four questions,
+                // which is possible now that a case's questions sit together.
+                const previous: any = i > 0 ? orderedQuestions[i - 1] : null;
+                const startsCase = Boolean(q.caseId) && q.caseId !== previous?.caseId;
+                const caseTotal = q.caseId
+                  ? orderedQuestions.filter((x: any) => x.caseId === q.caseId).length
+                  : 0;
+                const casePosition = q.caseId
+                  ? orderedQuestions.filter((x: any, xi: number) => x.caseId === q.caseId && xi <= i).length
+                  : 0;
+
                 return (
+                  <div key={q.id} className="space-y-3">
+                  {startsCase && (
+                    <div className="rounded-xl overflow-hidden">
+                      <CasePanel passage={q.casePassage} title={q.caseTitle} />
+                    </div>
+                  )}
                   <div
-                    key={q.id}
-                    className="rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#181A1F] p-5"
+                    className={`rounded-xl border bg-white dark:bg-[#181A1F] p-5 ${
+                      q.caseId
+                        ? 'border-amber-500/40 dark:border-amber-500/30'
+                        : 'border-slate-200 dark:border-white/10'
+                    }`}
                   >
                     <div className="flex items-start justify-between gap-3 mb-2">
                       <span className="text-xs font-bold text-[#475569] dark:text-[#94A3B8]">
                         Question {i + 1}
+                        {q.caseId && (
+                          <span className="ml-2 font-semibold text-amber-600 dark:text-amber-500">
+                            Case study · part {casePosition} of {caseTotal}
+                          </span>
+                        )}
                       </span>
                       <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
                         skipped ? 'bg-slate-500/10 text-slate-500'
@@ -929,6 +957,7 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
                         <ExplanationBody text={sol.explanation} />
                       </div>
                     )}
+                  </div>
                   </div>
                 );
               })}
