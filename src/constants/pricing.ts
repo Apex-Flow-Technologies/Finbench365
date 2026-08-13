@@ -11,22 +11,24 @@
  * two existing ones means renumbering, so leave gaps if that seems likely.
  */
 export const PLAN_PRICING: Record<string, { price: number; durationDays: number; name: string; tier: number }> = {
+  // The keys are the plan IDs recorded on every order ever placed, so they stay
+  // as they are. Only the customer-facing name and price change.
   'plan-10': {
     price: 499,
     durationDays: 10,
-    name: 'Plan 1 — 10 Days',
+    name: 'Standard — 10 Days',
     tier: 1,
   },
   'plan-30': {
-    price: 599,
+    price: 579,
     durationDays: 30,
-    name: 'Plan 2 — 30 Days',
+    name: 'Advanced — 30 Days',
     tier: 2,
   },
   'plan-60': {
     price: 699,
     durationDays: 60,
-    name: 'Plan 3 — 60 Days',
+    name: 'Elite — 60 Days',
     tier: 3,
   },
 };

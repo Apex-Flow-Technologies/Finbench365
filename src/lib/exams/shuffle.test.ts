@@ -60,4 +60,51 @@ describe('orderQuestionsForAttempt', () => {
     expect(out).not.toEqual(items);
     expect([...out].sort()).toEqual([...items].sort());
   });
+
+  /**
+   * Reported from a live paper: question 84 was a case sub-question whose
+   * siblings sat at 83, 91 and 94, so the case tabs jumped around the palette.
+   */
+  describe('case questions stay together', () => {
+    const paper = [
+      { id: 'a', caseId: null },
+      { id: 'c1a', caseId: 'C1' }, { id: 'c1b', caseId: 'C1' },
+      { id: 'c1c', caseId: 'C1' }, { id: 'c1d', caseId: 'C1' },
+      { id: 'b', caseId: null },
+      { id: 'c2a', caseId: 'C2' }, { id: 'c2b', caseId: 'C2' },
+      { id: 'c', caseId: null }, { id: 'd', caseId: null },
+    ];
+    const runs = ['att-1', 'att-2', 'att-3', 'att-4', 'att-5'].map(
+      (a) => orderQuestionsForAttempt(paper, a, true));
+
+    it('keeps every case contiguous, in every attempt', () => {
+      for (const out of runs) {
+        for (const cid of ['C1', 'C2']) {
+          const idx = out.map((q, i) => (q.caseId === cid ? i : -1)).filter((i) => i >= 0);
+          expect(idx).toHaveLength(cid === 'C1' ? 4 : 2);
+          expect(idx[idx.length - 1] - idx[0]).toBe(idx.length - 1);
+        }
+      }
+    });
+
+    it('keeps sub-questions in the order the author wrote them', () => {
+      for (const out of runs) {
+        expect(out.filter((q) => q.caseId === 'C1').map((q) => q.id))
+          .toEqual(['c1a', 'c1b', 'c1c', 'c1d']);
+      }
+    });
+
+    it('still loses no question and still varies between attempts', () => {
+      for (const out of runs) {
+        expect(out).toHaveLength(paper.length);
+        expect(new Set(out.map((q) => q.id)).size).toBe(paper.length);
+      }
+      expect(new Set(runs.map((r) => r.map((q) => q.id).join(','))).size).toBeGreaterThan(1);
+    });
+
+    it('is stable for one attempt id', () => {
+      expect(orderQuestionsForAttempt(paper, 'att-9', true).map((q) => q.id))
+        .toEqual(orderQuestionsForAttempt(paper, 'att-9', true).map((q) => q.id));
+    });
+  });
 });

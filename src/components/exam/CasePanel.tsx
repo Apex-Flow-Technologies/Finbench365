@@ -66,11 +66,21 @@ export function CasePanel({
                 {block.items.length > 0 && (
                   <dl className="space-y-1">
                     {block.items.map((item, j) => (
-                      <div key={j} className="flex items-baseline justify-between gap-3 text-xs">
+                      // A short figure sits on the same line as its label; a long
+                      // one drops beneath it. Previously every value was
+                      // whitespace-nowrap, so "PE = 16x, Debt/Equity = 0.5x,
+                      // Current Ratio = 1.8x" ran straight out of the card and
+                      // was clipped mid-word — the candidate saw "C" and the
+                      // rest of the figures simply were not there to read.
+                      <div key={j} className={`text-xs gap-x-3 gap-y-0.5 ${
+                        item.value.length > 18
+                          ? 'flex flex-col'
+                          : 'flex items-baseline justify-between'
+                      }`}>
                         <dt className="text-slate-400 leading-snug">{item.label}</dt>
                         {/* tabular-nums so figures line up down the column,
                             which is how they are compared. */}
-                        <dd className="text-slate-100 font-semibold tabular-nums whitespace-nowrap">
+                        <dd className="text-slate-100 font-semibold tabular-nums break-words min-w-0">
                           {item.value}
                         </dd>
                       </div>

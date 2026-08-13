@@ -64,5 +64,38 @@ export function orderQuestionsForAttempt<T>(
   randomise: boolean | undefined,
 ): T[] {
   if (!randomise || !attemptId) return questions;
-  return seededShuffle(questions, attemptId);
+
+  // Case questions move as one block, never individually.
+  //
+  // Shuffling every question separately tore the four sub-questions of a case
+  // apart and scattered them across the paper — a candidate on question 84
+  // would find its siblings at 83, 91 and 94, and the "Question 1..4" tabs
+  // jumped somewhere unrelated in the palette each time one was answered. The
+  // shared scenario only makes sense read alongside its own questions.
+  //
+  // So: shuffle the groups, and keep each case's sub-questions in the order the
+  // author wrote them. Standalone questions are groups of one, so they still
+  // shuffle freely among the cases.
+  const groups: T[][] = [];
+  const byCase = new Map<string, T[]>();
+
+  for (const q of questions) {
+    // Read rather than required: this also orders plain lists that carry no
+    // case information at all, where every item is simply its own group.
+    const caseId = (q as { caseId?: string | null } | null)?.caseId;
+    if (!caseId) {
+      groups.push([q]);
+      continue;
+    }
+    const existing = byCase.get(caseId);
+    if (existing) {
+      existing.push(q);
+    } else {
+      const group = [q];
+      byCase.set(caseId, group);
+      groups.push(group);
+    }
+  }
+
+  return seededShuffle(groups, attemptId).flat();
 }

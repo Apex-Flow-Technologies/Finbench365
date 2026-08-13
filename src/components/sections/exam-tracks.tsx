@@ -55,18 +55,23 @@ const EXAM_TRACKS: ExamTrack[] = IN_SCOPE_PATTERNS.slice(0, 3).map((p) => ({
 
 export function ExamTracks() {
   return (
-    <section id="exams" className="py-24 md:py-32 bg-[#F5F5F2] text-[#181A1F] border-b border-[#E4E4E0] relative">
+    /* This section was hardcoded light while the cards inside used dark:
+       variants, so in dark mode the four figures turned white on a background
+       that stayed #F5F5F2 — measured contrast 1.00, i.e. invisible. Reported as
+       a light-mode fault; it was the other way round. Theme-aware throughout
+       now, so the two halves cannot disagree again. */
+    <section id="exams" className="py-24 md:py-32 bg-[#F5F5F2] dark:bg-[#121419] text-[#181A1F] dark:text-[#FBFBF9] border-b border-[#E4E4E0] dark:border-[#282C36] transition-colors duration-300 relative">
       <div className="max-w-[1240px] mx-auto px-6 md:px-8">
         {/* Section Header */}
         <div className="max-w-3xl mx-auto text-center mb-16 space-y-4">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-300/60 border border-slate-400/60 text-[#111B35] tabular-nums text-xs font-semibold uppercase tracking-wider">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-300/60 dark:bg-slate-800/80 border border-slate-400/60 dark:border-slate-700 text-[#111B35] dark:text-amber-400 tabular-nums text-xs font-semibold uppercase tracking-wider">
             <Layers className="w-3.5 h-3.5 text-amber-700" />
             <span>NISM certifications</span>
           </div>
-          <h2 className="text-3xl sm:text-4xl md:text-5xl font-semibold tracking-tight text-[#111B35] leading-[1.16]">
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-semibold tracking-tight text-[#111B35] dark:text-white leading-[1.16]">
             Built for Exams That Actually Matter.
           </h2>
-          <p className="text-[#334155] text-lg leading-relaxed">
+          <p className="text-[#334155] dark:text-[#E2E8F0] text-lg leading-relaxed">
             Every mock follows the official NISM exam pattern — the same duration, marks and pass mark — and every option carries an explanation for why it is right or wrong.
           </p>
         </div>
@@ -80,12 +85,12 @@ export function ExamTracks() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: '-60px' }}
               transition={{ duration: 0.6, delay: idx * 0.15 }}
-              className="bg-white border border-[#DDDDD2] rounded-2xl p-6 sm:p-8 shadow-[0_4px_24px_-8px_rgba(0,0,0,0.04)] hover:shadow-[0_16px_48px_-12px_rgba(0,0,0,0.08)] hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between"
+              className="bg-white dark:bg-[#181A1F] border border-[#DDDDD2] dark:border-[#282C36] rounded-2xl p-6 sm:p-8 shadow-[0_4px_24px_-8px_rgba(0,0,0,0.04)] hover:shadow-[0_16px_48px_-12px_rgba(0,0,0,0.08)] hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between"
             >
               <div>
                 {/* Track Badge */}
                 <div className="flex items-center justify-between gap-2 mb-4 tabular-nums text-xs">
-                  <span className="px-2.5 py-1 rounded bg-white dark:bg-[#181A1F] transition-colors duration-300 text-[#111B35] dark:text-white font-bold tracking-wider">
+                  <span className="px-2.5 py-1 rounded bg-slate-100 dark:bg-white/10 transition-colors duration-300 text-[#111B35] dark:text-white font-bold tracking-wider">
                     {track.badge}
                   </span>
                   {/* Negative marking is the single fact that most changes how
@@ -102,14 +107,14 @@ export function ExamTracks() {
                 </div>
 
                 {/* Title & Subtitle */}
-                <h3 className="text-2xl font-semibold text-[#111B35] tracking-tight mb-1">
+                <h3 className="text-2xl font-semibold text-[#111B35] dark:text-white tracking-tight mb-1">
                   {track.title}
                 </h3>
                 <p className="text-xs tabular-nums text-[#475569] dark:text-[#94A3B8] font-medium mb-4">
                   {track.subtitle}
                 </p>
 
-                <p className="text-[#334155] text-sm leading-relaxed mb-6">
+                <p className="text-[#334155] dark:text-[#E2E8F0] text-sm leading-relaxed mb-6">
                   {track.description}
                 </p>
 
