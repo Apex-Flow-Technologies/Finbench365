@@ -25,16 +25,16 @@ export function CasePanel({
   const parsed = useMemo(() => parseCasePassage(passage), [passage]);
 
   return (
-    <div className="rounded-xl border border-amber-500/25 bg-amber-500/[0.06] overflow-hidden">
-      <div className="px-4 py-2.5 border-b border-amber-500/15">
-        <span className="text-xs font-bold uppercase tracking-wider text-amber-400">
+    <div className="rounded-xl border border-amber-500/40 dark:border-amber-500/25 bg-amber-50/70 dark:bg-amber-500/[0.06] overflow-hidden">
+      <div className="px-4 py-2.5 border-b border-amber-500/25 dark:border-amber-500/15">
+        <span className="text-xs font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400">
           {title || 'Case scenario'}
         </span>
       </div>
 
       <div className="p-4 space-y-3">
         {parsed.intro && (
-          <p className="text-sm text-slate-300 leading-relaxed">{parsed.intro}</p>
+          <p className="text-sm text-[#334155] dark:text-slate-300 leading-relaxed">{parsed.intro}</p>
         )}
 
         {/* Columns follow the content instead of always being three. A single
@@ -55,11 +55,11 @@ export function CasePanel({
                 // A block of figures is a table and reads well narrow. A block
                 // of sentences is prose and must not be squeezed into a column,
                 // so it takes the full width of the row.
-                className={`rounded-lg bg-slate-900/50 border border-white/10 p-3 ${
+                className={`rounded-lg bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-white/10 p-3 ${
                   block.items.length === 0 ? 'col-span-full' : ''
                 }`}
               >
-                <div className="text-[11px] font-bold uppercase tracking-wide text-amber-400/90 mb-2 leading-snug">
+                <div className="text-[11px] font-bold uppercase tracking-wide text-amber-700 dark:text-amber-400/90 mb-2 leading-snug">
                   {block.title}
                 </div>
 
@@ -77,10 +77,10 @@ export function CasePanel({
                           ? 'flex flex-col'
                           : 'flex items-baseline justify-between'
                       }`}>
-                        <dt className="text-slate-400 leading-snug">{item.label}</dt>
+                        <dt className="text-[#475569] dark:text-slate-400 leading-snug">{item.label}</dt>
                         {/* tabular-nums so figures line up down the column,
                             which is how they are compared. */}
-                        <dd className="text-slate-100 font-semibold tabular-nums break-words min-w-0">
+                        <dd className="text-[#111B35] dark:text-slate-100 font-semibold tabular-nums break-words min-w-0">
                           {item.value}
                         </dd>
                       </div>
@@ -94,8 +94,8 @@ export function CasePanel({
                   // candidate was struggling to read in the first place.
                   <ul className="space-y-1.5 mt-1">
                     {block.notes.map((note, j) => (
-                      <li key={j} className="text-xs text-slate-300 leading-relaxed flex gap-2">
-                        <span className="text-amber-400/70 shrink-0 select-none">•</span>
+                      <li key={j} className="text-xs text-[#334155] dark:text-slate-300 leading-relaxed flex gap-2">
+                        <span className="text-amber-600 dark:text-amber-400/70 shrink-0 select-none">•</span>
                         <span>{note}</span>
                       </li>
                     ))}

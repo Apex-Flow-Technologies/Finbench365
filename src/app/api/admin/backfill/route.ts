@@ -263,11 +263,46 @@ export async function POST(req: Request) {
       await batch.commit();
     }
 
+    // ------------------------------------------------- orphaned entitlements
+    //
+    // Access to a course that no longer exists. Deleting a course revokes its
+    // entitlements now, so these are leftovers from deletions made before that,
+    // or straight from the database. The dashboard already hides them; this
+    // removes them, so a candidate's record stops claiming access to something
+    // that cannot be opened.
+    //
+    // Orders are untouched — they are the record of a real payment and must
+    // survive the product being withdrawn.
+    const liveCourseIds = new Set(coursesSnap.docs.map((d: FirebaseFirestore.QueryDocumentSnapshot) => d.id));
+    let orphanedEntitlements = 0;
+
+    for (const userDoc of usersSnap.docs) {
+      const enrolled = userDoc.data().enrolledCourses;
+      if (!enrolled || typeof enrolled !== 'object') continue;
+
+      const drop: Record<string, any> = {};
+      for (const courseId of Object.keys(enrolled)) {
+        if (!liveCourseIds.has(courseId)) {
+          drop[`enrolledCourses.${courseId}`] = FieldValue.delete();
+        }
+      }
+      if (Object.keys(drop).length === 0) continue;
+
+      changes.push({
+        type: 'orphanedEntitlement',
+        id: userDoc.id,
+        courses: Object.keys(drop).map((k) => k.split('.')[1]),
+      });
+      orphanedEntitlements += Object.keys(drop).length;
+      if (!dryRun) await userDoc.ref.update(drop);
+    }
+
     return NextResponse.json({
       dryRun,
       usersScanned: usersSnap.size,
       ordersScanned: ordersSnap.size,
       coursesScanned: coursesSnap.size,
+      orphanedEntitlements,
       materialsMigrated,
       changeCount: changes.length,
       // Surfaced, not silently ignored: these need a human decision.

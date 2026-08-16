@@ -382,16 +382,21 @@ export async function getUserEntitlements(userId: string) {
     entries.map(([courseId]) => getDoc(doc(db, 'courses', courseId)))
   );
   
-  return entries.map(([courseId, data], i) => {
+  return entries.flatMap(([courseId, data], i) => {
     const courseSnap = courseSnaps[i];
-    // A deleted course used to be papered over with a title synthesised from its
-    // id ("NISM VA MOCK TEST SERIES") and an invented "Professional" tier. That
-    // is indistinguishable from real catalogue data, so a course removed from
-    // under a paying candidate still looked live on their dashboard. Say plainly
-    // that it is gone and flag it, so the UI can treat it differently.
-    const courseData = courseSnap.exists()
-      ? { id: courseSnap.id, ...courseSnap.data(), isMissing: false }
-      : { id: courseId, title: 'Course no longer available', tier: null, isMissing: true };
+
+    // A course that no longer exists is dropped from the dashboard entirely.
+    //
+    // Deleting a course now revokes its entitlements, so this only catches
+    // orphans: courses removed before that existed, or removed straight from
+    // the database. Either way the candidate was left with a card reading
+    // "Course no longer available" that they could not open and could only
+    // "Renew". Showing nothing is the honest result — there is nothing there.
+    //
+    // Deliberately NOT the same as expiry: an expired entitlement still points
+    // at a real course, so it keeps its card, its title and its Renew button.
+    if (!courseSnap.exists()) return [];
+    const courseData = { id: courseSnap.id, ...courseSnap.data(), isMissing: false };
 
     const parseDate = (val: any) => {
       if (!val) return new Date();
@@ -402,14 +407,14 @@ export async function getUserEntitlements(userId: string) {
 
     const expiresAtDate = parseDate(data.expiresAt);
 
-    return {
+    return [{
       courseId,
       course: courseData,
       enrolledAt: parseDate(data.enrolledAt),
       expiresAt: expiresAtDate,
       durationDays: data.durationDays,
       isActive: new Date() < expiresAtDate
-    };
+    }];
   });
 }
 
