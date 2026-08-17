@@ -1,0 +1,46 @@
+rules_version = '2';
+
+/**
+ * Study-note files.
+ *
+ * The whole point of moving files off Google Drive is that a Drive link set to
+ * "anyone with the link" stays open to anybody who is forwarded it. Repeating
+ * that mistake here would be worse, not better, so NOTHING is publicly
+ * readable: `allow read` is false for every path, including for signed-in
+ * candidates.
+ *
+ * Candidates get their file through /api/materials/download, which checks the
+ * entitlement and the plan tier on the server and then issues a signed link
+ * that expires in minutes. That is the only route to a file, and it cannot be
+ * shared usefully because it goes stale.
+ *
+ * Admins upload straight from the browser rather than through an API route, so
+ * a large PDF does not have to fit inside a request body.
+ */
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function isAdmin() {
+      return request.auth != null
+        && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    match /course-materials/{courseId}/{fileName} {
+      // Never readable with the client SDK. Downloads are signed server-side.
+      allow read: if false;
+
+      // 50 MB ceiling: study notes are documents and spreadsheets, and an
+      // accidental upload of something enormous costs real money to store and
+      // serve. Raise it deliberately if a genuine file ever needs more.
+      allow write: if isAdmin()
+        && request.resource.size < 50 * 1024 * 1024;
+
+      allow delete: if isAdmin();
+    }
+
+    // Anything outside the study-note area is denied outright.
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

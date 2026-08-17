@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Users, PenTool, LogOut, ShieldCheck, Home, CreditCard, BarChart3 } from 'lucide-react';
+import { LayoutDashboard, Users, PenTool, LogOut, ShieldCheck, Home, CreditCard, BarChart3, Ticket } from 'lucide-react';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { auth } from '@/lib/firebase/config';
 import { signOut } from 'firebase/auth';
@@ -30,6 +30,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { name: 'Students', href: '/admin/users', icon: Users },
     { name: 'Performance', href: '/admin/performance', icon: BarChart3 },
     { name: 'Orders', href: '/admin/orders', icon: CreditCard },
+    { name: 'Discount Codes', href: '/admin/coupons', icon: Ticket },
     { name: 'Content', href: '/editor', icon: PenTool },
   ];
 

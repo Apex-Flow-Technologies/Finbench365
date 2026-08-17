@@ -33,6 +33,8 @@ function ContentSkeleton() {
 
 import { AdminPreviewBanner } from '@/components/AdminPreviewBanner';
 import { detectMaterialType } from '@/lib/materials';
+import { auth } from '@/lib/firebase/config';
+import toast from 'react-hot-toast';
 import { FileText, Sheet, Presentation, FileType, Video, Image as ImageIcon, Archive, ExternalLink } from 'lucide-react';
 
 /** Maps the detected material type to the icon shown beside its name. */
@@ -60,6 +62,40 @@ export default function StudentExamPage({ params }: { params: Promise<{ id: stri
   // filtered to this candidate's plan — a note above their tier is refused by
   // Firestore, not merely hidden here.
   const [materials, setMaterials] = useState<any[]>([]);
+  /** Which note is currently being fetched, so its button can show a spinner. */
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
+
+  /**
+   * Fetches one study note.
+   *
+   * The file itself is never reachable from the browser — storage refuses every
+   * client read. The server re-checks that this candidate still has access and
+   * that their plan covers this particular note, then returns a link valid for
+   * a few minutes. Copying that link out of the page gains nobody anything,
+   * because it goes stale.
+   */
+  const downloadMaterial = async (mat: any) => {
+    const key = mat.id ?? mat.name;
+    setDownloadingId(key);
+    try {
+      if (!auth.currentUser) throw new Error('Please sign in again.');
+      const token = await auth.currentUser.getIdToken();
+      const res = await fetch(
+        `/api/materials/download?courseId=${encodeURIComponent(examId)}&materialId=${encodeURIComponent(mat.id ?? '')}`,
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Could not open that study note.');
+
+      // A signed link downloads; an old external link opens in a new tab,
+      // because we cannot control what happens on someone else's site.
+      window.open(data.url, data.external ? '_blank' : '_self');
+    } catch (err: any) {
+      toast.error(err.message, { duration: 8000 });
+    } finally {
+      setDownloadingId(null);
+    }
+  };
 
   useEffect(() => {
     async function loadData() {
@@ -286,7 +322,9 @@ export default function StudentExamPage({ params }: { params: Promise<{ id: stri
                   materials.map((mat: any, idx: number) => {
                     // Worked out from the URL rather than assumed. Every note
                     // used to claim to be a PDF, including the Excel workbook.
-                    const type = detectMaterialType(mat.url, mat.name);
+                    // An uploaded file knows its own name and type; a link has
+                    // to be guessed at from the URL.
+                    const type = detectMaterialType(mat.storagePath ? (mat.fileName ?? '') : mat.url, mat.name);
                     const Icon = MATERIAL_ICONS[type.icon];
                     return (
                     <motion.div
@@ -305,15 +343,20 @@ export default function StudentExamPage({ params }: { params: Promise<{ id: stri
                           <div className="text-xs text-[#475569] dark:text-[#94A3B8] mt-0.5 truncate max-w-xs">{type.label}</div>
                         </div>
                       </div>
-                      <a
-                        href={mat.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="shrink-0 flex items-center gap-2 px-4 py-2.5 bg-blue-50 dark:bg-blue-500/10 hover:bg-blue-500 text-blue-700 dark:text-blue-400 hover:text-white rounded-xl font-bold text-xs transition-all active:scale-95"
+                      {/* Always through the server. It re-checks the
+                          entitlement and the plan before handing over a link
+                          that expires in minutes, so a URL copied out of the
+                          page is worthless to anyone it is passed to. */}
+                      <button
+                        onClick={() => downloadMaterial(mat)}
+                        disabled={downloadingId === (mat.id ?? mat.name)}
+                        className="shrink-0 flex items-center gap-2 px-4 py-2.5 bg-blue-50 dark:bg-blue-500/10 hover:bg-blue-500 text-blue-700 dark:text-blue-400 hover:text-white rounded-xl font-bold text-xs transition-all active:scale-95 disabled:opacity-60"
                       >
-                        <FileDown className="w-4 h-4" />
+                        {downloadingId === (mat.id ?? mat.name)
+                          ? <Loader2 className="w-4 h-4 animate-spin" />
+                          : <FileDown className="w-4 h-4" />}
                         {type.action}
-                      </a>
+                      </button>
                     </motion.div>
                     );
                   })

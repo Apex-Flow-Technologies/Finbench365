@@ -38,7 +38,17 @@ export async function getCourse(courseId: string) {
 export interface CourseMaterial {
   id: string;
   name: string;
+  /**
+   * External link, for notes added before files could be uploaded. A note has
+   * either this or a storagePath — never both, and never neither.
+   */
   url: string;
+  /** Where the uploaded file lives. Never handed to a browser directly. */
+  storagePath?: string | null;
+  /** Original filename, used for the type icon and the saved file's name. */
+  fileName?: string | null;
+  contentType?: string | null;
+  sizeBytes?: number | null;
   /** Lowest plan tier that unlocks this note. 1 = every plan. */
   minPlanTier: number;
   order: number;
@@ -73,7 +83,11 @@ export async function getCourseMaterials(courseId: string): Promise<CourseMateri
 /** Replaces the whole set of study notes for a course. Admin only. */
 export async function saveCourseMaterials(
   courseId: string,
-  materials: { id?: string; name: string; url: string; minPlanTier: number }[],
+  materials: {
+    id?: string; name: string; url: string; minPlanTier: number;
+    storagePath?: string | null; fileName?: string | null;
+    contentType?: string | null; sizeBytes?: number | null;
+  }[],
 ) {
   const existing = await getDocs(collection(db, `courses/${courseId}/materials`));
   const batch = writeBatch(db);
@@ -90,6 +104,13 @@ export async function saveCourseMaterials(
     batch.set(ref, {
       name: m.name,
       url: m.url,
+      // Null rather than undefined: Firestore rejects undefined outright, and
+      // an explicit null is what tells the download route this note is a link
+      // to somewhere else rather than a file we hold.
+      storagePath: m.storagePath ?? null,
+      fileName: m.fileName ?? null,
+      contentType: m.contentType ?? null,
+      sizeBytes: m.sizeBytes ?? null,
       minPlanTier: m.minPlanTier ?? 1,
       order: i,
       updatedAt: serverTimestamp(),

@@ -58,6 +58,11 @@ if (!getApps().length) {
         clientEmail: process.env.FIREBASE_CLIENT_EMAIL?.replace(/^["']|["']$/g, ''),
         privateKey,
       }),
+      // Required for study-note downloads. Without it, storage().bucket()
+      // throws "Bucket name not specified" at request time rather than at
+      // startup, so the failure would only appear the first time a candidate
+      // tried to open a file.
+      storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
     });
   } catch (err) {
     initError = err;

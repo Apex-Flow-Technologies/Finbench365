@@ -8,10 +8,30 @@ import { IN_SCOPE_PATTERNS, findExamPattern } from '@/constants/examPatterns';
 import { 
   ChevronLeft, Plus, Save, Settings, UploadCloud, FileText, 
   ClipboardList, Trash2, ExternalLink, CheckCircle2, Loader2,
-  GripVertical, BookMarked, ChevronUp, ChevronDown
+  GripVertical, BookMarked, ChevronUp, ChevronDown, FileCheck2
 } from 'lucide-react';
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
+import toast from 'react-hot-toast';
+import { uploadMaterialFile, deleteMaterialFile, formatBytes } from '@/lib/materials/upload';
+
+/**
+ * One study note as the editor holds it before saving.
+ *
+ * `url` and `storagePath` are alternatives: a note is either a link to
+ * somewhere else or a file this site holds. Uploading clears the link, and
+ * detaching the file leaves the link field free again.
+ */
+interface MaterialDraft {
+  id?: string;
+  name: string;
+  url: string;
+  minPlanTier: number;
+  storagePath?: string | null;
+  fileName?: string | null;
+  contentType?: string | null;
+  sizeBytes?: number | null;
+}
 
 // Skeleton card for loading state
 function SkeletonCard() {
@@ -62,7 +82,9 @@ export default function ExamBuilderPage({ params }: { params: Promise<{ id: stri
   };
 
   // Materials state — flat list of {name, url}
-  const [materials, setMaterials] = useState<{ id?: string; name: string; url: string; minPlanTier: number }[]>([]);
+  const [materials, setMaterials] = useState<MaterialDraft[]>([]);
+  /** Upload progress per row index. Absent means that row is not uploading. */
+  const [uploading, setUploading] = useState<Record<number, number>>({});
 
   useEffect(() => {
     async function load() {
@@ -128,7 +150,53 @@ export default function ExamBuilderPage({ params }: { params: Promise<{ id: stri
   };
 
   const removeMaterial = (index: number) => {
+    // The stored file goes too. Leaving it behind would keep paying to store
+    // something nothing points at any more.
+    const gone = materials[index];
+    if (gone?.storagePath) deleteMaterialFile(gone.storagePath);
     setMaterials(materials.filter((_, i) => i !== index));
+  };
+
+  /**
+   * Uploads a chosen file and attaches it to one study note.
+   *
+   * The file lands in storage first and the note is only pointed at it on
+   * success, so a failed upload leaves the note exactly as it was rather than
+   * referring to something that is not there.
+   */
+  const handleUpload = async (index: number, file: File) => {
+    setUploading((u) => ({ ...u, [index]: 0 }));
+    try {
+      const uploaded = await uploadMaterialFile(courseId, file, (pct) =>
+        setUploading((u) => ({ ...u, [index]: pct })));
+
+      setMaterials((prev) => prev.map((m, i) => i === index ? {
+        ...m,
+        // A note is a file or a link, never both — the link is cleared so the
+        // download route cannot be left with two sources to choose between.
+        url: '',
+        storagePath: uploaded.storagePath,
+        fileName: uploaded.fileName,
+        contentType: uploaded.contentType,
+        sizeBytes: uploaded.sizeBytes,
+        // An unnamed note takes the filename, which beats a blank row.
+        name: m.name?.trim() ? m.name : uploaded.fileName.replace(/\.[^.]+$/, ''),
+      } : m));
+      toast.success(`${uploaded.fileName} uploaded.`);
+    } catch (err: any) {
+      toast.error(err.message ?? 'Upload failed.', { duration: 9000 });
+    } finally {
+      setUploading((u) => { const next = { ...u }; delete next[index]; return next; });
+    }
+  };
+
+  /** Detaches the file so another can be chosen. Deletes the stored object. */
+  const detachFile = (index: number) => {
+    const current = materials[index];
+    if (current?.storagePath) deleteMaterialFile(current.storagePath);
+    setMaterials((prev) => prev.map((m, i) => i === index ? {
+      ...m, storagePath: null, fileName: null, contentType: null, sizeBytes: null,
+    } : m));
   };
 
   const moveMaterialUp = (idx: number) => {
@@ -402,15 +470,70 @@ export default function ExamBuilderPage({ params }: { params: Promise<{ id: stri
                         className="w-full bg-slate-50 dark:bg-[#0B0C10] border border-slate-200 dark:border-[#282C36] rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-amber-500 transition-colors"
                       />
                     </div>
+                    {/* Upload, or paste a link.
+                        An uploaded file is held by the site, so the plan
+                        restriction covers the file itself. A link can only ever
+                        be hidden from the page — anyone forwarded it can still
+                        open it — so uploading is the option shown first. */}
                     <div className="space-y-1.5">
-                      <label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">File URL (Google Drive / S3 / any)</label>
-                      <input
-                        type="url"
-                        value={mat.url}
-                        onChange={(e) => updateMaterial(idx, 'url', e.target.value)}
-                        placeholder="https://drive.google.com/..."
-                        className="w-full bg-slate-50 dark:bg-[#0B0C10] border border-slate-200 dark:border-[#282C36] rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-amber-500 font-mono transition-colors"
-                      />
+                      <label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+                        File
+                      </label>
+
+                      {mat.storagePath ? (
+                        <div className="flex items-center gap-2 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/30 rounded-lg px-3 py-2">
+                          <FileCheck2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                          <span className="text-sm text-slate-900 dark:text-white truncate flex-1" title={mat.fileName ?? ''}>
+                            {mat.fileName}
+                          </span>
+                          <span className="text-[10px] tabular-nums text-slate-500 dark:text-slate-400 shrink-0">
+                            {formatBytes(mat.sizeBytes)}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => detachFile(idx)}
+                            className="text-[10px] font-bold text-slate-500 hover:text-red-500 transition-colors shrink-0"
+                            title="Remove this file and choose another"
+                          >
+                            Replace
+                          </button>
+                        </div>
+                      ) : uploading[idx] !== undefined ? (
+                        <div className="bg-slate-50 dark:bg-[#0B0C10] border border-slate-200 dark:border-[#282C36] rounded-lg px-3 py-2">
+                          <div className="flex items-center justify-between text-xs text-slate-600 dark:text-slate-300 mb-1.5">
+                            <span>Uploading…</span>
+                            <span className="tabular-nums">{uploading[idx]}%</span>
+                          </div>
+                          <div className="h-1.5 rounded-full bg-slate-200 dark:bg-[#282C36] overflow-hidden">
+                            <div className="h-full bg-amber-500 transition-all" style={{ width: `${uploading[idx]}%` }} />
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="space-y-1.5">
+                          <label className="flex items-center gap-2 cursor-pointer bg-slate-50 dark:bg-[#0B0C10] border border-dashed border-slate-300 dark:border-[#3A404B] hover:border-amber-500 rounded-lg px-3 py-2 transition-colors">
+                            <UploadCloud className="w-4 h-4 text-amber-500 shrink-0" />
+                            <span className="text-sm text-slate-600 dark:text-slate-300">
+                              Upload a file (PDF, Excel, Word…)
+                            </span>
+                            <input
+                              type="file"
+                              className="hidden"
+                              onChange={(e) => {
+                                const f = e.target.files?.[0];
+                                e.target.value = '';
+                                if (f) handleUpload(idx, f);
+                              }}
+                            />
+                          </label>
+                          <input
+                            type="url"
+                            value={mat.url}
+                            onChange={(e) => updateMaterial(idx, 'url', e.target.value)}
+                            placeholder="…or paste a link"
+                            className="w-full bg-slate-50 dark:bg-[#0B0C10] border border-slate-200 dark:border-[#282C36] rounded-lg px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-amber-500 font-mono transition-colors"
+                          />
+                        </div>
+                      )}
                     </div>
 
                     {/* Which plans unlock this note. Enforced by Firestore
