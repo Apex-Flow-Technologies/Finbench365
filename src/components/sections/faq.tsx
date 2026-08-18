@@ -82,7 +82,7 @@ export function Faq() {
             Frequently Asked Questions <br />
             On Our Examination Engine.
           </h2>
-          <p className="text-[#334155] text-lg leading-relaxed">
+          <p className="text-[#334155] dark:text-[#E2E8F0] text-lg leading-relaxed">
             Everything you need to know about our NISM mock tests, study notes, plans and access.
           </p>
         </div>
@@ -136,7 +136,7 @@ export function Faq() {
                       exit={{ height: 0, opacity: 0 }}
                       transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
                     >
-                      <div className="px-6 sm:px-7 pb-6 pt-1 text-[#334155] text-base leading-relaxed border-t border-[#F2F2EC]">
+                      <div className="px-6 sm:px-7 pb-6 pt-1 text-[#334155] dark:text-[#E2E8F0] text-base leading-relaxed border-t border-[#F2F2EC] dark:border-white/10">
                         <p>{item.answer}</p>
                       </div>
                     </motion.div>
@@ -151,7 +151,7 @@ export function Faq() {
         <div className="mt-16 text-center">
           <p className="text-sm text-[#475569] dark:text-[#94A3B8]">
             Have a specific quantitative institutional query or university curriculum partnership request?{' '}
-            <a href="#contact" className="font-semibold text-[#181A1F] underline underline-offset-4 hover:text-amber-700 transition-colors">
+            <a href="#contact" className="font-semibold text-[#181A1F] dark:text-white underline underline-offset-4 hover:text-amber-700 dark:hover:text-amber-400 transition-colors">
               Contact our Academic Team →
             </a>
           </p>

@@ -303,12 +303,12 @@ export function HeroExamSimulator() {
         </div>
 
         {/* Bottom Minimal Decorative Status */}
-        <div className="bg-[#15171F] border-t border-[#222630] px-6 py-3 flex items-center justify-between text-[10px] tabular-nums text-slate-400 dark:text-slate-500">
+        <div className="bg-[#15171F] border-t border-[#222630] px-6 py-3 flex items-center justify-between text-[10px] tabular-nums text-slate-400">
           <div className="flex items-center gap-2">
             <span className="w-1.5 h-1.5 rounded-full bg-slate-500 animate-ping" />
             <span>NISM_EXAM_PATTERN</span>
           </div>
-          <span className="text-slate-600 tracking-widest">FINBENCH365 SYSTEM</span>
+          <span className="text-slate-400 tracking-widest">MYEXAMS365 SYSTEM</span>
         </div>
       </motion.div>
     </div>
