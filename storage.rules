@@ -1,44 +1,28 @@
 rules_version = '2';
 
 /**
- * Study-note files.
+ * Study-note files. Nothing here is reachable with a client SDK — at all.
  *
- * The whole point of moving files off Google Drive is that a Drive link set to
- * "anyone with the link" stays open to anybody who is forwarded it. Repeating
- * that mistake here would be worse, not better, so NOTHING is publicly
- * readable: `allow read` is false for every path, including for signed-in
- * candidates.
+ * The point of holding files rather than linking to Google Drive is that a
+ * Drive link set to "anyone with the link" stays open to whoever it is
+ * forwarded to. Repeating that here would be worse, so every path denies both
+ * reads and writes, for everyone, signed in or not.
  *
- * Candidates get their file through /api/materials/download, which checks the
- * entitlement and the plan tier on the server and then issues a signed link
- * that expires in minutes. That is the only route to a file, and it cannot be
- * shared usefully because it goes stale.
+ * Both directions are handled server-side with signed URLs instead:
  *
- * Admins upload straight from the browser rather than through an API route, so
- * a large PDF does not have to fit inside a request body.
+ *   uploads    /api/materials/upload-url  — admin only, 15-minute signature
+ *   downloads  /api/materials/download    — checks the entitlement and the
+ *                                           plan tier, 5-minute signature
+ *
+ * An earlier version allowed admin writes here and identified the admin by
+ * reading their role out of Firestore. That cross-service lookup refused every
+ * upload in practice, and it meant the feature only worked if a rule in another
+ * service stayed correct. Deciding it in the API route removes that coupling
+ * entirely: there is now no rule that has to be right for uploads to work, and
+ * no rule that can accidentally expose a file if it is wrong.
  */
 service firebase.storage {
   match /b/{bucket}/o {
-
-    function isAdmin() {
-      return request.auth != null
-        && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role == 'admin';
-    }
-
-    match /course-materials/{courseId}/{fileName} {
-      // Never readable with the client SDK. Downloads are signed server-side.
-      allow read: if false;
-
-      // 50 MB ceiling: study notes are documents and spreadsheets, and an
-      // accidental upload of something enormous costs real money to store and
-      // serve. Raise it deliberately if a genuine file ever needs more.
-      allow write: if isAdmin()
-        && request.resource.size < 50 * 1024 * 1024;
-
-      allow delete: if isAdmin();
-    }
-
-    // Anything outside the study-note area is denied outright.
     match /{allPaths=**} {
       allow read, write: if false;
     }
