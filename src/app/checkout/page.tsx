@@ -133,6 +133,30 @@ function CheckoutContent() {
     return () => { cancelled = true; };
   }, [courseId]);
 
+  // A validated coupon belongs to the exam it was validated against.
+  //
+  // The exam is a query parameter on this same route, so moving between exams
+  // re-renders this component rather than remounting it: `courseId` changes
+  // while `couponApplied` and `discountPercent` survive. The order summary
+  // would then show a discount for an exam the code is not scoped to, and
+  // create-order — which re-checks scope server-side and is the authority —
+  // would refuse it and charge full price. The candidate would be quoted one
+  // figure and billed another.
+  //
+  // Dropping the discount on an exam change keeps the summary and the gateway
+  // saying the same thing. The typed code is deliberately left in the box so
+  // re-checking it against the new exam is one click.
+  const couponScopeRef = useRef(courseId);
+  useEffect(() => {
+    if (couponScopeRef.current === courseId) return;
+    couponScopeRef.current = courseId;
+    if (couponApplied) {
+      setCouponError('Exam changed — apply your code again to check it is valid here.');
+    }
+    setCouponApplied(false);
+    setDiscountPercent(0);
+  }, [courseId, couponApplied]);
+
   // On mount, quietly re-check any order left over from a previous tab session.
   // If it was actually paid the success screen appears; otherwise the candidate
   // lands on a normal checkout page. Nothing here ever blocks the page — an
