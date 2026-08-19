@@ -28,6 +28,23 @@ export function normaliseCouponCode(raw: string): string {
 }
 
 /**
+ * The exams a coupon is restricted to. An empty array means every exam.
+ *
+ * Scope is stored as `courseIds`, but the first version of this feature stored
+ * a single `courseId` and codes created then are still live, so the singular
+ * field is read as a one-exam scope rather than migrated. Reading through this
+ * one function is what keeps that compatibility in a single place instead of
+ * at every call site.
+ */
+export function couponCourseIds(data: Record<string, any> | null | undefined): string[] {
+  if (!data) return [];
+  if (Array.isArray(data.courseIds)) {
+    return data.courseIds.filter((id: unknown): id is string => typeof id === 'string' && id !== '');
+  }
+  return typeof data.courseId === 'string' && data.courseId ? [data.courseId] : [];
+}
+
+/**
  * Decides whether a coupon may be applied. Takes the raw document data (or null
  * when the document does not exist) so it stays pure and testable — the caller
  * owns the Firestore read.
@@ -35,20 +52,22 @@ export function normaliseCouponCode(raw: string): string {
 export function evaluateCoupon(
   data: Record<string, any> | null,
   /**
-   * The exam the candidate is buying. A coupon restricted to a different exam
-   * is refused. Omitted only where no purchase is in progress — the admin list,
-   * which is reporting on the coupon itself rather than applying it.
+   * The exam the candidate is buying. A coupon restricted to a set of exams
+   * that does not include it is refused. Omitted only where no purchase is in
+   * progress — the admin list, which is reporting on the coupon itself rather
+   * than applying it.
    */
   courseId?: string | null,
 ): CouponEvaluation {
   if (!data) return { valid: false, reason: 'not-found', discountPercent: 0 };
   if (!data.isActive) return { valid: false, reason: 'inactive', discountPercent: 0 };
 
-  // A coupon with no courseId works on every exam, which is what every coupon
-  // created before this did — so existing codes keep behaving as they did.
-  // Once a courseId is set the code only works on that exam, which stops a
-  // discount meant for one exam being spread across the whole catalogue.
-  if (data.courseId && courseId !== undefined && data.courseId !== courseId) {
+  // An empty scope works on every exam, which is what every coupon created
+  // before scoping existed did — so those codes keep behaving as they did.
+  // Once the scope is non-empty the code only works on the exams in it, which
+  // stops a discount meant for a few exams being spread across the catalogue.
+  const scope = couponCourseIds(data);
+  if (scope.length > 0 && courseId !== undefined && !scope.includes(courseId as string)) {
     return { valid: false, reason: 'wrong-course', discountPercent: 0 };
   }
 

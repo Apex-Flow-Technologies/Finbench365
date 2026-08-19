@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { auth, db } from '@/lib/firebase/config';
 import { collection, getDocs } from 'firebase/firestore';
-import { Ticket, Plus, RefreshCw, Loader2 } from 'lucide-react';
+import { Ticket, Plus, RefreshCw, Loader2, ChevronDown, X } from 'lucide-react';
 import { PageHeader, Card, SectionTitle, Badge, Table, Th, Td, Row, EmptyRow } from '@/components/admin/primitives';
 import toast from 'react-hot-toast';
 
@@ -26,8 +26,8 @@ interface Coupon {
   description: string | null;
   usable: boolean;
   unusableReason: string | null;
-  /** null means the code works on every exam. */
-  courseId: string | null;
+  /** Empty means the code works on every exam. */
+  courseIds: string[];
 }
 
 const REASON_LABEL: Record<string, string> = {
@@ -35,6 +35,135 @@ const REASON_LABEL: Record<string, string> = {
   exhausted: 'Usage limit reached',
   expired: 'Past its expiry date',
 };
+
+interface Course { id: string; title: string }
+
+/**
+ * A dropdown of exams, any number of which can be ticked.
+ *
+ * Deliberately not a native `<select multiple>`: adding a second exam there
+ * needs a ctrl-click, un-choosing one needs another, and neither works on a
+ * touch screen — an admin would reasonably conclude only one exam was possible.
+ * A list of checkboxes ticks and unticks with an ordinary click. Each row is a
+ * `<label>` wrapping its input, so the whole row is the hit target and the state
+ * is announced rather than inferred from a highlight colour.
+ */
+function ExamPicker({
+  id, courses, selected, onChange, fieldClass,
+}: {
+  id: string;
+  courses: Course[];
+  selected: string[];
+  onChange: (next: string[]) => void;
+  fieldClass: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const boxRef = useRef<HTMLDivElement>(null);
+
+  // The panel is absolutely positioned and covers the fields beneath it, so it
+  // needs a way out that is not "tick something". Both an outside click and
+  // Escape close it; the listeners exist only while it is open.
+  useEffect(() => {
+    if (!open) return;
+    const onPointerDown = (e: MouseEvent) => {
+      if (boxRef.current && !boxRef.current.contains(e.target as Node)) setOpen(false);
+    };
+    const onKeyDown = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
+    document.addEventListener('mousedown', onPointerDown);
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', onPointerDown);
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [open]);
+
+  const toggle = (courseId: string) => {
+    onChange(selected.includes(courseId)
+      ? selected.filter((x) => x !== courseId)
+      : [...selected, courseId]);
+  };
+
+  const titleOf = (courseId: string) =>
+    courses.find((c) => c.id === courseId)?.title ?? courseId;
+
+  // Naming the single choice is more use than "1 exam selected". Past that the
+  // titles do not fit on one line, and the chips below spell them out anyway.
+  const summary = selected.length === 0
+    ? 'All exams'
+    : selected.length === 1
+      ? titleOf(selected[0])
+      : `${selected.length} exams selected`;
+
+  return (
+    <div ref={boxRef} className="relative">
+      <button
+        id={id} type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open} aria-haspopup="true"
+        className={`${fieldClass} flex items-center justify-between gap-2 text-left`}
+      >
+        <span className={selected.length === 0 ? 'text-slate-500 dark:text-slate-400' : ''}>
+          {summary}
+        </span>
+        <ChevronDown className={`w-4 h-4 shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+
+      {open && (
+        <div className="absolute z-20 mt-1 w-full max-h-64 overflow-y-auto rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#181A1F] shadow-lg p-1">
+          {/* Clearing every tick is the same thing as "works on everything", so
+              it is offered as a row rather than left as something to deduce. */}
+          <button
+            type="button"
+            onClick={() => onChange([])}
+            className="w-full text-left px-3 py-2 rounded-lg text-sm font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-white/10 transition-colors"
+          >
+            All exams
+            {selected.length === 0 && <span className="text-amber-500 font-normal"> · current</span>}
+          </button>
+          <div className="my-1 border-t border-slate-200 dark:border-white/10" />
+
+          {courses.length === 0 ? (
+            <p className="px-3 py-2 text-sm text-slate-500 dark:text-slate-400">No exams found.</p>
+          ) : courses.map((c) => (
+            <label
+              key={c.id}
+              className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-slate-800 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-white/10 cursor-pointer transition-colors"
+            >
+              <input
+                type="checkbox"
+                checked={selected.includes(c.id)}
+                onChange={() => toggle(c.id)}
+                className="w-4 h-4 shrink-0 accent-amber-500 cursor-pointer"
+              />
+              <span>{c.title}</span>
+            </label>
+          ))}
+        </div>
+      )}
+
+      {selected.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 mt-2">
+          {selected.map((courseId) => (
+            <span
+              key={courseId}
+              className="inline-flex items-center gap-1 pl-2.5 pr-1 py-1 rounded-lg text-xs font-semibold bg-amber-500/15 text-amber-700 dark:text-amber-300"
+            >
+              {titleOf(courseId)}
+              <button
+                type="button"
+                onClick={() => toggle(courseId)}
+                aria-label={`Remove ${titleOf(courseId)}`}
+                className="p-0.5 rounded hover:bg-amber-500/25 transition-colors"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function AdminCouponsPage() {
   const [coupons, setCoupons] = useState<Coupon[]>([]);
@@ -46,8 +175,8 @@ export default function AdminCouponsPage() {
   const [maxUses, setMaxUses] = useState('');
   const [expiresAt, setExpiresAt] = useState('');
   const [description, setDescription] = useState('');
-  const [courseId, setCourseId] = useState('');
-  const [courses, setCourses] = useState<{ id: string; title: string }[]>([]);
+  const [courseIds, setCourseIds] = useState<string[]>([]);
+  const [courses, setCourses] = useState<Course[]>([]);
 
   const call = useCallback(async (method: string, body?: any) => {
     if (!auth.currentUser) throw new Error('Not signed in.');
@@ -95,10 +224,10 @@ export default function AdminCouponsPage() {
         maxUses: maxUses === '' ? null : Number(maxUses),
         expiresAt: expiresAt || null,
         description,
-        courseId: courseId || null,
+        courseIds,
       });
       toast.success(`${code.toUpperCase()} created — ${discount}% off.`);
-      setCode(''); setDiscount(''); setMaxUses(''); setExpiresAt(''); setDescription(''); setCourseId('');
+      setCode(''); setDiscount(''); setMaxUses(''); setExpiresAt(''); setDescription(''); setCourseIds([]);
       await load();
     } catch (err: any) {
       toast.error(err.message, { duration: 9000 });
@@ -171,17 +300,15 @@ export default function AdminCouponsPage() {
           </div>
 
           <div className="sm:col-span-2">
-            <label className={label} htmlFor="courseId">Valid for</label>
-            <select
-              id="courseId" value={courseId}
-              onChange={(e) => setCourseId(e.target.value)}
-              className={field}
-            >
-              <option value="">All exams</option>
-              {courses.map((c) => (
-                <option key={c.id} value={c.id}>{c.title}</option>
-              ))}
-            </select>
+            <label className={label} htmlFor="courseIds">Valid for</label>
+            <ExamPicker
+              id="courseIds" courses={courses}
+              selected={courseIds} onChange={setCourseIds}
+              fieldClass={field}
+            />
+            <p className="mt-1.5 text-xs text-[#475569] dark:text-[#94A3B8]">
+              Tick every exam the code should work on. Leave them all unticked for the whole catalogue.
+            </p>
           </div>
 
           <div className="sm:col-span-2 lg:col-span-2">
@@ -245,10 +372,21 @@ export default function AdminCouponsPage() {
                 )}
               </Td>
               <Td className="tabular-nums font-semibold">{c.discountPercent}% off</Td>
-              <Td className="whitespace-nowrap">
-                {c.courseId
-                  ? (courses.find((x) => x.id === c.courseId)?.title ?? c.courseId)
-                  : <span className="text-slate-500 dark:text-slate-400">All exams</span>}
+              <Td>
+                {c.courseIds.length === 0
+                  ? <span className="text-slate-500 dark:text-slate-400">All exams</span>
+                  : (
+                    <div className="flex flex-wrap gap-1 max-w-[16rem]">
+                      {c.courseIds.map((courseId) => (
+                        <span
+                          key={courseId}
+                          className="inline-block px-2 py-0.5 rounded-md text-xs font-semibold bg-slate-100 dark:bg-white/10 text-slate-700 dark:text-slate-200"
+                        >
+                          {courses.find((x) => x.id === courseId)?.title ?? courseId}
+                        </span>
+                      ))}
+                    </div>
+                  )}
               </Td>
               <Td className="tabular-nums">
                 {c.usedCount}{c.maxUses ? ` of ${c.maxUses}` : ' · unlimited'}

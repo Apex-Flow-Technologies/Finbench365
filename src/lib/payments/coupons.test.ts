@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { evaluateCoupon, normaliseCouponCode, couponRejectionMessage } from './coupons';
+import { evaluateCoupon, normaliseCouponCode, couponRejectionMessage, couponCourseIds } from './coupons';
 
 const HOUR = 60 * 60 * 1000;
 const valid = (extra: Record<string, any> = {}) => ({
@@ -85,10 +85,14 @@ describe('couponRejectionMessage', () => {
   });
 
   /**
-   * A discount meant for one exam must not be spendable across the catalogue.
+   * A discount meant for particular exams must not be spendable across the
+   * whole catalogue. `forExam` builds the original single-`courseId` shape,
+   * which live codes still use, so these cases double as the compatibility
+   * guard for it.
    */
   describe('exam-specific coupons', () => {
     const forExam = (courseId: string) => valid({ courseId });
+    const forExams = (...courseIds: string[]) => valid({ courseIds });
 
     it('accepts the code on the exam it was made for', () => {
       expect(evaluateCoupon(forExam('nism-va'), 'nism-va').valid).toBe(true);
@@ -124,6 +128,55 @@ describe('couponRejectionMessage', () => {
 
     it('has a message a candidate can act on', () => {
       expect(couponRejectionMessage('wrong-course')).toMatch(/not valid for the exam/i);
+    });
+
+    it('accepts any exam in a multi-exam scope, and refuses the rest', () => {
+      const c = forExams('nism-va', 'nism-xv');
+      expect(evaluateCoupon(c, 'nism-va').valid).toBe(true);
+      expect(evaluateCoupon(c, 'nism-xv').valid).toBe(true);
+      expect(evaluateCoupon(c, 'nism-viii'))
+        .toMatchObject({ valid: false, reason: 'wrong-course', discountPercent: 0 });
+    });
+
+    it('treats an empty courseIds list as every exam', () => {
+      // The admin form posts [] for "All exams" rather than omitting the field,
+      // so an empty array must not read as "restricted to nothing".
+      expect(evaluateCoupon(forExams(), 'nism-va').valid).toBe(true);
+      expect(evaluateCoupon(forExams(), null).valid).toBe(true);
+    });
+
+    it('prefers courseIds when a document carries both fields', () => {
+      // Only reachable if a document were written by mixed-version code. The
+      // array is the field this version writes, so it is the one that decides.
+      const c = valid({ courseId: 'nism-va', courseIds: ['nism-xv'] });
+      expect(evaluateCoupon(c, 'nism-xv').valid).toBe(true);
+      expect(evaluateCoupon(c, 'nism-va')).toMatchObject({ reason: 'wrong-course' });
+    });
+
+    it('still applies the other checks to a multi-exam code', () => {
+      expect(evaluateCoupon(valid({ courseIds: ['nism-va'], isActive: false }), 'nism-va'))
+        .toMatchObject({ reason: 'inactive' });
+      expect(evaluateCoupon(valid({ courseIds: ['nism-va'], maxUses: 1, usedCount: 1 }), 'nism-va'))
+        .toMatchObject({ reason: 'exhausted' });
+    });
+
+    describe('couponCourseIds', () => {
+      it('reads the modern array and the original single field alike', () => {
+        expect(couponCourseIds({ courseIds: ['a', 'b'] })).toEqual(['a', 'b']);
+        expect(couponCourseIds({ courseId: 'a' })).toEqual(['a']);
+      });
+
+      it('returns an empty scope for an unrestricted or missing coupon', () => {
+        expect(couponCourseIds({})).toEqual([]);
+        expect(couponCourseIds({ courseId: null })).toEqual([]);
+        expect(couponCourseIds(null)).toEqual([]);
+      });
+
+      it('drops junk entries rather than scoping a code to them', () => {
+        // A non-string in the array would never equal a courseId, so leaving it
+        // in would silently narrow the scope for no visible reason.
+        expect(couponCourseIds({ courseIds: ['a', '', null, 7, 'b'] })).toEqual(['a', 'b']);
+      });
     });
   });
 });

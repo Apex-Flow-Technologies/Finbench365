@@ -3,7 +3,7 @@ import { adminDb } from '@/lib/firebase/admin';
 import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 import { requireAdmin } from '@/lib/api/requireAdmin';
 import { rateLimit } from '@/lib/api/rateLimit';
-import { normaliseCouponCode, evaluateCoupon } from '@/lib/payments/coupons';
+import { normaliseCouponCode, evaluateCoupon, couponCourseIds } from '@/lib/payments/coupons';
 
 /**
  * Creating and managing discount codes.
@@ -22,6 +22,14 @@ import { normaliseCouponCode, evaluateCoupon } from '@/lib/payments/coupons';
 /** Codes are the document id, so they must be safe to put in a path. */
 const CODE_PATTERN = /^[A-Z0-9][A-Z0-9_-]{2,31}$/;
 
+/**
+ * An upper bound on how many exams one code may be scoped to, so a malformed
+ * or hostile request cannot turn one coupon into a getAll() of arbitrary size.
+ * The catalogue is far smaller than this; scoping to more exams than the
+ * catalogue holds is the same as scoping to none, which is already a choice.
+ */
+const MAX_SCOPED_EXAMS = 50;
+
 function serialise(doc: FirebaseFirestore.QueryDocumentSnapshot | FirebaseFirestore.DocumentSnapshot) {
   const d = doc.data() ?? {};
   const evaluation = evaluateCoupon(d);  // no courseId: not a purchase
@@ -34,8 +42,10 @@ function serialise(doc: FirebaseFirestore.QueryDocumentSnapshot | FirebaseFirest
     expiresAt: d.expiresAt?.toDate?.()?.toISOString() ?? null,
     createdAt: d.createdAt?.toDate?.()?.toISOString() ?? null,
     description: d.description ?? null,
-    // null means every exam, which is how coupons behaved before scoping.
-    courseId: d.courseId ?? null,
+    // Empty means every exam, which is how coupons behaved before scoping.
+    // Read through the shared helper so codes still carrying the original
+    // single `courseId` report their scope the same way as newer ones.
+    courseIds: couponCourseIds(d),
     // The same judgement a candidate's checkout would make, so the admin list
     // cannot say "Active" about a code that is exhausted or out of date.
     usable: evaluation.valid,
@@ -101,16 +111,46 @@ export async function POST(req: Request) {
     expiresAt = Timestamp.fromDate(when);
   }
 
-  // Restricting a code to one exam is what stops a discount meant for a single
-  // exam being spent across the whole catalogue. Blank means every exam, which
-  // is how every coupon created before this behaved.
-  const courseId = typeof body?.courseId === 'string' && body.courseId.trim()
-    ? body.courseId.trim()
-    : null;
-  if (courseId) {
-    const courseSnap = await adminDb.collection('courses').doc(courseId).get();
-    if (!courseSnap.exists) {
-      return NextResponse.json({ error: 'That exam does not exist.' }, { status: 400 });
+  // Restricting a code to a set of exams is what stops a discount meant for a
+  // few exams being spent across the whole catalogue. An empty list means every
+  // exam, which is how every coupon created before scoping behaved.
+  //
+  // The singular `courseId` is still accepted because the first version of this
+  // endpoint took it, and an older client posting one should keep working.
+  const rawIds: unknown[] = Array.isArray(body?.courseIds)
+    ? body.courseIds
+    : (body?.courseId ? [body.courseId] : []);
+
+  // Deduplicated: the same exam twice would double the existence check and read
+  // back as a scope wider than it is.
+  const courseIds = Array.from(new Set(
+    rawIds
+      .filter((id): id is string => typeof id === 'string')
+      .map((id) => id.trim())
+      .filter(Boolean),
+  ));
+
+  if (courseIds.length > MAX_SCOPED_EXAMS) {
+    return NextResponse.json({
+      error: `A code can be limited to at most ${MAX_SCOPED_EXAMS} exams. Leave it unrestricted instead.`,
+    }, { status: 400 });
+  }
+
+  if (courseIds.length > 0) {
+    // One round trip for the whole set — a getAll rather than a get per id, so
+    // scoping to ten exams is not ten sequential reads.
+    const snaps = await adminDb.getAll(
+      ...courseIds.map((id) => adminDb.collection('courses').doc(id)),
+    );
+    const missing = snaps
+      .filter((snap: FirebaseFirestore.DocumentSnapshot) => !snap.exists)
+      .map((snap: FirebaseFirestore.DocumentSnapshot) => snap.id);
+    if (missing.length > 0) {
+      return NextResponse.json({
+        error: missing.length === 1
+          ? 'That exam does not exist.'
+          : `These exams do not exist: ${missing.join(', ')}.`,
+      }, { status: 400 });
     }
   }
 
@@ -123,7 +163,10 @@ export async function POST(req: Request) {
       discountPercent,
       isActive: body?.isActive === false ? false : true,
       maxUses,
-      courseId,
+      // Always an array, even when empty. Codes predating this still carry the
+      // singular `courseId`; couponCourseIds() reads either shape, so there is
+      // no migration to run and no half-migrated state to reason about.
+      courseIds,
       usedCount: 0,
       expiresAt,
       description: typeof body?.description === 'string' && body.description.trim()
