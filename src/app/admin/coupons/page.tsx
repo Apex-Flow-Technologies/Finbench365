@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { auth } from '@/lib/firebase/config';
+import { auth, db } from '@/lib/firebase/config';
+import { collection, getDocs } from 'firebase/firestore';
 import { Ticket, Plus, RefreshCw, Loader2 } from 'lucide-react';
 import { PageHeader, Card, SectionTitle, Badge, Table, Th, Td, Row, EmptyRow } from '@/components/admin/primitives';
 import toast from 'react-hot-toast';
@@ -25,6 +26,8 @@ interface Coupon {
   description: string | null;
   usable: boolean;
   unusableReason: string | null;
+  /** null means the code works on every exam. */
+  courseId: string | null;
 }
 
 const REASON_LABEL: Record<string, string> = {
@@ -43,6 +46,8 @@ export default function AdminCouponsPage() {
   const [maxUses, setMaxUses] = useState('');
   const [expiresAt, setExpiresAt] = useState('');
   const [description, setDescription] = useState('');
+  const [courseId, setCourseId] = useState('');
+  const [courses, setCourses] = useState<{ id: string; title: string }[]>([]);
 
   const call = useCallback(async (method: string, body?: any) => {
     if (!auth.currentUser) throw new Error('Not signed in.');
@@ -70,6 +75,16 @@ export default function AdminCouponsPage() {
 
   useEffect(() => { load(); }, [load]);
 
+  // The exam list for the restriction dropdown. Read directly: the catalogue is
+  // public, so this needs no privileged call.
+  useEffect(() => {
+    getDocs(collection(db, 'courses'))
+      .then((snap) => setCourses(snap.docs
+        .map((d) => ({ id: d.id, title: (d.data() as any).title ?? d.id }))
+        .sort((a, b) => a.title.localeCompare(b.title))))
+      .catch(() => setCourses([]));
+  }, []);
+
   const create = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
@@ -80,9 +95,10 @@ export default function AdminCouponsPage() {
         maxUses: maxUses === '' ? null : Number(maxUses),
         expiresAt: expiresAt || null,
         description,
+        courseId: courseId || null,
       });
       toast.success(`${code.toUpperCase()} created — ${discount}% off.`);
-      setCode(''); setDiscount(''); setMaxUses(''); setExpiresAt(''); setDescription('');
+      setCode(''); setDiscount(''); setMaxUses(''); setExpiresAt(''); setDescription(''); setCourseId('');
       await load();
     } catch (err: any) {
       toast.error(err.message, { duration: 9000 });
@@ -154,7 +170,21 @@ export default function AdminCouponsPage() {
             />
           </div>
 
-          <div className="sm:col-span-2 lg:col-span-3">
+          <div className="sm:col-span-2">
+            <label className={label} htmlFor="courseId">Valid for</label>
+            <select
+              id="courseId" value={courseId}
+              onChange={(e) => setCourseId(e.target.value)}
+              className={field}
+            >
+              <option value="">All exams</option>
+              {courses.map((c) => (
+                <option key={c.id} value={c.id}>{c.title}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="sm:col-span-2 lg:col-span-2">
             <label className={label} htmlFor="description">Note to yourself (optional)</label>
             <input
               id="description" value={description} maxLength={140}
@@ -196,15 +226,16 @@ export default function AdminCouponsPage() {
         <Table head={<>
           <Th>Code</Th>
           <Th>Discount</Th>
+          <Th>Valid for</Th>
           <Th>Used</Th>
           <Th>Expires</Th>
           <Th>Status</Th>
           <Th />
         </>}>
           {loading ? (
-            <EmptyRow colSpan={6}>Loading…</EmptyRow>
+            <EmptyRow colSpan={7}>Loading…</EmptyRow>
           ) : coupons.length === 0 ? (
-            <EmptyRow colSpan={6}>No discount codes yet.</EmptyRow>
+            <EmptyRow colSpan={7}>No discount codes yet.</EmptyRow>
           ) : coupons.map((c) => (
             <Row key={c.code}>
               <Td>
@@ -214,6 +245,11 @@ export default function AdminCouponsPage() {
                 )}
               </Td>
               <Td className="tabular-nums font-semibold">{c.discountPercent}% off</Td>
+              <Td className="whitespace-nowrap">
+                {c.courseId
+                  ? (courses.find((x) => x.id === c.courseId)?.title ?? c.courseId)
+                  : <span className="text-slate-500 dark:text-slate-400">All exams</span>}
+              </Td>
               <Td className="tabular-nums">
                 {c.usedCount}{c.maxUses ? ` of ${c.maxUses}` : ' · unlimited'}
               </Td>

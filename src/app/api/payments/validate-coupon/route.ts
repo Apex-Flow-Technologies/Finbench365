@@ -47,7 +47,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const { code } = await req.json().catch(() => ({ code: null }));
+    const { code, courseId } = await req.json().catch(() => ({ code: null, courseId: null }));
 
     if (!code || typeof code !== 'string') {
       return NextResponse.json({ valid: false, message: 'Invalid coupon code format.' }, { status: 400 });
@@ -55,7 +55,12 @@ export async function POST(req: Request) {
 
     const sanitizedCode = normaliseCouponCode(code);
     const couponSnap = await adminDb.collection('coupons').doc(sanitizedCode).get();
-    const evaluation = evaluateCoupon(couponSnap.exists ? couponSnap.data()! : null);
+    // Same courseId the order will be created with, so the discount quoted here
+    // is the discount actually applied at the gateway.
+    const evaluation = evaluateCoupon(
+      couponSnap.exists ? couponSnap.data()! : null,
+      typeof courseId === 'string' ? courseId : null,
+    );
 
     if (!evaluation.valid) {
       return NextResponse.json(

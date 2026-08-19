@@ -1,7 +1,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
-import { PRODUCT, LEGAL_ENTITY, SUPPORT_EMAIL, PRIVACY_EMAIL, GRIEVANCE_EMAIL, SUPPORT_PHONE } from '@/constants/brand';
+import { PRODUCT, LEGAL_ENTITY, SUPPORT_EMAIL, PRIVACY_EMAIL, GRIEVANCE_EMAIL, SUPPORT_PHONE, REGISTERED_ADDRESS } from '@/constants/brand';
 
 export default function PrivacyPage() {
   return (
@@ -101,10 +101,9 @@ export default function PrivacyPage() {
           <section>
             <h2 className="text-2xl font-bold text-[#111B35] dark:text-white mb-4">4.11 Grievance Officer</h2>
             <p className="mb-4">
-              <strong>Grievance Officer:</strong> [Name]<br />
               <strong>Email:</strong> {GRIEVANCE_EMAIL}<br />
               <strong>Phone:</strong> {SUPPORT_PHONE}<br />
-              <strong>Address:</strong> [Registered Address, Chennai, Tamil Nadu]<br />
+              <strong>Address:</strong> {REGISTERED_ADDRESS}<br />
               We acknowledge privacy grievances within 48 hours and resolve them within 30 days.
             </p>
           </section>

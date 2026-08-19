@@ -83,4 +83,47 @@ describe('couponRejectionMessage', () => {
     expect(couponRejectionMessage('expired')).toMatch(/expired/i);
     expect(couponRejectionMessage('exhausted')).toMatch(/limit/i);
   });
+
+  /**
+   * A discount meant for one exam must not be spendable across the catalogue.
+   */
+  describe('exam-specific coupons', () => {
+    const forExam = (courseId: string) => valid({ courseId });
+
+    it('accepts the code on the exam it was made for', () => {
+      expect(evaluateCoupon(forExam('nism-va'), 'nism-va').valid).toBe(true);
+    });
+
+    it('refuses it on a different exam', () => {
+      expect(evaluateCoupon(forExam('nism-va'), 'nism-xv'))
+        .toMatchObject({ valid: false, reason: 'wrong-course', discountPercent: 0 });
+    });
+
+    it('refuses it when no exam is supplied', () => {
+      expect(evaluateCoupon(forExam('nism-va'), null))
+        .toMatchObject({ valid: false, reason: 'wrong-course' });
+    });
+
+    it('leaves unrestricted codes working everywhere, as before', () => {
+      expect(evaluateCoupon(valid(), 'nism-va').valid).toBe(true);
+      expect(evaluateCoupon(valid(), 'anything-else').valid).toBe(true);
+      expect(evaluateCoupon(valid(), null).valid).toBe(true);
+    });
+
+    it('reports on a restricted code without an exam, for the admin list', () => {
+      // No second argument at all: not a purchase, so the scope is not judged.
+      expect(evaluateCoupon(forExam('nism-va')).valid).toBe(true);
+    });
+
+    it('still applies the other checks to a restricted code', () => {
+      expect(evaluateCoupon(valid({ courseId: 'nism-va', isActive: false }), 'nism-va'))
+        .toMatchObject({ reason: 'inactive' });
+      expect(evaluateCoupon(valid({ courseId: 'nism-va', maxUses: 1, usedCount: 1 }), 'nism-va'))
+        .toMatchObject({ reason: 'exhausted' });
+    });
+
+    it('has a message a candidate can act on', () => {
+      expect(couponRejectionMessage('wrong-course')).toMatch(/not valid for the exam/i);
+    });
+  });
 });

@@ -33,8 +33,22 @@ export const LEGAL_ENTITY = 'MyExams365 by MentraEdge';
  * pointed at finexamsedge.com, a domain this product no longer uses.
  */
 export const SUPPORT_EMAIL = 'support@myexams365.com';
-export const PRIVACY_EMAIL = 'privacy@myexams365.com';
-export const GRIEVANCE_EMAIL = 'grievance@myexams365.com';
+
+/**
+ * Privacy and grievance contacts both resolve to the support mailbox.
+ *
+ * privacy@ and grievance@ were published on the legal pages but do not exist.
+ * A statutory contact that bounces is worse than a shared one: under the DPDP
+ * Act the grievance address has to actually receive complaints. Kept as
+ * separate names so they can be split out again the day those mailboxes are
+ * created, without hunting through the pages.
+ */
+export const PRIVACY_EMAIL = SUPPORT_EMAIL;
+export const GRIEVANCE_EMAIL = SUPPORT_EMAIL;
+
+/** Registered address, as published on the Terms and Privacy pages. */
+export const REGISTERED_ADDRESS =
+  'No 1544/1, Kiran Garden, Ground Floor, Ram Nagar, Anna Nagar West Extension, Chennai-600101';
 
 /**
  * The one contact number published anywhere on the site.

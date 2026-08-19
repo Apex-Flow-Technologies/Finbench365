@@ -24,7 +24,7 @@ const CODE_PATTERN = /^[A-Z0-9][A-Z0-9_-]{2,31}$/;
 
 function serialise(doc: FirebaseFirestore.QueryDocumentSnapshot | FirebaseFirestore.DocumentSnapshot) {
   const d = doc.data() ?? {};
-  const evaluation = evaluateCoupon(d);
+  const evaluation = evaluateCoupon(d);  // no courseId: not a purchase
   return {
     code: doc.id,
     discountPercent: d.discountPercent ?? 0,
@@ -34,6 +34,8 @@ function serialise(doc: FirebaseFirestore.QueryDocumentSnapshot | FirebaseFirest
     expiresAt: d.expiresAt?.toDate?.()?.toISOString() ?? null,
     createdAt: d.createdAt?.toDate?.()?.toISOString() ?? null,
     description: d.description ?? null,
+    // null means every exam, which is how coupons behaved before scoping.
+    courseId: d.courseId ?? null,
     // The same judgement a candidate's checkout would make, so the admin list
     // cannot say "Active" about a code that is exhausted or out of date.
     usable: evaluation.valid,
@@ -99,6 +101,19 @@ export async function POST(req: Request) {
     expiresAt = Timestamp.fromDate(when);
   }
 
+  // Restricting a code to one exam is what stops a discount meant for a single
+  // exam being spent across the whole catalogue. Blank means every exam, which
+  // is how every coupon created before this behaved.
+  const courseId = typeof body?.courseId === 'string' && body.courseId.trim()
+    ? body.courseId.trim()
+    : null;
+  if (courseId) {
+    const courseSnap = await adminDb.collection('courses').doc(courseId).get();
+    if (!courseSnap.exists) {
+      return NextResponse.json({ error: 'That exam does not exist.' }, { status: 400 });
+    }
+  }
+
   const ref = adminDb.collection('coupons').doc(code);
 
   try {
@@ -108,6 +123,7 @@ export async function POST(req: Request) {
       discountPercent,
       isActive: body?.isActive === false ? false : true,
       maxUses,
+      courseId,
       usedCount: 0,
       expiresAt,
       description: typeof body?.description === 'string' && body.description.trim()

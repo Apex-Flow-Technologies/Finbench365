@@ -69,7 +69,9 @@ export async function POST(req: Request) {
     if (couponCode && typeof couponCode === 'string') {
       const sanitizedCode = normaliseCouponCode(couponCode);
       const couponSnap = await adminDb.collection('coupons').doc(sanitizedCode).get();
-      const evaluation = evaluateCoupon(couponSnap.exists ? couponSnap.data()! : null);
+      // Scoped to the exam being bought, so a code meant for one exam cannot
+      // be spent against another.
+      const evaluation = evaluateCoupon(couponSnap.exists ? couponSnap.data()! : null, courseId);
 
       if (evaluation.valid) {
         discountPercent = evaluation.discountPercent;

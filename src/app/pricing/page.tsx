@@ -63,9 +63,9 @@ function PricingContent() {
     },
     'plan-30': {
       tagline: 'Best for candidates who want to prepare properly, not just cram',
-      popular: true,
-      badge: 'Most Popular • Recommended',
-      badgeClass: 'bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-500/15 dark:text-amber-400 dark:border-amber-500/30 font-bold',
+      popular: false,
+      badge: 'Extended Preparation Tier',
+      badgeClass: 'bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-500/15 dark:text-amber-400 dark:border-amber-500/30',
       features: [
         'Access the full question bank for 30 days',
         '400+ updated questions, each with a full explanation',
@@ -148,15 +148,19 @@ function PricingContent() {
       <section className="py-16 md:py-24 px-6 md:px-8 max-w-[1240px] mx-auto">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-stretch">
           {plans.map((plan) => {
-            let cardBg = 'bg-white border-slate-200 dark:bg-[#181A1F] dark:border-[#282C36]';
-            if (plan.popular) {
-              cardBg = 'bg-white dark:bg-[#16181D] border-2 border-amber-500 shadow-[0_0_30px_rgba(245,158,11,0.15)] dark:shadow-[0_0_50px_rgba(245,158,11,0.18)] scale-[1.03] z-10';
-            }
+            // Every plan is presented identically. Singling one out as
+            // "most popular" is a claim we are not in a position to make
+            // while starting out, and pre-highlighting one nudges the choice
+            // before the candidate has read the other two.
+            //
+            // The lift happens on hover instead, so whichever plan the
+            // candidate is actually considering is the one that stands out.
+            const cardBg = 'bg-white border-slate-200 dark:bg-[#181A1F] dark:border-[#282C36] '
+              + 'hover:border-amber-500 hover:shadow-[0_0_30px_rgba(245,158,11,0.15)] '
+              + 'dark:hover:shadow-[0_0_50px_rgba(245,158,11,0.18)] hover:-translate-y-1';
 
-            let btnClass = 'bg-slate-800 hover:bg-slate-700 text-white dark:bg-[#272B33] dark:hover:bg-[#343942] dark:text-white';
-            if (plan.popular) {
-              btnClass = 'bg-amber-500 hover:bg-amber-400 text-[#111B35] dark:text-[#121419] font-extrabold shadow-lg shadow-amber-500/25 text-base';
-            }
+            const btnClass = 'bg-amber-500 hover:bg-amber-400 text-[#111B35] dark:text-[#121419] '
+              + 'font-extrabold shadow-lg shadow-amber-500/25 text-base';
 
             return (
               <motion.div
@@ -166,13 +170,6 @@ function PricingContent() {
                 transition={{ duration: 0.4 }}
                 className={`rounded-3xl p-7 sm:p-8 flex flex-col justify-between relative transition-all duration-300 border ${cardBg}`}
               >
-                {plan.popular && (
-                  <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-amber-500 text-[#111B35] dark:text-[#121419] font-extrabold text-[11px] uppercase tracking-wider px-4 py-1.5 rounded-full shadow-md flex items-center gap-1.5 transition-colors">
-                    <Sparkles className="w-3.5 h-3.5 fill-current" />
-                    <span>Most Popular Choice</span>
-                  </div>
-                )}
-
                 <div>
                   {/* Plan Header */}
                   <div className="flex items-center justify-between gap-3 mb-5">
@@ -229,7 +226,7 @@ function PricingContent() {
                      <Loader2 className="w-5 h-5 animate-spin" />
                   ) : (
                     <>
-                      {plan.popular ? `Unlock ${plan.days.split(' ')[0]}-Day Access` : 'Select Plan & Checkout'}
+                      Select Plan &amp; Checkout
                       <ArrowRight className="w-4 h-4" />
                     </>
                   )}
@@ -239,7 +236,7 @@ function PricingContent() {
           })}
         </div>
         <div className="mt-8 text-center text-sm text-[#475569] dark:text-[#94A3B8] tabular-nums transition-colors">
-          * All prices are in Indian Rupees (INR) and are inclusive of 18% GST.
+          * All prices are in Indian Rupees (INR) and are exclusive of GST. 18% GST is added at checkout, and the total payable is shown before you pay.
         </div>
       </section>
 

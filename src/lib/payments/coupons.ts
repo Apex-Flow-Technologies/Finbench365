@@ -12,7 +12,7 @@ import { toMillis } from '@/lib/admin/revenue';
  * price at the gateway.
  */
 
-export type CouponRejection = 'not-found' | 'inactive' | 'exhausted' | 'expired';
+export type CouponRejection = 'not-found' | 'inactive' | 'exhausted' | 'expired' | 'wrong-course';
 
 export interface CouponEvaluation {
   valid: boolean;
@@ -32,9 +32,25 @@ export function normaliseCouponCode(raw: string): string {
  * when the document does not exist) so it stays pure and testable — the caller
  * owns the Firestore read.
  */
-export function evaluateCoupon(data: Record<string, any> | null): CouponEvaluation {
+export function evaluateCoupon(
+  data: Record<string, any> | null,
+  /**
+   * The exam the candidate is buying. A coupon restricted to a different exam
+   * is refused. Omitted only where no purchase is in progress — the admin list,
+   * which is reporting on the coupon itself rather than applying it.
+   */
+  courseId?: string | null,
+): CouponEvaluation {
   if (!data) return { valid: false, reason: 'not-found', discountPercent: 0 };
   if (!data.isActive) return { valid: false, reason: 'inactive', discountPercent: 0 };
+
+  // A coupon with no courseId works on every exam, which is what every coupon
+  // created before this did — so existing codes keep behaving as they did.
+  // Once a courseId is set the code only works on that exam, which stops a
+  // discount meant for one exam being spread across the whole catalogue.
+  if (data.courseId && courseId !== undefined && data.courseId !== courseId) {
+    return { valid: false, reason: 'wrong-course', discountPercent: 0 };
+  }
 
   if (data.maxUses && (data.usedCount ?? 0) >= data.maxUses) {
     return { valid: false, reason: 'exhausted', discountPercent: 0 };
@@ -57,6 +73,8 @@ export function couponRejectionMessage(reason: CouponRejection): string {
   switch (reason) {
     case 'exhausted':
       return 'This coupon has reached its maximum usage limit.';
+    case 'wrong-course':
+      return 'This code is not valid for the exam you have selected.';
     case 'expired':
       return 'This coupon has expired.';
     // 'not-found' and 'inactive' share a message deliberately: telling a caller

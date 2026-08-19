@@ -191,7 +191,9 @@ function CheckoutContent() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify({ code: coupon.trim().toUpperCase() })
+        // The exam goes with the code: a coupon can be restricted to one
+        // exam, and the answer here has to match what create-order will do.
+        body: JSON.stringify({ code: coupon.trim().toUpperCase(), courseId })
       });
       const data = await res.json();
       if (res.ok && data.valid) {
