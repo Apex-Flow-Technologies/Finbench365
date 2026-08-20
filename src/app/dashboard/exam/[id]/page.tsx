@@ -685,7 +685,7 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
             <Clock className="w-8 h-8" />
           </div>
           <h2 className="text-2xl font-bold mb-3">{copy.title}</h2>
-          <p className="text-[#94A3B8] mb-7 max-w-md text-sm leading-relaxed">{copy.body}</p>
+          <p className="text-[#475569] dark:text-[#94A3B8] mb-7 max-w-md text-sm leading-relaxed">{copy.body}</p>
           <div className="flex flex-col sm:flex-row gap-3">
             <button
               onClick={() =>
@@ -820,7 +820,7 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
                   {/* Called out separately: with negative marking on, leaving a
                       question blank is a deliberate strategy, not an oversight. */}
                   <div className={label}>Skipped</div>
-                  <div className="text-slate-500 font-bold text-base">{result.unattemptedCount}</div>
+                  <div className="text-[#475569] dark:text-slate-500 font-bold text-base">{result.unattemptedCount}</div>
                 </div>
               </div>
 
@@ -1020,16 +1020,16 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
 
   return (
     <ProtectedRoute requiredRole="student">
-      <div className="min-h-screen bg-slate-950 text-white flex flex-col select-none relative z-20">
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-[#111B35] dark:text-white flex flex-col select-none relative z-20 transition-colors duration-300">
         
         {showCalculator && <Calculator onClose={() => setShowCalculator(false)} />}
 
         {/* Anti-Cheat Overlay */}
         {antiCheatWarning !== null && (
-          <div className="fixed inset-0 z-50 bg-slate-950/95 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center">
+          <div className="fixed inset-0 z-50 bg-white/95 dark:bg-slate-950/95 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center">
             <AlertTriangle className="w-24 h-24 text-red-500 mb-6 animate-pulse" />
             <h2 className="text-4xl font-extrabold text-red-500 mb-4">ANTI-CHEAT WARNING</h2>
-            <p className="text-xl text-slate-300 max-w-2xl mb-8 leading-relaxed">
+            <p className="text-xl text-[#334155] dark:text-slate-300 max-w-2xl mb-8 leading-relaxed">
               You have left the exam window or exited full-screen mode. This is a violation of the exam rules.
             </p>
             
@@ -1054,11 +1054,11 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
         )}
 
         {/* Top Roof Header */}
-        <div className="h-16 border-b border-white/10 bg-zinc-900 px-6 flex items-center justify-between shrink-0">
-          <div className="font-bold text-white text-sm flex items-center gap-2">
+        <div className="h-16 border-b border-slate-200 dark:border-white/10 bg-white dark:bg-slate-900 px-6 flex items-center justify-between shrink-0">
+          <div className="font-bold text-[#111B35] dark:text-white text-sm flex items-center gap-2">
             <span className="text-amber-500">NISM V-A</span> · {test?.title}
             {test?.type === 'exam' && (
-              <span className={`ml-4 px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wider ${strikes > 0 ? 'bg-red-500/20 text-red-400 border border-red-500/30 animate-pulse' : 'bg-white/5 text-[#475569] border border-white/10'}`}>
+              <span className={`ml-4 px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wider ${strikes > 0 ? 'bg-red-500/20 text-red-400 border border-red-500/30 animate-pulse' : 'bg-slate-100 dark:bg-white/5 text-[#475569] dark:text-[#94A3B8] border border-slate-200 dark:border-white/10'}`}>
                 WARNINGS: {strikes}/3
               </span>
             )}
@@ -1078,7 +1078,7 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
               className={`px-3 py-2 h-9 rounded-xl text-xs font-bold border transition-colors flex items-center gap-1.5 ${
                 showCalculator
                   ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
-                  : 'bg-white/5 text-slate-300 border-white/10 hover:bg-white/10'
+                  : 'bg-slate-100 dark:bg-white/5 text-[#334155] dark:text-slate-300 border-slate-200 dark:border-white/10 hover:bg-slate-200 dark:hover:bg-white/10'
               }`}
             >
               <CalculatorIcon className="w-4 h-4" />
@@ -1102,7 +1102,7 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
           <div className="flex-1 overflow-y-auto p-6 lg:p-10 space-y-6">
             <div className="max-w-3xl mx-auto space-y-6">
               
-              <div className="flex justify-between items-center text-xs tabular-nums text-[#475569] border-b border-white/10 pb-3">
+              <div className="flex justify-between items-center text-xs tabular-nums text-[#475569] dark:text-[#94A3B8] border-b border-slate-200 dark:border-white/10 pb-3">
                 <span>QUESTION {currentQuestionIndex + 1} OF {orderedQuestions.length}</span>
                 {markedForReview[currentQuestion.id] && (
                   <span className="px-2.5 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/40 font-bold">
@@ -1129,7 +1129,7 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
                 </div>
               )}
 
-              <div className="text-base text-white leading-relaxed font-medium">
+              <div className="text-base text-[#111B35] dark:text-white leading-relaxed font-medium">
                 {currentQuestion.text || "Loading question..."}
               </div>
 
@@ -1140,25 +1140,25 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
                   const isCorrectOption = currentQuestion.correctOptionIndex === index;
                   
                   // Styles for instant feedback (Only for Practice tests)
-                  let buttonStyle = 'border-white/10 bg-zinc-900/80 text-slate-300 hover:border-white/20 hover:bg-white/5';
-                  let iconStyle = 'bg-slate-800 text-[#475569]';
+                  let buttonStyle = 'border-slate-200 dark:border-white/10 bg-white dark:bg-slate-900/80 text-[#334155] dark:text-slate-300 hover:border-slate-300 dark:hover:border-white/20 hover:bg-slate-50 dark:hover:bg-white/5';
+                  let iconStyle = 'bg-slate-100 dark:bg-slate-800 text-[#475569] dark:text-[#94A3B8]';
                   
                   if (test?.type === 'practice') {
                     if (isAnswered) {
                       if (isCorrectOption) {
-                        buttonStyle = 'border-emerald-500 bg-emerald-500/10 shadow-[0_0_15px_rgba(16,185,129,0.15)] text-emerald-400 font-bold';
+                        buttonStyle = 'border-emerald-500 bg-emerald-500/10 shadow-[0_0_15px_rgba(16,185,129,0.15)] text-emerald-700 dark:text-emerald-400 font-bold';
                         iconStyle = 'bg-emerald-500 text-slate-950';
                       } else if (isSelected) {
-                        buttonStyle = 'border-red-500 bg-red-500/10 shadow-[0_0_15px_rgba(239,68,68,0.15)] text-red-400 font-bold';
+                        buttonStyle = 'border-red-500 bg-red-500/10 shadow-[0_0_15px_rgba(239,68,68,0.15)] text-red-700 dark:text-red-400 font-bold';
                         iconStyle = 'bg-red-500 text-slate-950';
                       } else {
-                        buttonStyle = 'border-white/5 bg-zinc-900/40 text-[#475569] opacity-50 cursor-not-allowed';
+                        buttonStyle = 'border-slate-200 dark:border-white/5 bg-slate-50 dark:bg-slate-900/40 text-[#475569] dark:text-[#94A3B8] opacity-60 cursor-not-allowed';
                       }
                     }
                   } else {
                     // Exam Mode Styling (No feedback, just select)
                     if (isSelected) {
-                      buttonStyle = 'border-amber-500 bg-amber-500/10 shadow-[0_0_15px_rgba(245,158,11,0.15)] text-amber-400 font-bold';
+                      buttonStyle = 'border-amber-500 bg-amber-500/10 shadow-[0_0_15px_rgba(245,158,11,0.15)] text-amber-800 dark:text-amber-400 font-bold';
                       iconStyle = 'bg-amber-500 text-slate-950';
                     }
                   }
@@ -1189,14 +1189,14 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
                   per-option text is still captured on import, so this is a
                   display decision and can be reversed without re-importing. */}
               {test?.type === 'practice' && answers[currentQuestion.id] !== undefined && (
-                <div className="mt-6 p-5 rounded-xl bg-slate-800/50 border border-slate-700 animate-in fade-in slide-in-from-bottom-2 space-y-3">
+                <div className="mt-6 p-5 rounded-xl bg-slate-100 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 animate-in fade-in slide-in-from-bottom-2 space-y-3">
                   <div className="flex items-center gap-2">
                     {answers[currentQuestion.id] === currentQuestion.correctOptionIndex ? (
                       <CheckCircle2 className="w-5 h-5 text-emerald-400" />
                     ) : (
                       <AlertTriangle className="w-5 h-5 text-red-400" />
                     )}
-                    <h3 className="font-bold text-slate-200">
+                    <h3 className="font-bold text-[#111B35] dark:text-slate-200">
                       {answers[currentQuestion.id] === currentQuestion.correctOptionIndex ? 'Correct' : 'Incorrect'}
                     </h3>
                   </div>
@@ -1220,11 +1220,11 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
               )}
 
               {/* Navigation Actions */}
-              <div className="flex items-center justify-between border-t border-white/10 pt-6 gap-3 flex-wrap">
+              <div className="flex items-center justify-between border-t border-slate-200 dark:border-white/10 pt-6 gap-3 flex-wrap">
                 <button
                   onClick={() => setCurrentQuestionIndex(prev => Math.max(0, prev - 1))}
                   disabled={currentQuestionIndex === 0}
-                  className="px-5 py-2.5 rounded-xl border border-white/10 bg-slate-900 hover:bg-slate-800 disabled:opacity-30 text-xs font-bold flex items-center gap-1.5"
+                  className="px-5 py-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-30 text-xs font-bold flex items-center gap-1.5"
                 >
                   <ChevronLeft className="w-4 h-4" /> Previous
                 </button>
@@ -1249,9 +1249,9 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
           </div>
 
           {/* Right Palette Grid (4-State Legend) */}
-          <div className="w-80 bg-zinc-900 border-l border-white/10 p-5 hidden lg:flex flex-col justify-between shrink-0">
+          <div className="w-80 bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-white/10 p-5 hidden lg:flex flex-col justify-between shrink-0">
             <div>
-              <div className="font-bold text-white text-sm border-b border-white/10 pb-3 mb-4">
+              <div className="font-bold text-[#111B35] dark:text-white text-sm border-b border-slate-200 dark:border-white/10 pb-3 mb-4">
                 Question Palette ({orderedQuestions.length} Items)
               </div>
 
@@ -1262,7 +1262,7 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
                   const isVisited = visitedQuestions[idx];
                   const isCurrent = idx === currentQuestionIndex;
 
-                  let badgeStyle = 'bg-slate-800 text-[#475569] border border-white/10'; // Not Visited
+                  let badgeStyle = 'bg-slate-100 dark:bg-slate-800 text-[#475569] dark:text-[#94A3B8] border border-slate-200 dark:border-white/10'; // Not Visited
                   if (isMarked) {
                     badgeStyle = 'bg-purple-600 text-white font-bold border border-purple-400';
                   } else if (isAnswered) {
@@ -1276,7 +1276,7 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
                       key={q.id || idx}
                       onClick={() => setCurrentQuestionIndex(idx)}
                       className={`h-10 rounded-lg text-xs tabular-nums transition-all ${badgeStyle} ${
-                        isCurrent ? 'ring-2 ring-amber-500 ring-offset-2 ring-offset-slate-900' : ''
+                        isCurrent ? 'ring-2 ring-amber-500 ring-offset-2 ring-offset-white dark:ring-offset-slate-900' : ''
                       }`}
                     >
                       {idx + 1}
@@ -1287,7 +1287,7 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
             </div>
 
             {/* Legend */}
-            <div className="pt-4 border-t border-white/10 text-xs tabular-nums space-y-2">
+            <div className="pt-4 border-t border-slate-200 dark:border-white/10 text-xs tabular-nums space-y-2">
               <div className="flex items-center gap-2">
                 <span className="w-3 h-3 rounded bg-emerald-500" />
                 <span>Answered ({Object.keys(answers).length})</span>
@@ -1301,7 +1301,7 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
                 <span>Visited (Unanswered)</span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="w-3 h-3 rounded bg-slate-800" />
+                <span className="w-3 h-3 rounded bg-slate-300 dark:bg-slate-800" />
                 <span>Not Visited</span>
               </div>
             </div>

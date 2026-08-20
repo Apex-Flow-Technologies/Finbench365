@@ -151,7 +151,7 @@ export default function SettingsPage() {
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 
                 {/* 1. Profile & Contact Details Card */}
-                <div className="lg:col-span-2 backdrop-blur-md bg-zinc-900/80 border border-white/10 rounded-2xl p-6 sm:p-8 space-y-6 shadow-xl relative group">
+                <div className="lg:col-span-2 backdrop-blur-md bg-slate-900/80 border border-white/10 rounded-2xl p-6 sm:p-8 space-y-6 shadow-xl relative group">
                   <div className="flex items-center justify-between border-b border-white/10 pb-4">
                     <div className="flex items-center gap-2.5 font-bold text-lg text-white">
                       <User className="w-5 h-5 text-indigo-400" />
@@ -248,7 +248,7 @@ export default function SettingsPage() {
                 </div>
 
                 {/* 2. Active Subscription Card */}
-                <div className="backdrop-blur-md bg-zinc-900/80 border border-white/10 rounded-2xl p-6 space-y-6 shadow-xl relative overflow-hidden">
+                <div className="backdrop-blur-md bg-slate-900/80 border border-white/10 rounded-2xl p-6 space-y-6 shadow-xl relative overflow-hidden">
                   <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/10 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none" />
 
                   <div className="flex items-center justify-between border-b border-white/10 pb-4">
@@ -293,7 +293,7 @@ export default function SettingsPage() {
               </div>
 
               {/* 3. Purchase History Table */}
-              <div className="backdrop-blur-md bg-zinc-900/80 border border-white/10 rounded-2xl p-6 sm:p-8 space-y-6 shadow-xl">
+              <div className="backdrop-blur-md bg-slate-900/80 border border-white/10 rounded-2xl p-6 sm:p-8 space-y-6 shadow-xl">
                 <div className="flex items-center justify-between border-b border-white/10 pb-4">
                   <div className="flex items-center gap-2.5 font-bold text-lg text-white">
                     <CreditCard className="w-5 h-5 text-amber-500" />
@@ -354,7 +354,7 @@ export default function SettingsPage() {
               </div>
 
               {/* 4. Legal Links Footer */}
-              <footer className="backdrop-blur-md bg-zinc-900/60 border border-white/10 rounded-2xl p-6 space-y-4">
+              <footer className="backdrop-blur-md bg-slate-900/60 border border-white/10 rounded-2xl p-6 space-y-4">
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-white/10 pb-4">
                   <div className="text-xs tabular-nums text-[#475569]">
                     Protected under Digital Personal Data Protection (DPDP) Act 2023
