@@ -1105,7 +1105,7 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
               <div className="flex justify-between items-center text-xs tabular-nums text-[#475569] dark:text-[#94A3B8] border-b border-slate-200 dark:border-white/10 pb-3">
                 <span>QUESTION {currentQuestionIndex + 1} OF {orderedQuestions.length}</span>
                 {markedForReview[currentQuestion.id] && (
-                  <span className="px-2.5 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/40 font-bold">
+                  <span className="px-2.5 py-0.5 rounded bg-purple-100 dark:bg-purple-500/20 text-purple-800 dark:text-purple-300 border border-purple-300 dark:border-purple-500/40 font-bold">
                     ● MARKED FOR REVIEW
                   </span>
                 )}
@@ -1231,7 +1231,7 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
 
                 <button
                   onClick={toggleMarkForReview}
-                  className="px-5 py-2.5 rounded-xl bg-purple-600/30 hover:bg-purple-600/50 text-purple-300 border border-purple-500/40 text-xs font-bold transition-all"
+                  className="px-5 py-2.5 rounded-xl bg-purple-100 dark:bg-purple-600/30 hover:bg-purple-200 dark:hover:bg-purple-600/50 text-purple-800 dark:text-purple-300 border border-purple-300 dark:border-purple-500/40 text-xs font-bold transition-all"
                 >
                   {markedForReview[currentQuestion.id] ? 'Unmark Review & Next' : 'Mark for Review & Next'}
                 </button>
