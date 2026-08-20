@@ -64,7 +64,14 @@ export function useAdminContent() {
             id: d.id,
             title: c.title || 'Untitled',
             isPublished: Boolean(c.isPublished),
-            materialCount: Array.isArray(c.materials) ? c.materials.length : 0,
+            // materialCount is written whenever study notes are saved. Reading the
+            // old `materials` array instead reported 0 for every course once notes
+            // moved into their own protected collection — the notes were there, the
+            // count was looking in a place nothing writes to any more. The array is
+            // still accepted as a fallback for any course not yet re-saved.
+            materialCount: typeof c.materialCount === 'number'
+              ? c.materialCount
+              : (Array.isArray(c.materials) ? c.materials.length : 0),
             testCount: mine.length,
             publishedTestCount: published,
             publishedWithoutTests: Boolean(c.isPublished) && published === 0,

@@ -64,6 +64,17 @@ export default function StudentExamPage({ params }: { params: Promise<{ id: stri
   const [materials, setMaterials] = useState<any[]>([]);
   /** Which note is currently being fetched, so its button can show a spinner. */
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  /**
+   * Set when the access check could not be completed.
+   *
+   * Not the same as having no access, and it must never be shown as though it
+   * were. Signing back in after being logged out on another device can leave
+   * the first read racing the new session, and treating that failure as "not
+   * entitled" told a paying candidate to buy the course they already owned.
+   */
+  const [accessError, setAccessError] = useState(false);
+  /** Bumped by "Try again" to re-run the access check. */
+  const [retryToken, setRetryToken] = useState(0);
 
   /**
    * Fetches one study note.
@@ -100,6 +111,7 @@ export default function StudentExamPage({ params }: { params: Promise<{ id: stri
   useEffect(() => {
     async function loadData() {
       if (!user) return;
+      setAccessError(false);
 
       try {
         // 1. Check if Admin/Editor override applies
@@ -156,13 +168,15 @@ export default function StudentExamPage({ params }: { params: Promise<{ id: stri
         setAttemptCounts(counts);
       } catch (err) {
         console.error(err);
+        // Say we could not check, rather than that they cannot enter.
+        setAccessError(true);
       } finally {
         setLoading(false);
       }
     }
 
     loadData();
-  }, [user, examId]);
+  }, [user, examId, retryToken]);
 
   if (loading) {
     return (
@@ -181,6 +195,37 @@ export default function StudentExamPage({ params }: { params: Promise<{ id: stri
             <div className="h-10 w-36 bg-slate-200 dark:bg-[#272B33] rounded-xl animate-pulse" />
           </div>
           <ContentSkeleton />
+        </div>
+      </div>
+    );
+  }
+
+  // Distinct from the screen below: this one offers to try again, and never
+  // suggests buying something the candidate may already own.
+  if (accessError) {
+    return (
+      <div className="min-h-screen bg-slate-50 dark:bg-[#121419] flex flex-col items-center justify-center text-center px-6 transition-colors duration-300">
+        <div className="w-16 h-16 rounded-2xl bg-amber-50 dark:bg-amber-500/10 flex items-center justify-center mb-6">
+          <AlertCircle className="w-8 h-8 text-amber-500" />
+        </div>
+        <h1 className="text-2xl font-bold text-[#111B35] dark:text-white mb-3">Could not check your access</h1>
+        <p className="text-[#475569] dark:text-[#94A3B8] mb-8 max-w-md text-sm">
+          Something went wrong while loading this exam. This does not affect your purchase &mdash;
+          please try again.
+        </p>
+        <div className="flex flex-col sm:flex-row gap-3">
+          <button
+            onClick={() => { setLoading(true); setRetryToken((n) => n + 1); }}
+            className="bg-amber-500 text-[#111B35] px-6 py-3 rounded-xl font-bold hover:bg-amber-400 transition-colors shadow-md shadow-amber-500/20"
+          >
+            Try again
+          </button>
+          <button
+            onClick={() => router.push('/dashboard')}
+            className="bg-slate-200 dark:bg-[#272B33] text-slate-800 dark:text-white px-6 py-3 rounded-xl font-bold hover:bg-slate-300 dark:hover:bg-[#343942] transition-colors"
+          >
+            Back to my courses
+          </button>
         </div>
       </div>
     );

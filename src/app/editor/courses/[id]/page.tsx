@@ -57,6 +57,10 @@ export default function ExamBuilderPage({ params }: { params: Promise<{ id: stri
   // Index of the row being dragged. Null when nothing is in flight.
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  // Study notes drag independently of mock tests. Shared state would let a
+  // note dropped onto a test reorder the wrong list.
+  const [matDragIndex, setMatDragIndex] = useState<number | null>(null);
+  const [matDragOverIndex, setMatDragOverIndex] = useState<number | null>(null);
 
   /**
    * Reorders the mock tests and persists the arrangement.
@@ -197,6 +201,21 @@ export default function ExamBuilderPage({ params }: { params: Promise<{ id: stri
     setMaterials((prev) => prev.map((m, i) => i === index ? {
       ...m, storagePath: null, fileName: null, contentType: null, sizeBytes: null,
     } : m));
+  };
+
+  /**
+   * Reorders study notes by drag.
+   *
+   * Nothing is written here: the order is the position in this list, and it is
+   * saved with the rest of the course when Save is pressed. That differs from
+   * mock tests, which live in their own records and are saved on drop.
+   */
+  const moveMaterial = (from: number, to: number) => {
+    if (from === to) return;
+    const next = [...materials];
+    const [moved] = next.splice(from, 1);
+    next.splice(to, 0, moved);
+    setMaterials(next);
   };
 
   const moveMaterialUp = (idx: number) => {
@@ -454,9 +473,25 @@ export default function ExamBuilderPage({ params }: { params: Promise<{ id: stri
               materials.map((mat, idx) => (
                 <div
                   key={idx}
-                  className="bg-white dark:bg-[#121419] border border-slate-200 dark:border-[#282C36] rounded-xl p-5 flex gap-4 items-start group transition-colors hover:border-slate-300 dark:hover:border-[#323842]"
+                  draggable
+                  onDragStart={() => setMatDragIndex(idx)}
+                  onDragEnd={() => { setMatDragIndex(null); setMatDragOverIndex(null); }}
+                  onDragOver={(e) => { e.preventDefault(); setMatDragOverIndex(idx); }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    if (matDragIndex !== null) moveMaterial(matDragIndex, idx);
+                    setMatDragIndex(null);
+                    setMatDragOverIndex(null);
+                  }}
+                  className={`bg-white dark:bg-[#121419] border rounded-xl p-5 flex gap-4 items-start group transition-colors ${
+                    matDragIndex === idx
+                      ? 'opacity-40 border-amber-500'
+                      : matDragOverIndex === idx
+                      ? 'border-amber-500 border-dashed'
+                      : 'border-slate-200 dark:border-[#282C36] hover:border-slate-300 dark:hover:border-[#323842]'
+                  }`}
                 >
-                  <div className="mt-1 text-slate-400 dark:text-slate-500 shrink-0">
+                  <div className="mt-1 text-slate-400 dark:text-slate-500 shrink-0 cursor-grab active:cursor-grabbing">
                     <GripVertical className="w-4 h-4" />
                   </div>
                   <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-3">

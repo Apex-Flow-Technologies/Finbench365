@@ -121,9 +121,16 @@ function CheckoutContent() {
         setContents({
           // Only published tests — a buyer must not be promised drafts.
           mocks: (tests as any[]).filter((t) => t?.isPublished).length,
-          materials: Array.isArray((courseData as any)?.materials)
-            ? (courseData as any).materials.length
-            : 0,
+          // materialCount is written whenever study notes are saved. Reading the
+          // old `materials` array instead reported 0 for every course once notes
+          // moved into their own protected collection — the notes were there, the
+          // count was looking in a place nothing writes to any more. The array is
+          // still accepted as a fallback for any course not yet re-saved.
+          materials: typeof (courseData as any)?.materialCount === 'number'
+            ? (courseData as any).materialCount
+            : (Array.isArray((courseData as any)?.materials)
+              ? (courseData as any).materials.length
+              : 0),
         });
       } catch (err) {
         console.error('Could not load course contents:', err);
