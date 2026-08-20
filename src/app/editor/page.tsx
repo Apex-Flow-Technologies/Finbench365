@@ -56,7 +56,7 @@ export default function EditorDashboard() {
       const id = await createCourse({ 
         title, 
         description: 'New Exam', 
-        materials: [],
+        materialCount: 0,
         isPublished: false 
       });
       router.push(`/editor/courses/${id}`);
@@ -227,7 +227,15 @@ export default function EditorDashboard() {
                 <div className="flex gap-2 mt-auto pt-2">
                   <div className="flex-1 py-2 rounded-lg border border-slate-100 dark:border-[#282C36] text-xs font-mono text-slate-500 dark:text-slate-400 flex items-center justify-center gap-1.5">
                     <ClipboardList className="w-3.5 h-3.5" />
-                    {(exam.materials || []).length} materials
+                    {/* materialCount is what saving study notes writes. Reading
+                        the old `materials` array reported 0 on every card once
+                        notes moved into their own protected collection — the
+                        notes were there, the count was reading a field nothing
+                        writes to any more. The array remains as a fallback for
+                        a course not yet re-saved. */}
+                    {typeof (exam as any).materialCount === 'number'
+                      ? (exam as any).materialCount
+                      : (exam.materials || []).length} materials
                   </div>
                   <button
                     onClick={(e) => handleOpenEditor(exam.id, e)}
