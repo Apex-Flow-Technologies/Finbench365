@@ -53,6 +53,32 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Your account is suspended. Contact support.' }, { status: 403 });
     }
 
+    // Refuse to sell a course this candidate already has live access to.
+    //
+    // Reported from a real session: a candidate signed out on one device by a
+    // login on another came back, found their course behind the sign-in wall,
+    // and was walked into the purchase flow for a course they had already
+    // bought. Nothing anywhere stopped the second payment going through.
+    //
+    // Expiry is deliberately excluded. Buying again once access has run out is
+    // a renewal, which the storefront actively offers — only UNEXPIRED access
+    // is a double purchase. The courseId comes back so the browser can offer
+    // to open the course instead of the checkout.
+    const existing = userData?.enrolledCourses?.[courseId];
+    if (existing) {
+      const expiresAt = existing.expiresAt?.toDate?.()
+        ?? (existing.expiresAt ? new Date(existing.expiresAt) : null);
+      if (expiresAt && expiresAt.getTime() > Date.now()) {
+        console.warn(`Blocked repeat purchase: user=${userId} course=${courseId}`);
+        return NextResponse.json({
+          error: 'You already have access to this exam. Open it from your dashboard.',
+          reason: 'already-enrolled',
+          courseId,
+          expiresAt: expiresAt.toISOString(),
+        }, { status: 409 });
+      }
+    }
+
     const planData = PLAN_PRICING[planId];
     const basePrice = planData.price;
     let discountPercent = 0;
