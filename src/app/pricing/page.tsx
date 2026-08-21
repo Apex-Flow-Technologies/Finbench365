@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, Suspense } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { 
@@ -12,10 +12,12 @@ import {
   Zap, 
   BookOpen, 
   ArrowLeft,
-  Loader2
+  Loader2,
+  CheckCircle2
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { PLAN_PRICING } from '@/constants/pricing';
+import { getUserEntitlements } from '@/lib/firebase/db';
 
 function PricingContent() {
   const searchParams = useSearchParams();
@@ -26,9 +28,41 @@ function PricingContent() {
   const trackTitle = searchParams?.get('track') || 'Institutional Quantitative Certification Track';
   const trackBadge = searchParams?.get('badge') || 'Professional Syllabus Access';
 
+  /**
+   * Live access this candidate already has to the exam being priced.
+   *
+   * Plan selection is where a repeat purchase actually begins: a candidate
+   * signed out on one device, sent to log in, and returned here was shown three
+   * plans for an exam they had already paid for. Checkout and the order route
+   * both refuse the sale now, but being offered the plans at all is the part
+   * that reads as "you need to buy this again".
+   *
+   * Only unexpired access counts — renewing after expiry is deliberate.
+   */
+  const [alreadyEnrolled, setAlreadyEnrolled] = useState<{ expiresAt: Date } | null>(null);
+
+  useEffect(() => {
+    if (!user?.uid || !courseId) return;
+    let cancelled = false;
+    getUserEntitlements(user.uid)
+      .then((list) => {
+        const ent = list.find((e) => e.courseId === courseId);
+        if (cancelled || !ent) return;
+        if (ent.expiresAt.getTime() > Date.now()) setAlreadyEnrolled({ expiresAt: ent.expiresAt });
+      })
+      // A failed check must not block a legitimate purchase; checkout and the
+      // server both refuse a duplicate regardless.
+      .catch((err) => console.error('Could not check existing access:', err));
+    return () => { cancelled = true; };
+  }, [user?.uid, courseId]);
+
   const handleSelectPlan = async (plan: { id: string; name: string; price: string; days: string }) => {
     if (!user || !courseId) {
       router.push('/exams');
+      return;
+    }
+    if (alreadyEnrolled) {
+      router.push(`/dashboard/courses/${courseId}`);
       return;
     }
 
@@ -98,6 +132,52 @@ function PricingContent() {
     period: '+ GST',
     ...planCopy[id],
   }));
+
+  // Shown instead of the plans. A candidate who already owns this exam is sent
+  // to it rather than asked to choose how to pay for it a second time.
+  if (alreadyEnrolled) {
+    const daysLeft = Math.max(0, Math.ceil(
+      (alreadyEnrolled.expiresAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24)));
+    return (
+      <div className="min-h-screen pt-20 bg-slate-50 dark:bg-[#121419] text-[#111B35] dark:text-[#FBFBF9] transition-colors duration-300 flex items-center justify-center px-6">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="max-w-xl w-full rounded-3xl p-8 sm:p-10 text-center space-y-6 shadow-2xl bg-white dark:bg-[#181A1F] border border-slate-200 dark:border-[#282C36]"
+        >
+          <div className="w-16 h-16 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mx-auto text-emerald-500">
+            <CheckCircle2 className="w-8 h-8" />
+          </div>
+          <div className="space-y-2">
+            <h1 className="text-2xl font-bold">You already have this exam</h1>
+            <p className="text-[#475569] dark:text-[#94A3B8] text-sm leading-relaxed">
+              Your access is active for another{' '}
+              <span className="font-bold text-[#111B35] dark:text-white">
+                {daysLeft} day{daysLeft === 1 ? '' : 's'}
+              </span>. There is nothing to pay &mdash; carry on where you left off.
+            </p>
+          </div>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <button
+              onClick={() => router.push(`/dashboard/courses/${courseId}`)}
+              className="px-6 py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-[#111B35] font-bold transition-colors shadow-md shadow-amber-500/20"
+            >
+              Open the exam
+            </button>
+            <button
+              onClick={() => router.push('/dashboard')}
+              className="px-6 py-3 rounded-xl bg-slate-200 dark:bg-[#272B33] text-slate-800 dark:text-white font-bold hover:bg-slate-300 dark:hover:bg-[#343942] transition-colors"
+            >
+              My courses
+            </button>
+          </div>
+          <p className="text-xs text-[#475569] dark:text-[#94A3B8]">
+            You can renew once your access runs out.
+          </p>
+        </motion.div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen pt-20 bg-slate-50 dark:bg-[#121419] text-[#111B35] dark:text-[#FBFBF9] transition-colors duration-300">
