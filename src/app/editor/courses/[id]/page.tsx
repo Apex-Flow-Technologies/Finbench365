@@ -456,7 +456,7 @@ export default function ExamBuilderPage({ params }: { params: Promise<{ id: stri
               onClick={addMaterial}
               className="flex items-center gap-1.5 text-sm font-bold text-amber-600 dark:text-amber-500 hover:text-amber-500 dark:hover:text-amber-400 bg-amber-50 dark:bg-amber-500/10 px-3 py-1.5 rounded-lg transition-colors"
             >
-              <Plus className="w-4 h-4" /> Add PDF
+              <Plus className="w-4 h-4" /> Add study note
             </button>
           </div>
 
@@ -467,7 +467,7 @@ export default function ExamBuilderPage({ params }: { params: Promise<{ id: stri
                 className="p-12 text-center border-2 border-dashed border-slate-200 dark:border-[#282C36] hover:border-amber-500/50 dark:hover:border-amber-500/40 rounded-2xl text-slate-400 dark:text-slate-500 cursor-pointer transition-colors group"
               >
                 <FileText className="w-8 h-8 mx-auto mb-3 group-hover:text-amber-500 transition-colors" />
-                <p className="text-sm font-medium group-hover:text-slate-600 dark:group-hover:text-slate-300 transition-colors">No materials yet. Click to add a PDF link.</p>
+                <p className="text-sm font-medium group-hover:text-slate-600 dark:group-hover:text-slate-300 transition-colors">No materials yet. Click to add a PDF, spreadsheet or link.</p>
               </div>
             ) : (
               materials.map((mat, idx) => (
