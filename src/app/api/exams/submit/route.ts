@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebase/admin';
-import { FieldValue } from 'firebase-admin/firestore';
 import { requireEntitlement } from '@/lib/api/requireEntitlement';
 import { finaliseAttempt } from '@/lib/exams/finalise';
 
@@ -21,23 +20,16 @@ export async function POST(req: Request) {
     }
     const uid = check.uid;
 
-    // 1. Verify Attempt limits (Server-side enforcement)
-    const attemptsSnapshot = await adminDb.collection('test_attempts')
-      .where('userId', '==', uid)
-      .where('testId', '==', testId)
-      .get();
-      
-    // Exclude the current attempt being submitted from the count
-    const completedAttempts = attemptsSnapshot.docs.filter(
-      (doc: FirebaseFirestore.QueryDocumentSnapshot) =>
-        doc.data().status === 'completed' && doc.id !== attemptId
-    );
-
-    if (completedAttempts.length >= 10) {
-      return NextResponse.json({ error: 'Maximum attempts reached' }, { status: 403 });
-    }
-
-    // 2. Confirm the attempt is this candidate's and still open.
+    // The attempt cap is NOT checked here. It is enforced at /api/exams/start,
+    // because starting an exam is what spends an attempt.
+    //
+    // This route used to refuse a submission once ten attempts had completed,
+    // which meant a candidate could sit a full timed paper and be turned away
+    // at the door still holding it — every answer lost, over a limit that could
+    // have been applied before they began. Refusing to accept finished work is
+    // never the right end of that rule.
+    //
+    // 1. Confirm the attempt is this candidate's and still open.
     const attemptRef = adminDb.collection('test_attempts').doc(attemptId);
     const attemptDoc = await attemptRef.get();
 
@@ -53,7 +45,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Test solutions not found' }, { status: 404 });
     }
 
-    // 3. Grade and close the attempt.
+    // 2. Grade and close the attempt.
     //
     // Shared with the disconnect check so a paper abandoned mid-exam is marked
     // by exactly the same rules as one handed in. `startedAt` falls back to the

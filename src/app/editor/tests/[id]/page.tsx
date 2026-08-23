@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef, use, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { getMockTest, getTestQuestions, saveQuestionsBatch, createMockTest, updateChapter, updateCourse, updateMockTest, deleteAllQuestions } from '@/lib/firebase/db';
 import { parseDocxText } from '@/lib/parser';
+import { resolveMaxAttempts } from '@/lib/exams/attempts';
 import { UploadCloud, CheckCircle2, AlertCircle, Save, Plus, ChevronDown, ChevronUp, Trash2, ArrowLeft, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { IN_SCOPE_PATTERNS, findExamPattern } from '@/constants/examPatterns';
@@ -291,6 +292,14 @@ function TestBuilderContent({ params }: { params: Promise<{ id: string }> }) {
         marksPerQuestion: num(test?.marksPerQuestion, 1),
         negativeMarkPercent: num(test?.negativeMarkPercent, 0),
         passPercent: num(test?.passPercent, 60),
+        // Blank means "whatever this mode allows", so it is stored as null
+        // rather than coerced. resolveMaxAttempts falls back on an absent
+        // value; a coerced 0 or NaN would lock every candidate out of the
+        // paper instead.
+        maxAttempts: (() => {
+          const n = Number(test?.maxAttempts);
+          return Number.isInteger(n) && n >= 1 ? n : null;
+        })(),
         // Recommended on by the content spec, to reduce answer-sharing between
         // attempts. Undefined counts as ON for new tests; an admin can turn it
         // off explicitly.
@@ -582,6 +591,27 @@ function TestBuilderContent({ params }: { params: Promise<{ id: string }> }) {
               {test?.randomiseQuestions !== false ? 'Randomised' : 'Fixed order'}
             </button>
           </div>
+
+          <div className="flex flex-col gap-1">
+            <label className="text-[10px] uppercase font-bold text-slate-500">Attempts allowed</label>
+            <input
+              type="number"
+              min={1}
+              max={50}
+              step="1"
+              value={test?.maxAttempts ?? ''}
+              onChange={(e) => setTest({ ...test, maxAttempts: e.target.value })}
+              placeholder={String(resolveMaxAttempts({ type: test?.type }))}
+              title="Leave blank to use this mode's default. Starting an exam uses an attempt whether or not the candidate finishes it."
+              className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs font-bold rounded px-2 h-8 w-28 border border-slate-200 dark:border-slate-700 outline-none"
+            />
+          </div>
+
+          <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-snug max-w-xs">
+            Candidates get {resolveMaxAttempts({ type: test?.type, maxAttempts: num(test?.maxAttempts, NaN) })} attempts
+            {test?.maxAttempts ? '' : ` by default in ${test?.type === 'exam' ? 'Exam' : 'Practice'} Mode`}.
+            Starting the exam uses one, finished or not.
+          </p>
 
           <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-snug max-w-xs">
             {num(test?.negativeMarkPercent, 0) > 0

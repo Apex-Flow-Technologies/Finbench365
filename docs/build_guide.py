@@ -386,7 +386,7 @@ integrity = [
     ["Content protection", "Right-click, text selection, copy and cut are disabled during an attempt."],
     ["Shortcut suppression", "Developer-tools and print/copy shortcuts (F12, Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+U, Ctrl+P, Ctrl+C, Ctrl+X) are intercepted."],
     ["Server-side grading", "Certification scores are computed on the server from a protected answer key, so a manipulated browser cannot award itself marks."],
-    ["Attempt ceiling", "A maximum of 10 completed attempts per candidate per test, enforced on the server."],
+    ["Attempt ceiling", "10 attempts per candidate on a practice test and 3 on an Exam Mode paper, set per test and enforced on the server when the candidate starts. Starting consumes an attempt; an attempt left open is resumed rather than counted twice."],
     ["Resubmission lock", "Once an attempt is submitted it is permanently sealed and cannot be re-scored or edited."],
 ]
 E += [table(integrity, [42 * mm, PAGE_W - 2 * MARGIN - 42 * mm]), Spacer(1, 4)]
@@ -568,7 +568,7 @@ run = [
     ["Suspected account sharing",
      "Session control already limits an account to one device at a time. For repeat abuse, suspend the account; it takes effect immediately."],
     ["Candidate disqualified and disputes it",
-     "The attempt record retains the submitted answers and score. Attempts are capped at ten per test, so a further attempt is normally available."],
+     "The attempt record retains the submitted answers and score. Attempts are capped per test — ten on a practice test, three on an Exam Mode paper — so a further attempt may be available."],
     ["Candidate locked out by the 15-minute disconnect rule",
      "The attempt is final by design. Remaining attempts, if any, can be used immediately."],
     ["Pricing or plan change required",

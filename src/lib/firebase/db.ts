@@ -1,4 +1,4 @@
-import { db } from './config';
+import { auth, db } from './config';
 import { 
   collection, 
   doc, 
@@ -179,17 +179,35 @@ export async function getTestQuestions(testId: string, withSolutions: boolean = 
 // over-time check, getUserAnalytics) looked for `startedAt` / `submittedAt` — so
 // the duration logic was dead code and "Total CBT Time" was permanently 0h 0m.
 // Readers fall back to the legacy names so historical attempts still count.
-export async function startTestAttempt(userId: string, testId: string) {
-  const attemptRef = doc(collection(db, 'test_attempts'));
-  const newAttempt = {
-    userId,
-    testId,
-    startedAt: serverTimestamp(),
-    status: 'in_progress',
-    answers: {}
-  };
-  await setDoc(attemptRef, newAttempt);
-  return attemptRef.id;
+export async function startTestAttempt(testId: string) {
+  // Created server-side, which is what makes the attempt cap real. The browser
+  // used to write this document itself, so the limit could only be applied at
+  // submit — after the candidate had already sat the whole paper. Firestore
+  // rules cannot count documents, so /api/exams/start is the only place the
+  // rule can actually live.
+  //
+  // The candidate is taken from the verified token there, never from a body
+  // field, which is why no userId is sent.
+  if (!auth.currentUser) throw new Error('Not signed in.');
+  const token = await auth.currentUser.getIdToken();
+
+  const res = await fetch('/api/exams/start', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ testId }),
+  });
+
+  const data = await res.json().catch(() => ({}));
+
+  if (!res.ok) {
+    const error = new Error(data.error || 'Could not start the exam.');
+    // Carried through so the runner can show the exhausted state instead of a
+    // generic "something went wrong" alert the candidate cannot act on.
+    Object.assign(error, { reason: data.reason, max: data.max, used: data.used });
+    throw error;
+  }
+
+  return data.attemptId as string;
 }
 
 export async function saveTestProgress(attemptId: string, answers: Record<string, number>) {
@@ -227,11 +245,19 @@ export async function getTestAttempt(attemptId: string) {
 }
 
 export async function getTestAttemptsCount(userId: string, testId: string) {
+  // Every attempt counts, in progress or completed, because starting an exam is
+  // what spends one. Counting only completed attempts would let a candidate
+  // open a paper, walk away, and open another indefinitely.
+  //
+  // There is deliberately no status filter rather than an `in` clause: that
+  // would need a composite index, and the caller on the course page runs this
+  // inside a Promise.all whose rejection is swallowed to console.error — a
+  // missing index would silently render every test as "0 of 3", which is a
+  // wide-open door on the one screen whose job is showing the cap.
   const q = query(
     collection(db, 'test_attempts'),
     where('userId', '==', userId),
-    where('testId', '==', testId),
-    where('status', '==', 'completed') // Match server-side validation — only count completed, not in_progress or expired
+    where('testId', '==', testId)
   );
   const snapshot = await getDocs(q);
   return snapshot.size;

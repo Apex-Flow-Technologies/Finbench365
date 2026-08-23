@@ -43,7 +43,7 @@ const FAQ_ITEMS: FaqItem[] = [
   {
     category: 'Reattempt Policy',
     question: 'Can I retake a mock test multiple times, or is each attempt final?',
-    answer: 'Every mock test comes with 10 attempts, across all three plans.',
+    answer: 'Practice tests come with 10 attempts. Exam Mode papers — the timed, answers-withheld sittings — come with 3, because a rehearsal you can repeat indefinitely stops resembling the exam it is rehearsing. Starting a paper uses an attempt whether or not you finish it. This is the same on all three plans.',
   },
   {
     category: 'Study Material',

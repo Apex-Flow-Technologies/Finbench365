@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { useAuth } from '@/context/AuthContext';
 import { getCourse, getCourseTests, getUserEntitlements, getTestAttemptsCount, getCourseMaterials } from '@/lib/firebase/db';
+import { resolveMaxAttempts } from '@/lib/exams/attempts';
 import { 
   BookOpen, PlayCircle, Loader2, ArrowLeft, Clock, 
   FileDown, AlertCircle, BookMarked, ClipboardList
@@ -427,7 +428,10 @@ export default function StudentExamPage({ params }: { params: Promise<{ id: stri
                 ) : (
                   tests.map((test, idx) => {
                     const attempts = attemptCounts[test.id] || 0;
-                    const maxAttempts = 10;
+                    // Per test, so an Exam Mode paper shows its three and a
+                    // practice test its ten. A literal here would drift from
+                    // the server the moment either changed.
+                    const maxAttempts = resolveMaxAttempts(test);
                     const isExhausted = !isAdmin && attempts >= maxAttempts;
                     const progressPct = Math.min((attempts / maxAttempts) * 100, 100);
                     const isStarting = startingTestId === test.id;

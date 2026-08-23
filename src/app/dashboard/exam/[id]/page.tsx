@@ -18,6 +18,7 @@ import { Clock, AlertCircle, ChevronLeft, ChevronRight, CheckCircle2, LayoutGrid
 import { AdminPreviewBanner } from '@/components/AdminPreviewBanner';
 import { LoadingButton } from '@/components/ui/LoadingButton';
 import { orderQuestionsForAttempt } from '@/lib/exams/shuffle';
+import { resolveMaxAttempts } from '@/lib/exams/attempts';
 import { Calculator } from '@/components/exam/Calculator';
 import { ExplanationBody } from '@/components/exam/ExplanationBody';
 import { CasePanel, CaseQuestionTabs } from '@/components/exam/CasePanel';
@@ -34,7 +35,11 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [attemptsCount, setAttemptsCount] = useState<number>(0);
-  const MAX_ATTEMPTS = 10;
+  // Set when the server refuses a start. The locally held count can lag behind
+  // — another tab, or an attempt the disconnect sweep closed — and the server
+  // is the authority on the cap, so its refusal is recorded rather than
+  // recomputed.
+  const [attemptsExhausted, setAttemptsExhausted] = useState(false);
 
   // Entitlement gate. The server and Firestore rules are the real enforcement;
   // this exists so an expired candidate sees "your access ran out — renew"
@@ -461,11 +466,21 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
       setIsSubmitting(true);
       // Remove any lingering disconnect timer before starting a new exam
       localStorage.removeItem(`cbt_last_active_${testId}`);
-      const newAttemptId = await startTestAttempt(user.uid, testId);
+      const newAttemptId = await startTestAttempt(testId);
       setAttemptId(newAttemptId);
       setStatus('in_progress');
     } catch (err: any) {
       console.error("[StartExam] Failed to start attempt:", err);
+
+      // The cap is enforced server-side, so its refusal belongs on the screen
+      // as a state the candidate can read — not in an alert box that says
+      // "check your connection" about a limit they have simply reached.
+      if (err?.reason === 'attempts-exhausted') {
+        setAttemptsExhausted(true);
+        if (typeof err.used === 'number') setAttemptsCount(err.used);
+        return;
+      }
+
       // Determine error type based on message or default to generic
       const errMsg = err?.message || err?.toString() || "";
       if (errMsg.includes("permission")) {
@@ -971,7 +986,8 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
   // Pre-exam instructions screen
   if (status === 'pre_exam') {
     const isAdmin = user?.role === 'admin';
-    const isExhausted = !isAdmin && attemptsCount >= MAX_ATTEMPTS;
+    const maxAttempts = resolveMaxAttempts(test);
+    const isExhausted = !isAdmin && (attemptsExhausted || attemptsCount >= maxAttempts);
 
     return (
       <ProtectedRoute requiredRole="student">
@@ -981,7 +997,7 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
             <h1 className="text-2xl font-bold text-amber-500">{test.title} — CBT Simulator</h1>
             <p className="text-[#334155] dark:text-slate-300 text-sm">{test.description || "NISM Series V-A Official Standard Mock Exam."}</p>
             
-            <div className="grid grid-cols-2 gap-4 py-4 border-y border-slate-200 dark:border-y-white/10 text-xs tabular-nums">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 py-4 border-y border-slate-200 dark:border-y-white/10 text-xs tabular-nums">
               <div>
                 <div className="text-[#475569] dark:text-[#94A3B8]">Duration</div>
                 <div className="font-bold text-[#111B35] dark:text-white text-sm">{test.durationMinutes} Minutes</div>
@@ -989,6 +1005,14 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
               <div>
                 <div className="text-[#475569] dark:text-[#94A3B8]">Total Questions</div>
                 <div className="font-bold text-[#111B35] dark:text-white text-sm">{questions.length} Items</div>
+              </div>
+              <div>
+                <div className="text-[#475569] dark:text-[#94A3B8]">Attempts</div>
+                <div className="font-bold text-[#111B35] dark:text-white text-sm">
+                  {isAdmin
+                    ? 'Unlimited (staff)'
+                    : `${Math.min(attemptsCount, maxAttempts)} of ${maxAttempts} used`}
+                </div>
               </div>
             </div>
 
@@ -998,8 +1022,17 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
                 <li>Full-screen mode is required throughout the examination.</li>
                 <li>Tab switching triggers an anti-cheat countdown warning.</li>
                 <li>4-Color Palette indicates Visited, Answered, Marked for Review, and Unanswered items.</li>
+                <li>Starting the exam uses one of your {maxAttempts} attempts, whether or not you finish it.</li>
               </ul>
             </div>
+
+            {isExhausted && (
+              <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-xs text-red-700 dark:text-red-300">
+                <span className="font-bold">You have used all {maxAttempts} attempts for this test.</span>{' '}
+                Starting an exam uses an attempt whether or not it is finished. Contact support if
+                you believe this is wrong.
+              </div>
+            )}
 
             <LoadingButton
               onClick={handleStartExam}
