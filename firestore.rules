@@ -128,14 +128,16 @@ service cloud.firestore {
       // Users can read and update their own attempts
       allow read: if request.auth != null && (resource.data.userId == request.auth.uid || isAdmin());
 
-      // Users can create an attempt for themselves. A fresh attempt must start
-      // in_progress with no score — otherwise a caller could create one that is
-      // already 'completed' with a score of their choosing, which is exactly the
-      // tampering the update rule below prevents.
-      allow create: if request.auth != null
-                    && request.resource.data.userId == request.auth.uid
-                    && request.resource.data.status == 'in_progress'
-                    && !('score' in request.resource.data);
+      // Attempts are created by /api/exams/start with the Admin SDK, which
+      // ignores these rules. A browser may no longer open one itself.
+      //
+      // The old rule let any signed-in candidate create their own attempt, and
+      // no rule could have improved on it: the limit on attempts is a COUNT of
+      // existing documents, and rules cannot count. That is why the cap could
+      // only ever be applied at submit — after a candidate had sat the whole
+      // paper — and why enforcing it properly meant moving creation to a route
+      // that can run the query first.
+      allow create: if false;
 
       // The ONLY fields a browser may change on its own in-progress attempt:
       // saved answers, review flags, and the liveness timestamps.
