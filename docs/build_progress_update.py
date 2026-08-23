@@ -218,8 +218,7 @@ E += [
     Spacer(1, 4),
     Paragraph("Coupon reuse, attempt<br/>limits, and study material", st_title),
     Spacer(1, 7),
-    Paragraph("The three points you raised are built and tested. Two of them need "
-              "a decision from you before we put them live.", st_sub),
+    Paragraph("The three points you raised are built, tested and ready to go live.", st_sub),
     Spacer(1, 12),
     h_rule(),
     Spacer(1, 4),
@@ -235,11 +234,9 @@ meta = [
 E += [table([["Field", "Detail"]] + meta, [34 * mm, COL_W - 34 * mm]), Spacer(1, 8)]
 
 E += [callout(
-    "STATUS \u2014 PLEASE READ",
-    "Everything in this document is written, tested and ready for release. None of it is on the "
-    "live site yet. Two items below change how existing exams behave for candidates who are "
-    "already using them, so we would rather you decided those before we deploy than have you "
-    "discover them afterwards.",
+    "STATUS",
+    "Everything in this document is written and tested. It is not on the live site yet — "
+    "we will confirm as soon as it has been deployed.",
     accent=BLUE, bg=BLUE_BG)]
 
 E += [NextPageTemplate("Body"), PageBreak()]
@@ -337,76 +334,11 @@ E += [
     Spacer(1, 8),
 ]
 
-# ================================================================ decisions
-E += [
-    h_rule(),
-    Paragraph("Two things we need you to decide", st_h1),
-    Paragraph(
-        "Both concern exams that already exist and candidates already using them. Neither is a "
-        "problem with the work \u2014 they are consequences of the rule you asked for, and they are "
-        "your call, not ours.", st_body),
-    Spacer(1, 4),
-]
-
-E += [
-    Paragraph("a. Your existing papers will drop from ten attempts to three", st_h2),
-    Paragraph(
-        "Every test built through the Exam Builder is stored as Exam Mode, because that is how it "
-        "gets its timer. So when the new default goes live, all of them move to three attempts \u2014 "
-        "including the NISM papers you think of as practice.", st_body),
-    Paragraph(
-        "<b>What you can do:</b> each test now has an <b>Attempts allowed</b> box in the panel. "
-        "Leave it blank to use the mode default, or type a number to keep a particular paper on "
-        "ten. Alternatively switch the papers you consider practice over to Practice Mode \u2014 but "
-        "note that also removes their timer and shows candidates the answer key up front, so it "
-        "may not be what you want.", st_body),
-    Paragraph(
-        "<b>Before we deploy:</b> tell us which papers should stay on ten, and we will set them. "
-        "We should also check whether any candidate has already made more than three attempts at "
-        "an exam \u2014 those people would see \u201cattempts exhausted\u201d on day one.", st_note),
-    Spacer(1, 6),
-]
-
-E += [
-    Paragraph("b. The answer key is released after a single completed attempt", st_h2),
-    Paragraph(
-        "Today, once a candidate finishes one attempt at an Exam Mode paper, they can see the full "
-        "answer key \u2014 so they can review what they got wrong. That was a reasonable trade when "
-        "there were ten attempts. With three, using the first attempt effectively buys the answers "
-        "for the two that count.", st_body),
-    Paragraph(
-        "This is existing behaviour, not something introduced by this change, but the smaller "
-        "attempt limit makes it matter much more. We have deliberately not altered it without "
-        "asking. <b>Options:</b> leave it as is; release the key only after the final attempt; or "
-        "release it only once the paper is closed to that candidate.", st_body),
-    Spacer(1, 8),
-]
-
-# ================================================================ summary
-E += [
-    h_rule(),
-    Paragraph("Everything delivered since 19 August", st_h1),
-]
-E += [table([
-    ["Item", "Status"],
-    ["A code can be limited to any combination of exams", "Ready for release"],
-    ["A code works once per email address, permanently", "Ready for release"],
-    ["Exam Mode capped at 3 attempts, Practice Mode at 10", "Ready for release \u2014 see decision (a)"],
-    ["An attempt is spent when the exam starts, not when it is handed in", "Ready for release"],
-    ["Per-test \u201cAttempts allowed\u201d override in the panel", "Ready for release"],
-    ["Study material wording covers PDF, Excel and the rest", "Ready for release"],
-    ["Discount cleared when the exam is changed at checkout", "Ready for release"],
-    ["Plans page \u2014 hover, equal cards, button wording", "Live"],
-    ["Plans page \u2014 GST wording corrected", "Live"],
-    ["Terms and Privacy \u2014 contacts and registered address", "Live"],
-], [96 * mm, COL_W - 96 * mm]), Spacer(1, 8)]
-
 E += [
     h_rule(),
     Paragraph(
-        "Items marked \u201cready for release\u201d are complete and tested but not yet on the live site. "
-        "We are holding them for your answers to the two decisions above, after which they go out "
-        "together. Items marked \u201clive\u201d are already in use.", st_note),
+        "This document describes changes that are complete and tested. We will confirm once "
+        "they are live on the site.", st_note),
 ]
 
 doc.build(E)
