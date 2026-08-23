@@ -1,3 +1,5 @@
+import { createHash } from 'node:crypto';
+
 import { toMillis } from '@/lib/admin/revenue';
 
 /**
@@ -12,7 +14,8 @@ import { toMillis } from '@/lib/admin/revenue';
  * price at the gateway.
  */
 
-export type CouponRejection = 'not-found' | 'inactive' | 'exhausted' | 'expired' | 'wrong-course';
+export type CouponRejection =
+  | 'not-found' | 'inactive' | 'exhausted' | 'expired' | 'wrong-course' | 'already-redeemed';
 
 export interface CouponEvaluation {
   valid: boolean;
@@ -25,6 +28,35 @@ export interface CouponEvaluation {
 /** Coupons are stored under their upper-cased code as the document id. */
 export function normaliseCouponCode(raw: string): string {
   return raw.trim().toUpperCase();
+}
+
+/**
+ * The document id recording that one email address has redeemed one coupon.
+ *
+ * A coupon may be spent once per candidate. Enrolment expires and can be
+ * renewed, so the ledger cannot live on the enrolment — it has to outlast it,
+ * which is why it is keyed off the address rather than the entitlement.
+ *
+ * The address is hashed rather than used directly. `/` is a legal character in
+ * an RFC 5322 local part, and a `/` in a document id silently becomes a path
+ * separator — `a/b@x.com` would write to the wrong place rather than fail.
+ * Hashing also keeps a real email address out of Firestore paths, which turn up
+ * in logs, console URLs and index entries.
+ *
+ * Returns null for anything unusable, so callers have to decide explicitly what
+ * to do when they cannot identify the candidate rather than silently keying
+ * every such redemption to the same document.
+ *
+ * Note this matches addresses exactly: plus-tags and Gmail's dots are NOT
+ * normalised away, so alice+1@x.com and alice@x.com are two candidates. That is
+ * the literal reading of the rule; treating them as one person is a policy
+ * decision for the operator, not one to smuggle in here.
+ */
+export function couponRedemptionKey(email: string | null | undefined): string | null {
+  if (typeof email !== 'string') return null;
+  const normalised = email.trim().toLowerCase();
+  if (!normalised) return null;
+  return createHash('sha256').update(normalised).digest('hex');
 }
 
 /**
@@ -58,6 +90,13 @@ export function evaluateCoupon(
    * than applying it.
    */
   courseId?: string | null,
+  /**
+   * Facts the caller had to read from the database, kept out of this function
+   * so it stays pure and testable. Absent means "not checked", which is what
+   * the admin list wants — whether one candidate has spent a code is a fact
+   * about that candidate, not about the coupon.
+   */
+  opts?: { alreadyRedeemed?: boolean },
 ): CouponEvaluation {
   if (!data) return { valid: false, reason: 'not-found', discountPercent: 0 };
   if (!data.isActive) return { valid: false, reason: 'inactive', discountPercent: 0 };
@@ -69,6 +108,13 @@ export function evaluateCoupon(
   const scope = couponCourseIds(data);
   if (scope.length > 0 && courseId !== undefined && !scope.includes(courseId as string)) {
     return { valid: false, reason: 'wrong-course', discountPercent: 0 };
+  }
+
+  // One redemption per candidate, for good. Deliberately checked before the
+  // usage limit: a candidate who has already spent this code should be told so
+  // whether or not the code has any uses left on it.
+  if (opts?.alreadyRedeemed) {
+    return { valid: false, reason: 'already-redeemed', discountPercent: 0 };
   }
 
   if (data.maxUses && (data.usedCount ?? 0) >= data.maxUses) {
@@ -96,6 +142,11 @@ export function couponRejectionMessage(reason: CouponRejection): string {
       return 'This code is not valid for the exam you have selected.';
     case 'expired':
       return 'This coupon has expired.';
+    // Needs its own case: falling through to the default would tell a candidate
+    // their own code is "not valid", which reads as a mistake on their part
+    // rather than a code they have already had the benefit of.
+    case 'already-redeemed':
+      return 'You have already used this code.';
     // 'not-found' and 'inactive' share a message deliberately: telling a caller
     // that a code exists but is switched off is more than they need to know.
     case 'not-found':

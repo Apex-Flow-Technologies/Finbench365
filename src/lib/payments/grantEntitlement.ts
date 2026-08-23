@@ -2,6 +2,7 @@ import { adminDb, adminAuth } from '@/lib/firebase/admin';
 import { PLAN_PRICING, GST_RATE } from '@/constants/pricing';
 import { Timestamp, FieldValue, Transaction } from 'firebase-admin/firestore';
 import { sendInvoiceEmail } from '@/lib/email';
+import { couponRedemptionKey } from '@/lib/payments/coupons';
 
 interface GrantParams {
   userId: string;
@@ -51,6 +52,32 @@ export async function grantEntitlementIdempotent(params: GrantParams): Promise<G
   const userRef: FirebaseFirestore.DocumentReference =
     adminDb.collection('users').doc(userId);
 
+  // The candidate's address, resolved before the transaction for two reasons:
+  // the redemption ledger written inside it is keyed on the address, and a
+  // transaction callback can be retried, so a network call in there would be
+  // repeated. The invoice below reuses this same record, so it costs nothing.
+  //
+  // Falls back to the copy create-order denormalises onto the user document.
+  // Neither lookup may fail the grant: by the time this runs the money has
+  // already moved, and withholding access over an email lookup would be worse
+  // than not recording the redemption.
+  let userRecord: any = null;
+  let candidateEmail: string | null = null;
+  try {
+    userRecord = await adminAuth.getUser(userId);
+    candidateEmail = userRecord?.email ?? null;
+  } catch (err) {
+    console.error(`Could not load the auth record for ${userId}:`, err);
+  }
+  if (!candidateEmail) {
+    try {
+      candidateEmail = (await userRef.get()).data()?.email ?? null;
+    } catch (err) {
+      console.error(`Could not read an email off users/${userId}:`, err);
+    }
+  }
+  const redemptionKey = couponRedemptionKey(candidateEmail);
+
   const alreadyProcessed = await adminDb.runTransaction(async (tx: Transaction) => {
     const existing = await tx.get(orderRef);
     if (existing.exists && existing.data()?.status === 'success') {
@@ -71,6 +98,23 @@ export async function grantEntitlementIdempotent(params: GrantParams): Promise<G
     const couponRef: FirebaseFirestore.DocumentReference | null =
       code ? adminDb.collection('coupons').doc(code) : null;
     const couponSnap = couponRef ? await tx.get(couponRef) : null;
+
+    // The ledger that makes a coupon spendable once per candidate, for good.
+    //
+    // Read inside the transaction rather than before it: this read is what
+    // serialises two checkouts racing with the same code and address, because
+    // a transaction locks the documents it reads. The loser sees it already
+    // there. The pre-checks in create-order and validate-coupon are plain
+    // reads and cannot do that on their own.
+    //
+    // It sits next to the coupon read because a Firestore transaction requires
+    // every read to happen before any write, not next to the increment below
+    // that it actually guards.
+    const redemptionRef: FirebaseFirestore.DocumentReference | null =
+      couponRef && redemptionKey
+        ? couponRef.collection('redemptions').doc(redemptionKey)
+        : null;
+    const redemptionSnap = redemptionRef ? await tx.get(redemptionRef) : null;
 
     const days = planData.durationDays;
     const expiresAt = new Date();
@@ -121,18 +165,47 @@ export async function grantEntitlementIdempotent(params: GrantParams): Promise<G
     }, { merge: true });
 
     if (couponRef && couponSnap?.exists) {
-      tx.update(couponRef, { usedCount: FieldValue.increment(1) });
-
-      // The money has already changed hands by the time we get here, so an
-      // over-limit redemption is reported rather than refused — refusing would
-      // mean taking payment and withholding access. This can only happen when
-      // several candidates pass validation and pay in the same instant, and it
-      // is worth knowing about.
-      const data = couponSnap.data()!;
-      if (data.maxUses && (data.usedCount ?? 0) >= data.maxUses) {
+      if (redemptionSnap?.exists) {
+        // Already spent by this candidate. The grant still goes through — the
+        // money has moved and the access is paid for — but the code must not
+        // count a second use, or a candidate renewing every month would burn
+        // a launch coupon's whole allowance on their own.
         console.warn(
-          `Coupon ${code} redeemed beyond maxUses (${data.usedCount}/${data.maxUses}) on order ${orderId} — concurrent checkouts.`,
+          `Coupon ${code} re-presented on order ${orderId} by an address that has already redeemed it — not counted again.`,
         );
+      } else {
+        tx.update(couponRef, { usedCount: FieldValue.increment(1) });
+
+        if (redemptionRef) {
+          // tx.set, not tx.create: create throws on a conflict, and a throw in
+          // here fails the whole transaction — which would withhold access
+          // someone has already paid for.
+          tx.set(redemptionRef, {
+            email: candidateEmail,
+            userId,
+            orderId,
+            courseId,
+            redeemedAt: FieldValue.serverTimestamp(),
+          });
+        } else {
+          // No address to key on, so this redemption cannot be held against a
+          // future one. The use is still counted; the gap is worth knowing.
+          console.warn(
+            `Coupon ${code} redeemed on order ${orderId} with no resolvable email — not recorded against a candidate.`,
+          );
+        }
+
+        // The money has already changed hands by the time we get here, so an
+        // over-limit redemption is reported rather than refused — refusing would
+        // mean taking payment and withholding access. This can only happen when
+        // several candidates pass validation and pay in the same instant, and it
+        // is worth knowing about.
+        const data = couponSnap.data()!;
+        if (data.maxUses && (data.usedCount ?? 0) >= data.maxUses) {
+          console.warn(
+            `Coupon ${code} redeemed beyond maxUses (${data.usedCount}/${data.maxUses}) on order ${orderId} — concurrent checkouts.`,
+          );
+        }
       }
     }
 
@@ -146,17 +219,15 @@ export async function grantEntitlementIdempotent(params: GrantParams): Promise<G
   // Side effects that must run exactly once — outside the transaction since
   // they're network calls, not Firestore writes.
   try {
-    const userRecord = await adminAuth.getUser(userId);
-
     // Denormalise the email onto the order so the admin list never needs a
     // per-row lookup. Best-effort and outside the transaction: a failure here
     // must not undo a granted entitlement.
-    if (userRecord.email) {
-      orderRef.set({ userEmail: userRecord.email }, { merge: true })
+    if (candidateEmail) {
+      orderRef.set({ userEmail: candidateEmail }, { merge: true })
         .catch((e) => console.error('Could not denormalise userEmail on order:', e));
     }
 
-    if (userRecord.email) {
+    if (candidateEmail) {
       const courseDoc = await adminDb.collection('courses').doc(courseId).get();
       const courseTitle = courseDoc.exists ? courseDoc.data()?.title : 'Certification Track';
 
@@ -164,8 +235,8 @@ export async function grantEntitlementIdempotent(params: GrantParams): Promise<G
       const gstAmount = basePrice * GST_RATE;
 
       await sendInvoiceEmail({
-        email: userRecord.email,
-        name: userRecord.displayName || 'Candidate',
+        email: candidateEmail,
+        name: userRecord?.displayName || 'Candidate',
         courseTitle,
         planName: planData.name,
         orderId,

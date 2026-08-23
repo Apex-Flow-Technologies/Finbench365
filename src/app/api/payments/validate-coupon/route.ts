@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { rateLimit, clientIp } from '@/lib/api/rateLimit';
 import {
-  evaluateCoupon, normaliseCouponCode, couponRejectionMessage,
+  evaluateCoupon, normaliseCouponCode, couponRejectionMessage, couponRedemptionKey,
 } from '@/lib/payments/coupons';
 
 /**
@@ -54,12 +54,35 @@ export async function POST(req: Request) {
     }
 
     const sanitizedCode = normaliseCouponCode(code);
-    const couponSnap = await adminDb.collection('coupons').doc(sanitizedCode).get();
-    // Same courseId the order will be created with, so the discount quoted here
-    // is the discount actually applied at the gateway.
+    const couponRef = adminDb.collection('coupons').doc(sanitizedCode);
+
+    // Keyed off the verified token, never off anything the browser sent — the
+    // checkout form has a candidate-typed email field, and trusting that here
+    // would let anyone clear their own redemption before applying the code.
+    const redemptionKey = couponRedemptionKey(decodedToken.email);
+    if (!redemptionKey) {
+      // create-order fails closed the same way. Said plainly rather than
+      // reported as 'already-redeemed', which would accuse a candidate of
+      // spending a code they have never touched.
+      console.warn(`Coupon check for ${decodedToken.uid} carried no email on the token.`);
+      return NextResponse.json(
+        { valid: false, message: 'We could not confirm your account email. Please sign in again.' },
+        { status: 200 },
+      );
+    }
+
+    const [couponSnap, redemptionSnap] = await Promise.all([
+      couponRef.get(),
+      couponRef.collection('redemptions').doc(redemptionKey).get(),
+    ]);
+
+    // Same courseId and the same redemption fact the order will be created
+    // with, so the discount quoted here is the discount actually applied at
+    // the gateway.
     const evaluation = evaluateCoupon(
       couponSnap.exists ? couponSnap.data()! : null,
       typeof courseId === 'string' ? courseId : null,
+      { alreadyRedeemed: redemptionSnap.exists },
     );
 
     if (!evaluation.valid) {

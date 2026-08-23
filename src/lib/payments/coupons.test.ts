@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { evaluateCoupon, normaliseCouponCode, couponRejectionMessage, couponCourseIds } from './coupons';
+import {
+  evaluateCoupon, normaliseCouponCode, couponRejectionMessage, couponCourseIds,
+  couponRedemptionKey,
+} from './coupons';
 
 const HOUR = 60 * 60 * 1000;
 const valid = (extra: Record<string, any> = {}) => ({
@@ -178,5 +181,98 @@ describe('couponRejectionMessage', () => {
         expect(couponCourseIds({ courseIds: ['a', '', null, 7, 'b'] })).toEqual(['a', 'b']);
       });
     });
+  });
+});
+
+
+/**
+ * A coupon is spendable once per candidate, for good.
+ *
+ * Enrolment expires and can be renewed on purpose, so the record of having
+ * spent a code has to outlast the access it bought — otherwise every renewal
+ * is another discount, forever.
+ */
+describe('one redemption per candidate', () => {
+  it('refuses a code the candidate has already spent', () => {
+    expect(evaluateCoupon(valid(), 'nism-va', { alreadyRedeemed: true }))
+      .toEqual({ valid: false, reason: 'already-redeemed', discountPercent: 0 });
+  });
+
+  it('behaves exactly as before when the caller does not supply the fact', () => {
+    // The regression net for every existing case: an omitted, undefined or
+    // false flag must leave the other rules untouched.
+    for (const opts of [undefined, {}, { alreadyRedeemed: false }]) {
+      expect(evaluateCoupon(valid(), 'nism-va', opts).valid).toBe(true);
+    }
+  });
+
+  it('does not judge redemption for the admin list', () => {
+    // serialise() reports on the coupon itself. Whether one candidate has spent
+    // it is a fact about that candidate, so "usable" must not depend on it.
+    expect(evaluateCoupon(valid()).valid).toBe(true);
+  });
+
+  describe('precedence against the other rejections', () => {
+    const redeemed = { alreadyRedeemed: true };
+
+    it('does not reveal that an unknown or switched-off code exists', () => {
+      // Telling someone "you already used this" about a code that does not
+      // exist, or is switched off, confirms it is real to someone probing.
+      expect(evaluateCoupon(null, 'nism-va', redeemed)).toMatchObject({ reason: 'not-found' });
+      expect(evaluateCoupon(valid({ isActive: false }), 'nism-va', redeemed))
+        .toMatchObject({ reason: 'inactive' });
+    });
+
+    it('reports the wrong exam first, since that is the actionable fault', () => {
+      expect(evaluateCoupon(valid({ courseIds: ['nism-xv'] }), 'nism-va', redeemed))
+        .toMatchObject({ reason: 'wrong-course' });
+    });
+
+    it('outranks exhaustion and expiry', () => {
+      // Both are true of the code rather than the candidate; being told the
+      // code is spent out is misleading when they personally already used it.
+      expect(evaluateCoupon(valid({ maxUses: 1, usedCount: 1 }), 'nism-va', redeemed))
+        .toMatchObject({ reason: 'already-redeemed' });
+      expect(evaluateCoupon(valid({ expiresAt: new Date(Date.now() - 1000) }), 'nism-va', redeemed))
+        .toMatchObject({ reason: 'already-redeemed' });
+    });
+  });
+
+  it('has its own message rather than the generic one', () => {
+    const message = couponRejectionMessage('already-redeemed');
+    expect(message).toMatch(/already used/i);
+    expect(message).not.toBe(couponRejectionMessage('not-found'));
+  });
+});
+
+describe('couponRedemptionKey', () => {
+  it('treats the same address written differently as one candidate', () => {
+    expect(couponRedemptionKey('  A@B.COM ')).toBe(couponRedemptionKey('a@b.com'));
+  });
+
+  it('is a sha256 hex digest, so it is always a safe document id', () => {
+    // "/" is legal in an RFC 5322 local part and would otherwise become a path
+    // separator, writing the redemption somewhere else entirely.
+    const key = couponRedemptionKey('a/b@example.com');
+    expect(key).toMatch(/^[0-9a-f]{64}$/);
+  });
+
+  it('separates different candidates', () => {
+    expect(couponRedemptionKey('a@x.com')).not.toBe(couponRedemptionKey('b@x.com'));
+  });
+
+  it('treats a plus-tagged address as a different candidate', () => {
+    // Pinned deliberately. Matching addresses exactly is the literal reading of
+    // the rule; collapsing plus-tags and Gmail dots is a policy call for the
+    // operator, and doing it here would silently make it for them.
+    expect(couponRedemptionKey('alice+1@x.com')).not.toBe(couponRedemptionKey('alice@x.com'));
+  });
+
+  it('returns null rather than a shared key when there is no address', () => {
+    // Every unidentifiable candidate hashing to one document would read as
+    // "this coupon is already spent" for all of them.
+    for (const bad of ['', '   ', null, undefined]) {
+      expect(couponRedemptionKey(bad)).toBeNull();
+    }
   });
 });

@@ -2,9 +2,8 @@ import { NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { PLAN_PRICING, GST_RATE } from '@/constants/pricing';
 import { FieldValue } from 'firebase-admin/firestore';
-import { randomUUID } from 'crypto';
 import { grantEntitlementIdempotent } from '@/lib/payments/grantEntitlement';
-import { evaluateCoupon, normaliseCouponCode } from '@/lib/payments/coupons';
+import { evaluateCoupon, normaliseCouponCode, couponRedemptionKey } from '@/lib/payments/coupons';
 
 // How long a just-created Razorpay order is considered "still in progress" —
 // past this, create-order will start a fresh order instead of trying to reuse it.
@@ -94,10 +93,40 @@ export async function POST(req: Request) {
     // charged at the gateway cannot drift apart.
     if (couponCode && typeof couponCode === 'string') {
       const sanitizedCode = normaliseCouponCode(couponCode);
-      const couponSnap = await adminDb.collection('coupons').doc(sanitizedCode).get();
+      const couponRef = adminDb.collection('coupons').doc(sanitizedCode);
+      const couponSnap = await couponRef.get();
+
+      // A code is spendable once per candidate, for good — including on the
+      // renewal after access has expired, which the already-enrolled guard
+      // above deliberately allows. Without this, a monthly renewer re-applies
+      // the same discount forever.
+      //
+      // The address comes off the verified token and never off the checkout
+      // form: that field is candidate-typed, so trusting it would let anyone
+      // clear their own redemption by editing it before paying.
+      //
+      // Fails closed. With no address there is no way to record the redemption,
+      // and granting a discount that cannot be recorded is the one outcome that
+      // silently reopens the hole.
+      const redemptionKey = couponRedemptionKey(decodedToken.email);
+      let alreadyRedeemed = true;
+      if (redemptionKey) {
+        alreadyRedeemed = (
+          await couponRef.collection('redemptions').doc(redemptionKey).get()
+        ).exists;
+      } else {
+        console.warn(
+          `Coupon ${sanitizedCode} refused for ${userId}: no email on the token to record a redemption against.`,
+        );
+      }
+
       // Scoped to the exam being bought, so a code meant for one exam cannot
       // be spent against another.
-      const evaluation = evaluateCoupon(couponSnap.exists ? couponSnap.data()! : null, courseId);
+      const evaluation = evaluateCoupon(
+        couponSnap.exists ? couponSnap.data()! : null,
+        courseId,
+        { alreadyRedeemed },
+      );
 
       if (evaluation.valid) {
         discountPercent = evaluation.discountPercent;
@@ -117,7 +146,12 @@ export async function POST(req: Request) {
       // record shape, and the same idempotency guarantee as a paid one. It
       // previously wrote its own copy of that logic and therefore never sent
       // the candidate any confirmation at all.
-      const orderId = `BYPASS-${randomUUID()}`;
+      // Derived from the candidate, the exam and the code rather than randomly,
+      // so a repeated POST resolves to the SAME order. grantEntitlement is
+      // idempotent on orderId, and a fresh uuid per call defeated that entirely:
+      // two clicks meant two grants, two coupon uses and two invoice emails.
+      // A later renewal on a different code still gets its own id.
+      const orderId = `BYPASS-${appliedCouponCode ?? 'FREE'}-${userId}-${courseId}`;
 
       const result = await grantEntitlementIdempotent({
         userId,
