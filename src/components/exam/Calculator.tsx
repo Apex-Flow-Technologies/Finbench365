@@ -91,17 +91,19 @@ export function Calculator({ onClose }: { onClose: () => void }) {
     const onKey = (e: KeyboardEvent) => {
       const k = e.key;
       const handled =
-        /^[0-9.]$/.test(k) || ['+', '-', '*', '/', 'Enter', '=', 'Escape', 'Backspace'].includes(k);
+        /^[0-9.]$/.test(k) || ['+', '-', '*', '/', 'Enter', '=', 'Escape', 'Delete', 'Backspace'].includes(k);
       if (!handled) return;
 
       e.preventDefault();
       e.stopPropagation();
 
       if (/^[0-9.]$/.test(k)) inputDigit(k);
-      else if (k === 'Escape') clearAll();
+      else if (k === 'Escape' || k === 'Delete') clearAll();
       else if (k === 'Enter' || k === '=') equals();
       else if (k === 'Backspace') {
         setDisplay((c) => (c.length <= 1 || c === 'Error' ? '0' : c.slice(0, -1)));
+        // Correcting a digit means the candidate is still entering this number.
+        setStartFresh(false);
       } else applyOp(k as Op);
     };
     // Capture phase, so this runs before the runner's document-level handler.
@@ -122,11 +124,12 @@ export function Calculator({ onClose }: { onClose: () => void }) {
     return () => { window.removeEventListener('mousemove', move); window.removeEventListener('mouseup', up); };
   }, []);
 
-  const key = (label: string, onClick: () => void, cls = '') => (
+  const key = (label: string, onClick: () => void, cls = '', title?: string) => (
     <button
       key={label}
       type="button"
       onClick={onClick}
+      title={title}
       // Keeps focus on the calculator body rather than moving it into the exam,
       // and avoids a focus change the anti-cheat watcher could misread.
       onMouseDown={(e) => e.preventDefault()}
@@ -173,9 +176,9 @@ export function Calculator({ onClose }: { onClose: () => void }) {
       </div>
 
       <div className="grid grid-cols-4 gap-2 p-3">
-        {key('C', clearAll, 'bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400')}
+        {key('C', clearAll, 'bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400', 'Clear (Esc or Delete)')}
         {key('±', () => setDisplay((c) => (c === '0' || c === 'Error' ? c : String(parseFloat(c) * -1))))}
-        {key('%', () => { setDisplay((c) => String(parseFloat(c) / 100)); setStartFresh(true); })}
+        {key('%', () => { setDisplay((c) => (c === 'Error' ? c : String(parseFloat(c) / 100))); setStartFresh(true); })}
         {key('÷', () => applyOp('/'), 'bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400')}
 
         {['7', '8', '9'].map((d) => key(d, () => inputDigit(d)))}

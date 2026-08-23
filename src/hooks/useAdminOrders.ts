@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { collection, getDocs, query } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
+import { useAuth } from '@/context/AuthContext';
 import { toMillis, type OrderLike } from '@/lib/admin/revenue';
 
 export interface AdminOrder extends OrderLike {
@@ -23,11 +24,15 @@ export interface AdminOrder extends OrderLike {
  * dropped from the query entirely rather than merely sorted oddly.
  */
 export function useAdminOrders() {
+  // See useAdminUsers: orders are admin-only, so reading before the session is
+  // restored is refused and never retried.
+  const { user } = useAuth();
   const [orders, setOrders] = useState<AdminOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
+    if (!user?.uid || user.role !== 'admin') return;
     setLoading(true);
     try {
       const snap = await getDocs(query(collection(db, 'orders')));
@@ -41,7 +46,7 @@ export function useAdminOrders() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [user?.uid, user?.role]);
 
   useEffect(() => { load(); }, [load]);
 

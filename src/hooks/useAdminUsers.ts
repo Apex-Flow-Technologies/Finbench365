@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { collection, onSnapshot, query } from 'firebase/firestore';
+import { useAuth } from '@/context/AuthContext';
 import { db } from '@/lib/firebase/config';
 import { toMillis } from '@/lib/admin/revenue';
 import type { UserRole } from '@/context/AuthContext';
@@ -79,12 +80,27 @@ function normalise(id: string, data: any): AdminUser {
   };
 }
 
+/**
+ * Waits for a confirmed admin before reading.
+ *
+ * Both `users` and `orders` are admin-only in the security rules. These hooks
+ * used to read on mount with no dependency on the signed-in user, so if the
+ * page rendered before Firebase had restored the session the read went out
+ * unauthenticated, was refused, and — because nothing re-ran it — stayed
+ * refused. That surfaced as "Missing or insufficient permissions" on a screen
+ * the admin was perfectly entitled to see.
+ */
 export function useAdminUsers() {
+  const { user } = useAuth();
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    // Nothing to subscribe to until we know who is asking. Stay in the loading
+    // state rather than reporting an error the admin cannot act on.
+    if (!user?.uid || user.role !== 'admin') return;
+
     const unsub = onSnapshot(
       query(collection(db, 'users')),
       (snap) => {
@@ -104,7 +120,7 @@ export function useAdminUsers() {
       },
     );
     return () => unsub();
-  }, []);
+  }, [user?.uid, user?.role]);
 
   return { users, loading, error };
 }

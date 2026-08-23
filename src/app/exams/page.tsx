@@ -79,7 +79,14 @@ export default function ExamsPage() {
               const tests = await getCourseTests(course.id);
               return {
                 mocks: (tests as any[]).filter((t) => t?.isPublished).length,
-                notes: Array.isArray(course.materials) ? course.materials.length : 0,
+                // materialCount is written whenever study notes are saved. Reading the
+                // old `materials` array instead reported 0 for every course once notes
+                // moved into their own protected collection — the notes were there, the
+                // count was looking in a place nothing writes to any more. The array is
+                // still accepted as a fallback for any course not yet re-saved.
+                notes: typeof (course as any).materialCount === 'number'
+                  ? (course as any).materialCount
+                  : (Array.isArray(course.materials) ? course.materials.length : 0),
               };
             } catch {
               return { mocks: 0, notes: 0 };
