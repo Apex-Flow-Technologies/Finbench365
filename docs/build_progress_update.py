@@ -4,9 +4,9 @@
 Shares the visual language of build_guide.py deliberately — same palette,
 same chrome — so the two documents read as coming from one company.
 
-The report is regenerated from this file rather than edited as a PDF, so a
-correction to what was delivered is a diff rather than a new binary nobody
-can review.
+There is one current progress update, regenerated from this file rather than
+edited as a PDF. What we told the client on any given date is then a reviewable
+diff in version control instead of a binary nobody can read.
 """
 
 import os
@@ -17,7 +17,7 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.enums import TA_LEFT
 from reportlab.platypus import (
     BaseDocTemplate, PageTemplate, Frame, Paragraph, Spacer, Table, TableStyle,
-    KeepTogether, NextPageTemplate,
+    PageBreak, NextPageTemplate,
 )
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
@@ -25,7 +25,8 @@ from reportlab.pdfbase.ttfonts import TTFont
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                    "MyExams365-Progress-Update.pdf")
 
-DATE = "20 August 2026"
+DATE = "23 August 2026"
+SUPERSEDES = "Progress Update, 20 August 2026"
 
 # ---------------------------------------------------------------- fonts
 FONT, FONT_B = "Helvetica", "Helvetica-Bold"
@@ -50,6 +51,8 @@ RULE     = colors.HexColor("#DFE3EA")
 BAND     = colors.HexColor("#F5F7FA")
 GREEN    = colors.HexColor("#0F7A54")
 GREEN_BG = colors.HexColor("#EAF6F1")
+BLUE     = colors.HexColor("#1F5FA8")
+BLUE_BG  = colors.HexColor("#EDF3FA")
 
 PAGE_W, PAGE_H = A4
 MARGIN = 20 * mm
@@ -70,6 +73,8 @@ st_title  = S("t",  fontName=FONT_B, fontSize=27, leading=32, textColor=INK)
 st_sub    = S("st", fontSize=12.5, leading=18, textColor=MUTED)
 st_h1     = S("h1", fontName=FONT_B, fontSize=14, leading=18, textColor=INK,
               spaceBefore=2, spaceAfter=5)
+st_h2     = S("h2", fontName=FONT_B, fontSize=10.5, leading=14, textColor=INK,
+              spaceBefore=8, spaceAfter=3)
 st_body   = S("b",  spaceAfter=4)
 st_bullet = S("bu", leftIndent=11, bulletIndent=2, spaceAfter=3)
 st_cell   = S("c",  fontSize=8.6, leading=11.8)
@@ -141,7 +146,7 @@ def callout(title, body, accent=AMBER, bg=AMBER_BG):
 
 
 def before_after(before, after):
-    """The two-line 'Before / Now' pattern used throughout the first report."""
+    """The two-line 'Before / Now' pattern used throughout these updates."""
     return [
         Paragraph('<font color="#6B7280"><b>Before:</b></font> ' + before, st_body),
         Paragraph('<font color="#0F7A54"><b>Now:</b></font> ' + after, st_body),
@@ -193,7 +198,7 @@ doc = BaseDocTemplate(OUT, pagesize=A4,
                       topMargin=MARGIN, bottomMargin=MARGIN,
                       title="MyExams365 \u2014 Progress Update, " + DATE,
                       author="MentraEdge",
-                      subject="Changes delivered against client testing feedback")
+                      subject="Changes delivered against client feedback")
 
 cover_frame = Frame(MARGIN, MARGIN, COL_W, PAGE_H - 2 * MARGIN - 62 * mm,
                     id="cover", showBoundary=0)
@@ -211,10 +216,10 @@ E += [
     Spacer(1, 26 * mm),
     Paragraph("PROGRESS UPDATE", st_kicker),
     Spacer(1, 4),
-    Paragraph("Changes delivered<br/>against your testing", st_title),
+    Paragraph("Coupon reuse, attempt<br/>limits, and study material", st_title),
     Spacer(1, 7),
-    Paragraph("What you raised, what was changed, and what it means for "
-              "candidates and for revenue.", st_sub),
+    Paragraph("The three points you raised are built and tested. Two of them need "
+              "a decision from you before we put them live.", st_sub),
     Spacer(1, 12),
     h_rule(),
     Spacer(1, 4),
@@ -223,144 +228,185 @@ E += [
 meta = [
     ["Product", "MyExams365 \u2014 institutional CBT examination &amp; preparation platform"],
     ["Operator", "MentraEdge Academy LLP"],
-    ["Document", "Progress update against client testing feedback"],
+    ["Document", "Progress update against client feedback"],
     ["Date", DATE],
-    ["Supersedes", "Progress Update, 19 August 2026"],
+    ["Supersedes", SUPERSEDES],
 ]
 E += [table([["Field", "Detail"]] + meta, [34 * mm, COL_W - 34 * mm]), Spacer(1, 8)]
 
 E += [callout(
-    "WHAT CHANGED SINCE THE 19 AUGUST UPDATE",
-    "Point 1 has been extended. Discount codes were limited to a single exam; they can "
-    "now be limited to any combination of exams. The related checkout behaviour was "
-    "corrected at the same time. Points 2 to 4 are unchanged from the previous update "
-    "and are restated here so this document stands on its own.")]
+    "STATUS \u2014 PLEASE READ",
+    "Everything in this document is written, tested and ready for release. None of it is on the "
+    "live site yet. Two items below change how existing exams behave for candidates who are "
+    "already using them, so we would rather you decided those before we deploy than have you "
+    "discover them afterwards.",
+    accent=BLUE, bg=BLUE_BG)]
 
-E += [NextPageTemplate("Body")]
-from reportlab.platypus import PageBreak
-E += [PageBreak()]
+E += [NextPageTemplate("Body"), PageBreak()]
 
 # ================================================================ 1
-E += [
-    Paragraph("1. Discount codes can be limited to the exams you choose", st_h1),
-]
+E += [Paragraph("1. A discount code now works once per person", st_h1)]
 E += before_after(
-    "A code worked on every exam in the portal, so a discount meant for one exam "
-    "could be used against any of them.",
-    "When you create a code you tick the exams it applies to \u2014 one, several, or all "
-    "of them. A code is refused at checkout for any exam you did not tick.",
+    "A code could be limited to a total number of uses, but nothing tied those uses to "
+    "people. The same candidate could apply the same code again every time they came back.",
+    "A code can be used once per email address, permanently. Presenting it a second time "
+    "is refused and the full price is charged.",
 )
 E += [
     Paragraph(
-        "The earlier version of this change allowed one exam only, which covered the "
-        "straightforward case but not a campaign spanning part of the catalogue. A "
-        "code for two of four exams previously had to be issued either as two separate "
-        "codes or as one unrestricted code that also discounted the exams it was not "
-        "meant for.", st_body),
+        "This matters most at renewal. Buying again once access has run out is deliberately "
+        "allowed \u2014 that is a renewal, and you want those. What was not intended is that the "
+        "discount came back with it. A candidate on a 30-day plan holding a launch code was "
+        "renewing at that discount every month, indefinitely, and a 100%-off code meant a free "
+        "enrolment every time.", st_body),
     Spacer(1, 3),
 ]
 E += bullets([
-    "The exam list is a set of tick boxes. Tick as many as apply; untick to remove one; a single control clears the lot back to <b>all exams</b>.",
-    "The codes list shows exactly which exams each code covers, so scope is visible without opening anything.",
-    "Leaving every box unticked means the code works across the whole catalogue \u2014 the behaviour every code had before scoping existed.",
-    "Codes you created earlier are unaffected and keep working exactly as they do today.",
+    "The record of having used a code outlives the access it bought. That is the whole point \u2014 expiry is exactly when the old behaviour paid out.",
+    "It is checked when the code is applied and again when the order is priced, so the figure a candidate is quoted is the figure they are charged.",
+    "Addresses are matched exactly. <b>alice@</b> and <b>alice+1@</b> count as two people. If you would rather treat those as one person, tell us and we will change it \u2014 it is a policy choice, not a technical limit.",
+    "Nobody who has used a code in the past is affected. The rule applies from the day it goes live, as agreed.",
 ])
 E += [
     Spacer(1, 4),
     callout(
-        "WHERE THE LIMIT IS ENFORCED",
-        "Scope is checked on the server when the order is created and priced \u2014 not in the "
-        "browser. A code presented against an exam outside its scope is refused and the "
-        "full price is charged, whatever the browser was showing. The same check runs "
-        "when the code is applied in the order summary, so the figure a candidate is "
-        "quoted and the figure charged at the gateway come from one decision rather "
-        "than two that could drift apart.",
+        "WHERE THIS IS ENFORCED",
+        "On the server, when the order is priced \u2014 never in the browser. A code presented against "
+        "an address that has already used it is refused and full price is charged, whatever the "
+        "page was showing. Two people checking out at the same instant with the same code and "
+        "address cannot both slip through: the check and the record happen as one operation.",
         accent=GREEN, bg=GREEN_BG),
-    Spacer(1, 6),
-]
-E += [
-    Paragraph("A related correction at checkout", st_h1),
-]
-E += before_after(
-    "Moving between exams on the checkout page kept a discount that had been applied "
-    "to the previous exam. The summary could therefore show a discount the payment "
-    "step would not honour.",
-    "Changing exam clears the applied discount and asks for the code to be checked "
-    "again. The typed code is kept, so re-checking it is a single click.",
-)
-E += [
+    Spacer(1, 4),
     Paragraph(
-        "No candidate was ever charged less than the correct amount \u2014 the server "
-        "priced the order correctly throughout. The fault was that the summary could "
-        "promise a discount the payment step would then decline, so a candidate could "
-        "be quoted one figure and billed another.", st_note),
+        "We also found and fixed a related fault while doing this work. A 100%-off enrolment could "
+        "be triggered twice by a double click, which granted the course twice, counted two uses of "
+        "the code and sent two invoice emails. It now resolves to a single enrolment.", st_note),
     Spacer(1, 8),
 ]
 
 # ================================================================ 2
-E += [
-    Paragraph("2. The plans page", st_h1),
-]
-E += bullets([
-    "Every plan card now lights up when the mouse moves over it, not only when it is clicked.",
-    "<b>\u201cMost Popular Choice\u201d is removed.</b> It is not a claim worth making while starting out, and highlighting one plan pushed the choice before the other two had been read.",
-    "All three plans now look the same. The middle one is no longer enlarged or pre-selected.",
-    "All three buttons read <b>Select Plan &amp; Checkout</b>.",
-])
-E += [Spacer(1, 8)]
-
-# ================================================================ 3
-E += [
-    Paragraph("3. GST on the plans page", st_h1),
-]
+E += [Paragraph("2. Three attempts on the real exam, ten on practice", st_h1)]
 E += before_after(
-    "The note at the bottom said prices were <b>inclusive</b> of 18% GST, while the "
-    "plan cards themselves showed \u201c+ GST\u201d. The two contradicted each other.",
-    "The cards were right, so the note was corrected. It now says prices exclude GST, "
-    "that 18% is added at checkout, and that the total is shown before paying.",
+    "Every test allowed 10 attempts, and the limit was only applied when a paper was "
+    "handed in.",
+    "<b>Exam Mode</b> \u2014 the timed sitting with answers withheld \u2014 allows 3 attempts. "
+    "<b>Practice Mode</b> keeps 10. The limit is applied before the candidate starts.",
 )
-E += [Spacer(1, 8)]
-
-# ================================================================ 4
 E += [
-    Paragraph("4. Terms and Privacy pages", st_h1),
+    Paragraph(
+        "You asked for the mode you already choose in the panel to decide this, and that is how "
+        "it works: pick Exam Mode and the paper gets a timer and three attempts, pick Practice "
+        "Mode and it gets no timer and ten.", st_body),
+    Spacer(1, 3),
+    Paragraph("Starting the exam is what uses an attempt", st_h2),
+    Paragraph(
+        "As you asked: pressing Start spends one. Running out of time and pressing submit both "
+        "simply close the attempt that was already spent. The candidate is told this on the "
+        "screen before they begin, and is shown how many they have left.", st_body),
 ]
 E += bullets([
-    "The <b>Grievance Officer name</b> is removed from both pages. They were showing the unfilled placeholder \u201c[Grievance Officer Name]\u201d to anyone who read them.",
-    "The registered address is now published in full on both pages.",
-    "The contact email on both is now <b>support@myexams365.com</b>.",
-    "The privacy page asked people to write to <b>privacy@myexams365.com</b> to withdraw consent. That mailbox does not exist, so those messages would have gone nowhere. It now points to support as well.",
+    "If a candidate's browser crashes or they close the tab, reopening puts them back into the <b>same</b> attempt. It does not cost them a second one.",
+    "A candidate who has used all three is told so plainly, rather than being shown a button that does nothing.",
+    "Staff previewing a paper are not limited, so you can keep testing your own exams.",
 ])
 E += [
     Spacer(1, 4),
     callout(
-        "WORTH KNOWING",
-        "Under the data protection rules the grievance address has to be one that "
-        "actually receives complaints. Publishing an address that bounces is a "
-        "compliance problem in itself, which is why all of these now point at a "
-        "mailbox you read."),
+        "A FAULT THIS REPLACES",
+        "Until now the limit was only checked when a paper was submitted. A candidate could sit a "
+        "full timed exam and be refused at the moment they handed it in, losing every answer, over "
+        "a limit that could have been applied before they started. That is gone.",
+        accent=GREEN, bg=GREEN_BG),
+    Spacer(1, 8),
+]
+
+# ================================================================ 3
+E += [Paragraph("3. Study material as PDF and Excel", st_h1)]
+E += before_after(
+    "Nothing. Spreadsheets already uploaded, downloaded and were labelled correctly \u2014 "
+    "only the wording in the panel mentioned PDFs alone.",
+    "The wording now says what it does. The button reads <b>Add study note</b> rather than "
+    "<b>Add PDF</b>.",
+)
+E += [
+    Paragraph(
+        "Worth stating plainly so you can plan the content: PDF, Excel, Word, PowerPoint and plain "
+        "links all upload today, up to 50 MB each. Excel files already show with a spreadsheet "
+        "icon and are labelled \u201cExcel workbook\u201d for candidates. Access is still controlled per "
+        "note, so you can restrict a file to the 60-day plan if you want to.", st_body),
+    Spacer(1, 8),
+]
+
+# ================================================================ decisions
+E += [
+    h_rule(),
+    Paragraph("Two things we need you to decide", st_h1),
+    Paragraph(
+        "Both concern exams that already exist and candidates already using them. Neither is a "
+        "problem with the work \u2014 they are consequences of the rule you asked for, and they are "
+        "your call, not ours.", st_body),
+    Spacer(1, 4),
+]
+
+E += [
+    Paragraph("a. Your existing papers will drop from ten attempts to three", st_h2),
+    Paragraph(
+        "Every test built through the Exam Builder is stored as Exam Mode, because that is how it "
+        "gets its timer. So when the new default goes live, all of them move to three attempts \u2014 "
+        "including the NISM papers you think of as practice.", st_body),
+    Paragraph(
+        "<b>What you can do:</b> each test now has an <b>Attempts allowed</b> box in the panel. "
+        "Leave it blank to use the mode default, or type a number to keep a particular paper on "
+        "ten. Alternatively switch the papers you consider practice over to Practice Mode \u2014 but "
+        "note that also removes their timer and shows candidates the answer key up front, so it "
+        "may not be what you want.", st_body),
+    Paragraph(
+        "<b>Before we deploy:</b> tell us which papers should stay on ten, and we will set them. "
+        "We should also check whether any candidate has already made more than three attempts at "
+        "an exam \u2014 those people would see \u201cattempts exhausted\u201d on day one.", st_note),
+    Spacer(1, 6),
+]
+
+E += [
+    Paragraph("b. The answer key is released after a single completed attempt", st_h2),
+    Paragraph(
+        "Today, once a candidate finishes one attempt at an Exam Mode paper, they can see the full "
+        "answer key \u2014 so they can review what they got wrong. That was a reasonable trade when "
+        "there were ten attempts. With three, using the first attempt effectively buys the answers "
+        "for the two that count.", st_body),
+    Paragraph(
+        "This is existing behaviour, not something introduced by this change, but the smaller "
+        "attempt limit makes it matter much more. We have deliberately not altered it without "
+        "asking. <b>Options:</b> leave it as is; release the key only after the final attempt; or "
+        "release it only once the paper is closed to that candidate.", st_body),
     Spacer(1, 8),
 ]
 
 # ================================================================ summary
 E += [
     h_rule(),
-    Paragraph("Summary of this update", st_h1),
+    Paragraph("Everything delivered since 19 August", st_h1),
 ]
 E += [table([
     ["Item", "Status"],
-    ["Discount codes limited to chosen exams", "Extended \u2014 any combination of exams, was one exam only"],
-    ["Discount cleared when the exam changes at checkout", "New in this update"],
-    ["Plans page \u2014 hover, equal cards, button wording", "Delivered, unchanged since 19 August"],
-    ["Plans page \u2014 GST wording corrected", "Delivered, unchanged since 19 August"],
-    ["Terms and Privacy \u2014 contacts and address", "Delivered, unchanged since 19 August"],
-], [78 * mm, COL_W - 78 * mm]), Spacer(1, 8)]
+    ["A code can be limited to any combination of exams", "Ready for release"],
+    ["A code works once per email address, permanently", "Ready for release"],
+    ["Exam Mode capped at 3 attempts, Practice Mode at 10", "Ready for release \u2014 see decision (a)"],
+    ["An attempt is spent when the exam starts, not when it is handed in", "Ready for release"],
+    ["Per-test \u201cAttempts allowed\u201d override in the panel", "Ready for release"],
+    ["Study material wording covers PDF, Excel and the rest", "Ready for release"],
+    ["Discount cleared when the exam is changed at checkout", "Ready for release"],
+    ["Plans page \u2014 hover, equal cards, button wording", "Live"],
+    ["Plans page \u2014 GST wording corrected", "Live"],
+    ["Terms and Privacy \u2014 contacts and registered address", "Live"],
+], [96 * mm, COL_W - 96 * mm]), Spacer(1, 8)]
 
 E += [
     h_rule(),
     Paragraph(
-        "This document describes the platform as deployed at the time of writing. "
-        "Items marked delivered are implemented in the live system.", st_note),
+        "Items marked \u201cready for release\u201d are complete and tested but not yet on the live site. "
+        "We are holding them for your answers to the two decisions above, after which they go out "
+        "together. Items marked \u201clive\u201d are already in use.", st_note),
 ]
 
 doc.build(E)
