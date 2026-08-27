@@ -134,7 +134,7 @@ E = [
     Spacer(1, 10),
     h_rule(),
     Paragraph(
-        "You reported two problems from a phone. Both are fixed and tested.", st_body),
+        "You reported two problems from a phone. Both are fixed and are now live on the site.", st_body),
     Spacer(1, 4),
 ]
 
@@ -179,9 +179,9 @@ E += [
     Spacer(1, 10),
     h_rule(),
     note_box(
-        "<b>Not live yet.</b> Both fixes are complete and tested but still waiting to be "
-        "deployed, along with the changes covered in the 23 August update. We will confirm "
-        "as soon as they are on the site."),
+        "<b>Now live.</b> Both fixes are on the site, released together with the changes "
+        "covered in the 23 August update — discount codes usable once per person, and the "
+        "new attempt limits of three sittings on an Exam Mode paper and ten on a practice test."),
 ]
 
 doc.build(E)
