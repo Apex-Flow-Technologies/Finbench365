@@ -18,7 +18,7 @@ import { Clock, AlertCircle, ChevronLeft, ChevronRight, CheckCircle2, LayoutGrid
 import { AdminPreviewBanner } from '@/components/AdminPreviewBanner';
 import { LoadingButton } from '@/components/ui/LoadingButton';
 import { orderQuestionsForAttempt } from '@/lib/exams/shuffle';
-import { resolveMaxAttempts } from '@/lib/exams/attempts';
+import { resolveMaxAttempts, attemptStartedAtMs, remainingSeconds } from '@/lib/exams/attempts';
 import { Calculator } from '@/components/exam/Calculator';
 import { ExplanationBody } from '@/components/exam/ExplanationBody';
 import { CasePanel, CaseQuestionTabs } from '@/components/exam/CasePanel';
@@ -222,6 +222,26 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
           if (!restored && activeAttempt.answers) {
             setAnswers(activeAttempt.answers);
           }
+
+          // Rebuild the clock from when this attempt actually started.
+          //
+          // The full duration was set above, which is right for a fresh start
+          // and wrong for every resume. On a laptop nobody noticed, because the
+          // tab stays open and the countdown keeps its own state. On a phone,
+          // leaving the browser evicts the page, so returning mounted this
+          // component again and handed back the whole paper's time on an
+          // attempt already part-used. Answers came back correctly the whole
+          // time — they are saved as the candidate works; only the clock was
+          // being reinvented.
+          //
+          // Left alone when the start cannot be read, since the full duration
+          // is at worst generous, while a bad guess ends someone's exam.
+          const resumed = remainingSeconds(
+            attemptStartedAtMs(activeAttempt),
+            (testData as any).durationMinutes,
+          );
+          if (resumed !== null) setTimeRemaining(resumed);
+
           setStatus('in_progress');
           hasActiveSession = true;
         } else if (restored) {
@@ -1087,19 +1107,30 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
         )}
 
         {/* Top Roof Header */}
-        <div className="h-16 border-b border-slate-200 dark:border-white/10 bg-white dark:bg-slate-900 px-6 flex items-center justify-between shrink-0">
-          <div className="font-bold text-[#111B35] dark:text-white text-sm flex items-center gap-2">
-            <span className="text-amber-500">NISM V-A</span> · {test?.title}
+        {/* Everything on one row, and it has to survive a 375px phone.
+            The title is the only part allowed to shrink (min-w-0 + truncate);
+            without that it held its full width and pushed Submit clean off the
+            right-hand edge, which is what candidates reported. */}
+        <div className="h-16 border-b border-slate-200 dark:border-white/10 bg-white dark:bg-slate-900 px-3 sm:px-6 flex items-center justify-between gap-2 sm:gap-4 shrink-0">
+          <div className="font-bold text-[#111B35] dark:text-white text-sm flex items-center gap-2 min-w-0">
+            <span className="text-amber-500 shrink-0">NISM V-A</span>
+            <span className="truncate">· {test?.title}</span>
             {test?.type === 'exam' && (
-              <span className={`ml-4 px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wider ${strikes > 0 ? 'bg-red-500/20 text-red-400 border border-red-500/30 animate-pulse' : 'bg-slate-100 dark:bg-white/5 text-[#475569] dark:text-[#94A3B8] border border-slate-200 dark:border-white/10'}`}>
-                WARNINGS: {strikes}/3
+              <span className={`shrink-0 ml-1 sm:ml-4 px-2 sm:px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wider whitespace-nowrap ${strikes > 0 ? 'bg-red-500/20 text-red-400 border border-red-500/30 animate-pulse' : 'bg-slate-100 dark:bg-white/5 text-[#475569] dark:text-[#94A3B8] border border-slate-200 dark:border-white/10'}`}>
+                {/* The count is the part that matters when space is short. */}
+                <span className="hidden sm:inline">WARNINGS: </span>{strikes}/3
               </span>
             )}
           </div>
-          <div className="flex items-center gap-6">
-            <div className={`tabular-nums text-base font-bold flex items-center gap-2 ${test?.type === 'exam' ? (timeRemaining < 300 ? 'text-red-400 animate-pulse' : 'text-amber-400') : 'text-emerald-400'}`}>
-              <Clock className="w-4 h-4" />
-              {test?.type === 'exam' ? formatTime(timeRemaining) : 'Practice Mode'}
+          <div className="flex items-center gap-2 sm:gap-6 shrink-0">
+            <div className={`tabular-nums text-sm sm:text-base font-bold flex items-center gap-1.5 sm:gap-2 whitespace-nowrap ${test?.type === 'exam' ? (timeRemaining < 300 ? 'text-red-400 animate-pulse' : 'text-amber-400') : 'text-emerald-400'}`}>
+              <Clock className="w-4 h-4 shrink-0" />
+              {test?.type === 'exam' ? formatTime(timeRemaining) : (
+                <>
+                  <span className="hidden sm:inline">Practice Mode</span>
+                  <span className="sm:hidden">Practice</span>
+                </>
+              )}
             </div>
             {/* NISM provides a basic calculator in the real exam, so a mock
                 without one is harder than the test it simulates. */}
@@ -1108,22 +1139,25 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
               onClick={() => setShowCalculator((v) => !v)}
               title="Calculator"
               aria-pressed={showCalculator}
-              className={`px-3 py-2 h-9 rounded-xl text-xs font-bold border transition-colors flex items-center gap-1.5 ${
+              className={`shrink-0 px-2.5 sm:px-3 py-2 h-9 rounded-xl text-xs font-bold border transition-colors flex items-center gap-1.5 ${
                 showCalculator
                   ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
                   : 'bg-slate-100 dark:bg-white/5 text-[#334155] dark:text-slate-300 border-slate-200 dark:border-white/10 hover:bg-slate-200 dark:hover:bg-white/10'
               }`}
             >
-              <CalculatorIcon className="w-4 h-4" />
+              <CalculatorIcon className="w-4 h-4 shrink-0" />
               <span className="hidden sm:inline">Calculator</span>
             </button>
 
+            {/* shrink-0 is the load-bearing part: this is the control a
+                candidate needs to hand their paper in, so it is the last thing
+                allowed to give way when the row runs out of room. */}
             <LoadingButton
               onClick={handleManualSubmit}
               isLoading={isSubmitting}
-              className="px-4 py-2 h-9 rounded-xl bg-emerald-500 text-slate-950 font-bold text-xs hover:bg-emerald-400 transition-all"
+              className="shrink-0 whitespace-nowrap px-3 sm:px-4 py-2 h-9 rounded-xl bg-emerald-500 text-slate-950 font-bold text-xs hover:bg-emerald-400 transition-all"
             >
-              Submit Exam
+              Submit<span className="hidden sm:inline"> Exam</span>
             </LoadingButton>
           </div>
         </div>

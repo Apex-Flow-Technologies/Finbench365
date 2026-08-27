@@ -57,3 +57,68 @@ export function resolveMaxAttempts(testData: Record<string, any> | null | undefi
   // on the generous allowance, not the strict one.
   return testData?.type === 'exam' ? EXAM_MAX_ATTEMPTS : PRACTICE_MAX_ATTEMPTS;
 }
+
+/**
+ * When an attempt was started, in epoch milliseconds.
+ *
+ * The field was renamed from `startTime` to `startedAt` at one point and older
+ * attempts still carry the original name, so both are read — the same fallback
+ * the server grader makes.
+ *
+ * Returns null when there is nothing usable rather than guessing. In a timed
+ * exam a wrong start is a wrong clock, and the caller can fall back to the full
+ * duration, which is only ever generous.
+ */
+export function attemptStartedAtMs(
+  attempt: Record<string, any> | null | undefined,
+): number | null {
+  const raw = attempt?.startedAt ?? attempt?.startTime;
+  if (!raw) return null;
+
+  const ms =
+    // Firestore Timestamp, from either SDK.
+    typeof raw.toMillis === 'function' ? raw.toMillis()
+      : typeof raw.toDate === 'function' ? raw.toDate()?.getTime()
+        : raw instanceof Date ? raw.getTime()
+          : new Date(raw).getTime();
+
+  return typeof ms === 'number' && Number.isFinite(ms) ? ms : null;
+}
+
+/**
+ * Seconds left on a timed paper, worked out from when it actually started.
+ *
+ * The exam runner used to set the clock to the paper's full duration on every
+ * page load, which meant the remaining time lived only in memory. On a laptop
+ * that went unnoticed because the tab stays open. On a phone, leaving the
+ * browser evicts the page, and coming back mounted the runner afresh — so a
+ * candidate who had already used forty minutes was handed the full duration
+ * again, on the same attempt. Their answers came back correctly, because those
+ * are saved; only the clock was reinvented.
+ *
+ * Deriving it from `startedAt` also closes it as a way to cheat: reopening the
+ * tab no longer buys more time on any device. The server already noticed and
+ * recorded `flaggedOverTime`, but it still graded the paper, so nothing
+ * actually stopped it.
+ *
+ * Returns null when the inputs cannot support an honest answer, so the caller
+ * decides what to do rather than being handed a 0 that submits someone.
+ */
+export function remainingSeconds(
+  startedAtMs: number | null,
+  durationMinutes: unknown,
+  now: number = Date.now(),
+): number | null {
+  if (startedAtMs === null || !Number.isFinite(startedAtMs)) return null;
+  if (typeof durationMinutes !== 'number' || !Number.isFinite(durationMinutes) || durationMinutes <= 0) {
+    return null;
+  }
+
+  const total = Math.round(durationMinutes * 60);
+  const elapsed = Math.floor((now - startedAtMs) / 1000);
+
+  // Clamped at both ends. Below zero the paper is over; above the total means
+  // the start is in the future, which is a clock disagreement between the
+  // device and the server rather than extra time the candidate has earned.
+  return Math.min(total, Math.max(0, total - elapsed));
+}
