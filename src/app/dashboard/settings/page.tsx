@@ -13,6 +13,9 @@ import {
   Download, ArrowRight, Loader2, Clock, Check,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { getUserEntitlements } from '@/lib/firebase/db';
+import { resolveExamSeries } from '@/constants/examPatterns';
+import { accessStatus } from '@/lib/accessStatus';
 
 export default function SettingsPage() {
   const { user } = useAuth();
@@ -54,6 +57,23 @@ export default function SettingsPage() {
       }));
     }
   }, [user]);
+
+  // Real course access for the "Course Access" card. null = still loading.
+  const [entitlements, setEntitlements] =
+    useState<Awaited<ReturnType<typeof getUserEntitlements>> | null>(null);
+  const [accessError, setAccessError] = useState(false);
+
+  useEffect(() => {
+    if (!user?.uid) return;
+    let cancelled = false;
+    getUserEntitlements(user.uid)
+      .then((list) => { if (!cancelled) setEntitlements(list); })
+      .catch((err) => {
+        console.error('Could not load course access:', err);
+        if (!cancelled) { setAccessError(true); setEntitlements([]); }
+      });
+    return () => { cancelled = true; };
+  }, [user?.uid]);
 
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [profileSuccess, setProfileSuccess] = useState(false);
@@ -247,47 +267,99 @@ export default function SettingsPage() {
                   </form>
                 </div>
 
-                {/* 2. Active Subscription Card */}
+                {/* 2. Course Access — real entitlements only.
+                    This card used to be invented outright: "Tier 2 — NISM V-A
+                    Pro Pack", "42 Days Left", "Expires: 15 Oct 2026", a fixed
+                    70% bar and a LIVE pill, shown to every student whatever they
+                    had bought, and a Renew button that only animated a progress
+                    bar. It now reads the same entitlements, with the same day
+                    arithmetic, as the dashboard's course cards. */}
                 <div className="backdrop-blur-md bg-slate-900/80 border border-white/10 rounded-2xl p-6 space-y-6 shadow-xl relative overflow-hidden">
                   <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/10 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none" />
 
-                  <div className="flex items-center justify-between border-b border-white/10 pb-4">
-                    <div className="flex items-center gap-2 font-bold text-white text-base">
-                      <CreditCard className="w-5 h-5 text-amber-500" />
-                      Active Subscription
-                    </div>
-                    <span className="px-2.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] font-bold tabular-nums">
-                      ● LIVE
-                    </span>
+                  <div className="flex items-center gap-2 font-bold text-white text-base border-b border-white/10 pb-4">
+                    <CreditCard className="w-5 h-5 text-amber-500" />
+                    Course Access
                   </div>
 
-                  <div className="space-y-4">
-                    <div>
-                      <div className="text-xs text-[#475569] tabular-nums uppercase tracking-wider">Current Tier Package</div>
-                      <div className="text-lg font-extrabold text-white mt-1">
-                        Tier 2 — NISM V-A Pro Pack
-                      </div>
+                  {entitlements === null ? (
+                    <div className="flex items-center gap-2 text-sm text-[#475569]">
+                      <Loader2 className="w-4 h-4 animate-spin" /> Loading your access…
                     </div>
-
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-xs tabular-nums text-[#475569]">
-                        <span>Access Clock</span>
-                        <span className="text-amber-400 font-bold">42 Days Left</span>
-                      </div>
-                      <div className="w-full h-2.5 bg-slate-800 rounded-full overflow-hidden p-0.5 border border-white/5">
-                        <div className="h-full bg-gradient-to-r from-amber-500 to-indigo-500 rounded-full w-[70%]" />
-                      </div>
-                      <div className="text-[11px] text-[#475569] tabular-nums text-right">Expires: 15 Oct 2026</div>
+                  ) : accessError ? (
+                    <div className="space-y-3 text-sm text-[#475569]">
+                      <p>Couldn&apos;t load your access right now.</p>
+                      <button
+                        onClick={() => router.push('/dashboard')}
+                        className="font-bold text-amber-400 hover:text-amber-300 transition-colors"
+                      >
+                        Open your dashboard →
+                      </button>
                     </div>
+                  ) : entitlements.length === 0 ? (
+                    <div className="space-y-4">
+                      <p className="text-sm text-[#475569]">You haven&apos;t enrolled in an exam yet.</p>
+                      <button
+                        onClick={() => router.push('/exams')}
+                        className="w-full py-3 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl text-sm transition-all active:scale-95 flex items-center justify-center gap-2"
+                      >
+                        <span>Browse exams</span>
+                        <ArrowRight className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="space-y-5">
+                      {entitlements.map((e) => {
+                        const s = accessStatus(e.expiresAt, e.durationDays);
+                        // Firestore course data, read for just these two fields.
+                        const course = e.course as { title?: string; nismSeries?: string | null };
+                        const series = resolveExamSeries(null, course);
+                        const title = course?.title || 'Course';
+                        const date = e.expiresAt.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+                        return (
+                          <div key={e.courseId} className="space-y-2">
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0">
+                                {series && (
+                                  <div className="text-[10px] font-bold tracking-wider text-amber-500">NISM SERIES {series}</div>
+                                )}
+                                <div className="text-sm font-bold text-white truncate">{title}</div>
+                              </div>
+                              <span className={`shrink-0 px-2.5 py-0.5 rounded border text-[10px] font-bold tabular-nums ${s.isExpired ? 'bg-red-500/10 text-red-400 border-red-500/20' : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'}`}>
+                                {s.isExpired ? 'EXPIRED' : 'ACTIVE'}
+                              </span>
+                            </div>
 
-                    <button
-                      onClick={triggerTopProgress}
-                      className="w-full py-3 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl text-sm transition-all shadow-[0_0_20px_rgba(245,158,11,0.3)] active:scale-95 flex items-center justify-center gap-2"
-                    >
-                      <span>Extend / Renew Access</span>
-                      <ArrowRight className="w-4 h-4" />
-                    </button>
-                  </div>
+                            {s.pct !== null && (
+                              <div className="w-full h-2.5 bg-slate-800 rounded-full overflow-hidden p-0.5 border border-white/5">
+                                <div
+                                  className={`h-full rounded-full ${s.isExpired ? 'bg-red-500' : 'bg-gradient-to-r from-amber-500 to-indigo-500'}`}
+                                  style={{ width: `${s.pct}%` }}
+                                />
+                              </div>
+                            )}
+
+                            <div className="flex justify-between gap-3 text-xs tabular-nums text-[#475569]">
+                              <span>{s.isExpired ? `Expired ${date}` : `Expires ${date}`}</span>
+                              {!s.isExpired && (
+                                <span className="text-amber-400 font-bold">{s.daysLeft} day{s.daysLeft === 1 ? '' : 's'} left</span>
+                              )}
+                            </div>
+
+                            {s.isExpired && (
+                              <button
+                                onClick={() => router.push(`/pricing?courseId=${e.courseId}&track=${encodeURIComponent(title)}`)}
+                                className="w-full py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl text-sm transition-all active:scale-95 flex items-center justify-center gap-2"
+                              >
+                                <span>Renew access</span>
+                                <ArrowRight className="w-4 h-4" />
+                              </button>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
 
               </div>
