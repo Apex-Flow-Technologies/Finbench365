@@ -12,12 +12,14 @@ import {
   getTestAttemptsCount,
   updateAttemptHeartbeat,
   getActiveAttemptForUser,
-  getUserEntitlements
+  getUserEntitlements,
+  getCourse
 } from '@/lib/firebase/db';
 import { Clock, AlertCircle, ChevronLeft, ChevronRight, CheckCircle2, LayoutGrid, AlertTriangle, ShieldCheck, Calculator as CalculatorIcon } from 'lucide-react';
 import { AdminPreviewBanner } from '@/components/AdminPreviewBanner';
 import { LoadingButton } from '@/components/ui/LoadingButton';
 import { orderQuestionsForAttempt } from '@/lib/exams/shuffle';
+import { resolveExamSeries, findExamPattern } from '@/constants/examPatterns';
 import { resolveMaxAttempts, attemptStartedAtMs, remainingSeconds } from '@/lib/exams/attempts';
 import { Calculator } from '@/components/exam/Calculator';
 import { ExplanationBody } from '@/components/exam/ExplanationBody';
@@ -30,7 +32,7 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
   const { user } = useAuth();
   
   // Test Data State
-  const [test, setTest] = useState<{ id: string; title: string; durationMinutes: number; totalQuestions: number; description?: string; type?: 'practice' | 'exam'; randomiseQuestions?: boolean } | null>(null);
+  const [test, setTest] = useState<{ id: string; title: string; durationMinutes: number; totalQuestions: number; description?: string; type?: 'practice' | 'exam'; randomiseQuestions?: boolean; nismSeries?: string | null } | null>(null);
   const [questions, setQuestions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -46,6 +48,14 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
   // instead of a misleading "this exam could not be found".
   const [accessDenied, setAccessDenied] = useState<null | 'expired' | 'not-enrolled' | 'misconfigured'>(null);
   const [accessCourseId, setAccessCourseId] = useState<string | null>(null);
+  const [owningCourse, setOwningCourse] = useState<any>(null);
+
+  // One source of truth for the series shown to the candidate. Null means the
+  // test belongs to no NISM series (or a non-NISM course), and nothing is shown.
+  const examSeries = useMemo(
+    () => resolveExamSeries(test, owningCourse),
+    [test, owningCourse],
+  );
   
   // Anti-Cheat & Disconnect State
   const [isDisqualified, setIsDisqualified] = useState(false);
@@ -143,6 +153,15 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
         const testData: any = await getMockTest(testId);
         const isAdminRole = user?.role === 'admin';
         setAccessCourseId(testData?.courseId || null);
+
+        // Only for the series badge. getCourse() THROWS on a deleted course, and
+        // a missing course must never stop a candidate starting their exam, so
+        // this is deliberately swallowed — no series simply means no badge.
+        if (testData?.courseId) {
+          getCourse(testData.courseId)
+            .then((c: any) => setOwningCourse(c))
+            .catch(() => setOwningCourse(null));
+        }
 
         if (user && !isAdminRole) {
           if (!testData?.courseId) {
@@ -1015,7 +1034,16 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
           {isAdmin && <AdminPreviewBanner />}
           <div className="max-w-3xl mx-auto bg-white dark:bg-[#181A1F] border border-slate-200 dark:border-white/10 rounded-2xl p-8 space-y-6 shadow-2xl">
             <h1 className="text-2xl font-bold text-amber-500">{test.title} — CBT Simulator</h1>
-            <p className="text-[#334155] dark:text-slate-300 text-sm">{test.description || "NISM Series V-A Official Standard Mock Exam."}</p>
+            {/* The old fallback claimed every undescribed test was Series V-A.
+                Build it from the resolved pattern, or say nothing. */}
+            {(() => {
+              const p = findExamPattern(examSeries);
+              const intro = test.description?.trim()
+                || (p ? `NISM Series ${p.series} — ${p.name}.` : null);
+              return intro
+                ? <p className="text-[#334155] dark:text-slate-300 text-sm">{intro}</p>
+                : null;
+            })()}
             
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 py-4 border-y border-slate-200 dark:border-y-white/10 text-xs tabular-nums">
               <div>
@@ -1113,8 +1141,11 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
             right-hand edge, which is what candidates reported. */}
         <div className="h-16 border-b border-slate-200 dark:border-white/10 bg-white dark:bg-slate-900 px-3 sm:px-6 flex items-center justify-between gap-2 sm:gap-4 shrink-0">
           <div className="font-bold text-[#111B35] dark:text-white text-sm flex items-center gap-2 min-w-0">
-            <span className="text-amber-500 shrink-0">NISM V-A</span>
-            <span className="truncate">· {test?.title}</span>
+            {/* Was a hardcoded "NISM V-A" on every test, whatever the paper.
+                Stays shrink-0 so the title remains the only part that gives
+                way at 375px — see the header note above. */}
+            {examSeries && <span className="text-amber-500 shrink-0">NISM {examSeries}</span>}
+            <span className="truncate">{examSeries ? '· ' : ''}{test?.title}</span>
             {test?.type === 'exam' && (
               <span className={`shrink-0 ml-1 sm:ml-4 px-2 sm:px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wider whitespace-nowrap ${strikes > 0 ? 'bg-red-500/20 text-red-400 border border-red-500/30 animate-pulse' : 'bg-slate-100 dark:bg-white/5 text-[#475569] dark:text-[#94A3B8] border border-slate-200 dark:border-white/10'}`}>
                 {/* The count is the part that matters when space is short. */}

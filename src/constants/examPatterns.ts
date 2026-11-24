@@ -40,7 +40,7 @@ export const NISM_EXAM_PATTERNS: NismExamPattern[] = [
   { series: 'IV', name: 'Interest Rate Derivatives', description: 'For those dealing in interest rate derivative products in the market.',                             durationMinutes: 120, maxMarks: 100, passPercent: 60, negativeMarkPercent: 25, inScope: true },
   { series: 'VIII', name: 'Equity Derivatives', description: 'For those looking to trade or advise on equity derivative products.',                                    durationMinutes: 120, maxMarks: 100, passPercent: 60, negativeMarkPercent: 25, inScope: true },
   { series: 'XII', name: 'Securities Markets Foundation', description: 'A foundational exam covering how the securities market works overall.',                         durationMinutes: 120, maxMarks: 100, passPercent: 60, negativeMarkPercent: 0,  inScope: true },
-  { series: 'X-A', name: 'Investment Adviser (Level 1)', description: 'The first step to becoming a SEBI-registered investment adviser.',                          durationMinutes: 180, maxMarks: 150, passPercent: 60, negativeMarkPercent: 25, inScope: false },
+  { series: 'X-A', name: 'Investment Adviser (Level 1)', description: 'The first step to becoming a SEBI-registered investment adviser.',                          durationMinutes: 180, maxMarks: 150, passPercent: 60, negativeMarkPercent: 25, inScope: true },
   { series: 'X-B', name: 'Investment Adviser (Level 2)', description: 'The advanced level for advisers, covering deeper financial planning skills.',                          durationMinutes: 180, maxMarks: 150, passPercent: 60, negativeMarkPercent: 25, inScope: false },
   { series: 'XIX-A', name: 'AIF (Category I & II) Distributors', description: 'Required to distribute Category I & II Alternative Investment Funds.',                    durationMinutes: 120, maxMarks: 100, passPercent: 60, negativeMarkPercent: 10, inScope: false },
   { series: 'XIX-B', name: 'AIF (Category III) Distributors', description: 'Required to distribute Category III Alternative Investment Funds.',                       durationMinutes: 120, maxMarks: 100, passPercent: 60, negativeMarkPercent: 10, inScope: false },
@@ -53,6 +53,32 @@ export function findExamPattern(series: string | undefined | null): NismExamPatt
   if (!series) return null;
   const key = series.trim().toUpperCase();
   return NISM_EXAM_PATTERNS.find((p) => p.series.toUpperCase() === key) ?? null;
+}
+
+/**
+ * The NISM series to display for a test, or null when there isn't one.
+ *
+ * The exam runner used to print a hardcoded "NISM V-A" on every test, so a
+ * Research Analyst or Securities Markets paper announced itself as Mutual Fund
+ * Distributors to the candidate sitting it. Reported by a client whose students
+ * hit it mid-exam.
+ *
+ * Resolution order is test, then its owning course. A test carries its own
+ * series once someone picks a pattern in the test editor; the course-level
+ * value covers tests created before that, or where the series was only ever set
+ * on the exam. The returned code comes from the pattern table rather than the
+ * stored string, so the badge can only ever show a real series.
+ *
+ * Returns null — meaning show no badge at all — when neither is set or the
+ * stored value is unknown. Showing nothing is correct for a non-NISM course,
+ * and is always better than naming the wrong exam.
+ */
+export function resolveExamSeries(
+  test?: { nismSeries?: string | null } | null,
+  course?: { nismSeries?: string | null } | null,
+): string | null {
+  const pattern = findExamPattern(test?.nismSeries) ?? findExamPattern(course?.nismSeries);
+  return pattern ? pattern.series : null;
 }
 
 /** The series we currently sell, for the editor's dropdown and the storefront. */
