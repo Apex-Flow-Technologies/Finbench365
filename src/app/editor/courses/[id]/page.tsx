@@ -4,7 +4,7 @@ import React, { useState, useEffect, use } from 'react';
 import { useRouter } from 'next-nprogress-bar';
 import { getCourse, updateCourse, getCourseTests, createMockTest, getCourseMaterials, saveCourseMaterials, saveTestOrder } from '@/lib/firebase/db';
 import { PLAN_TIER_OPTIONS, normalisePlanTier } from '@/constants/pricing';
-import { IN_SCOPE_PATTERNS, findExamPattern } from '@/constants/examPatterns';
+import { NISM_EXAM_PATTERNS, findExamPattern } from '@/constants/examPatterns';
 import { 
   ChevronLeft, Plus, Save, Settings, UploadCloud, FileText, 
   ClipboardList, Trash2, ExternalLink, CheckCircle2, Loader2,
@@ -410,7 +410,7 @@ export default function ExamBuilderPage({ params }: { params: Promise<{ id: stri
                 className="w-full bg-slate-50 dark:bg-[#0B0C10] border border-slate-200 dark:border-[#282C36] rounded-xl px-4 py-3 text-slate-900 dark:text-white focus:outline-none focus:border-amber-500 text-sm transition-colors"
               >
                 <option value="">Not linked to a NISM series</option>
-                {IN_SCOPE_PATTERNS.map((p) => (
+                {NISM_EXAM_PATTERNS.map((p) => (
                   <option key={p.series} value={p.series}>{p.series} — {p.name}</option>
                 ))}
               </select>

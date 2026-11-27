@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { resolveExamSeries, IN_SCOPE_PATTERNS, findExamPattern } from './examPatterns';
+import { resolveExamSeries, IN_SCOPE_PATTERNS, NISM_EXAM_PATTERNS, findExamPattern } from './examPatterns';
 
 /**
  * The bug these guard against: the exam runner printed a hardcoded "NISM V-A"
@@ -61,5 +61,13 @@ describe('IN_SCOPE_PATTERNS', () => {
     for (const p of IN_SCOPE_PATTERNS) {
       expect(findExamPattern(p.series)?.series).toBe(p.series);
     }
+  });
+});
+
+describe('editor dropdown source', () => {
+  it('offers every official series, including X-B and the XIX AIF series', () => {
+    const all = NISM_EXAM_PATTERNS.map((p) => p.series);
+    for (const s of ['X-B', 'XIX-A', 'XIX-B', 'XIX-C', 'XIX-D', 'XIX-E']) expect(all).toContain(s);
+    for (const s of all) expect(resolveExamSeries({ nismSeries: s }, null)).toBe(s);
   });
 });

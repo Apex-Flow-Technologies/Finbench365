@@ -81,5 +81,10 @@ export function resolveExamSeries(
   return pattern ? pattern.series : null;
 }
 
-/** The series we currently sell, for the editor's dropdown and the storefront. */
+/**
+ * The series featured on the homepage. NOT what the editors offer: both editor
+ * dropdowns list every official series (NISM_EXAM_PATTERNS), so the content team
+ * can link a new exam such as X-B without a code change. Gating the dropdowns on
+ * this flag meant every new series needed a developer first.
+ */
 export const IN_SCOPE_PATTERNS = NISM_EXAM_PATTERNS.filter((p) => p.inScope);

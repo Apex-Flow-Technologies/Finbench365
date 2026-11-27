@@ -7,7 +7,7 @@ import { parseDocxText } from '@/lib/parser';
 import { resolveMaxAttempts } from '@/lib/exams/attempts';
 import { UploadCloud, CheckCircle2, AlertCircle, Save, Plus, ChevronDown, ChevronUp, Trash2, ArrowLeft, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { IN_SCOPE_PATTERNS, findExamPattern } from '@/constants/examPatterns';
+import { NISM_EXAM_PATTERNS, findExamPattern } from '@/constants/examPatterns';
 import { CasePanel } from '@/components/exam/CasePanel';
 
 export default function TestBuilderPage({ params }: { params: Promise<{ id: string }> }) {
@@ -550,7 +550,7 @@ function TestBuilderContent({ params }: { params: Promise<{ id: string }> }) {
               className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs font-bold rounded px-2 h-8 border border-slate-200 dark:border-slate-700 outline-none cursor-pointer min-w-[220px]"
             >
               <option value="">Custom (set manually)</option>
-              {IN_SCOPE_PATTERNS.map((p) => (
+              {NISM_EXAM_PATTERNS.map((p) => (
                 <option key={p.series} value={p.series}>{p.series} — {p.name}</option>
               ))}
             </select>
